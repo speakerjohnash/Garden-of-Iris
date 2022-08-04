@@ -21,13 +21,13 @@ async def on_ready():
 async def ping(ctx):
 	await ctx.send('Pong!')
 
-@bot.command()
-async def members(ctx):
+def members(ctx):
 	members = []
-    for guild in bot.guilds:
-        for member in guild.members:
-            members.append(member)
-    return [*set(members)]
+	for guild in bot.guilds:
+		for member in guild.members:
+			members.append(member)
+	unique_members = [*set(members)]
+	return unique_members
 
 @bot.command()
 async def ask(ctx, *, thought):
@@ -75,6 +75,9 @@ async def ask_team(ctx, question=""):
 	"""
 	/ask_team ask team a question and have davinci summarize
 	"""
+
+	print(members(ctx))
+	return
 
 	joined_answers, summarized = "", ""
 	prompt = question + "\n" + joined_answers + "\nWhat is the consensus above?"
