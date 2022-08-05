@@ -71,13 +71,24 @@ async def claim(ctx, thought=""):
 	await ctx.send(thought, view=view)
 
 @bot.command()
-async def ask_team(ctx, question=""):
+async def ask_group(ctx, *, question=""):
 	"""
-	/ask_team ask team a question and have davinci summarize
+	/ask_group ask group a question and have davinci summarize
 	"""
 
-	print(members(ctx))
-	return
+	# Get people in Garden
+	people = members(ctx)
+
+	# Message Users
+
+	for person in people:
+		if person.name != "Golden Iris":
+			print(person.name)
+			await person.send(question)
+
+	# Gather Answers
+
+	"""
 
 	joined_answers, summarized = "", ""
 	prompt = question + "\n" + joined_answers + "\nWhat is the consensus above?"
@@ -93,6 +104,8 @@ async def ask_team(ctx, question=""):
 		stop=["END"]
 	)
 	
-	await ctx.send(summarized)
+	await ctx.send(summarized) */
+
+	"""
 
 bot.run(discord_key)
