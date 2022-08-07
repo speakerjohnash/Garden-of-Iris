@@ -3,7 +3,9 @@ import os
 import openai
 import discord
 
-from discord.ui import Button, View, TextInput
+from pprint import pprint
+
+from discord.ui import Button, View, TextInput, Modal
 from discord.ext import commands
 
 discord_key = os.getenv("DISCORD_BOT_KEY")
@@ -13,6 +15,39 @@ intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix='/', intents=intents)
 
+def members(ctx):
+
+	members = []
+
+	for guild in bot.guilds:
+		for member in guild.members:
+			members.append(member)
+
+	unique_members = [*set(members)]
+
+	return unique_members
+
+class ask_modal(Modal, title="Ask Modal"):
+
+	answer = TextInput(label="Answer")
+
+	async def on_submit(self, interaction: discord.Interaction):
+		embed = discord.Embed(title = self.title, description = f"**{self.answer.label}**\n{self.answer}")
+		embed.set_author(name = interaction.user)
+		await interaction.response.send_message(embed=embed)
+
+def button_view(modal_text="default text"):
+
+	async def button_callback(interaction):
+		await interaction.response.send_modal(ask_modal(title=modal_text))
+
+	view = View()
+	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
+	button.callback = button_callback
+	view.add_item(button)
+
+	return view
+
 @bot.event
 async def on_ready():
 	print("Iris is online")
@@ -20,14 +55,6 @@ async def on_ready():
 @bot.command()
 async def ping(ctx):
 	await ctx.send('Pong!')
-
-def members(ctx):
-	members = []
-	for guild in bot.guilds:
-		for member in guild.members:
-			members.append(member)
-	unique_members = [*set(members)]
-	return unique_members
 
 @bot.command()
 async def ask(ctx, *, thought):
@@ -58,16 +85,8 @@ async def claim(ctx, thought=""):
 	/claim log a claim for the iris to learn
 	"""
 
-	button = Button(label="button label", style=discord.ButtonStyle.blurple)
+	view = button_view()
 
-	async def button_callback(interaction):
-		await interaction.response.send_message(thought)
-
-	button.callback = button_callback
-
-	view = View()
-	view.add_item(button)
-	
 	await ctx.send(thought, view=view)
 
 @bot.command()
@@ -80,11 +99,10 @@ async def ask_group(ctx, *, question=""):
 	people = members(ctx)
 
 	# Message Users
-
 	for person in people:
 		if person.name != "Golden Iris":
-			print(person.name)
-			await person.send(question)
+			view = button_view(modal_text=question)
+			await person.send(question, view=view)
 
 	# Gather Answers
 
