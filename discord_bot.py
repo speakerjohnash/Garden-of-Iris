@@ -38,15 +38,17 @@ class ask_modal(Modal, title="Ask Modal"):
 
 def button_view(modal_text="default text"):
 
+	modal = ask_modal(title=modal_text)
+
 	async def button_callback(interaction):
-		await interaction.response.send_modal(ask_modal(title=modal_text))
+		answer = await interaction.response.send_modal(modal)
 
 	view = View()
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
 
-	return view
+	return view, modal
 
 @bot.event
 async def on_ready():
@@ -89,20 +91,26 @@ async def claim(ctx, thought=""):
 
 	await ctx.send(thought, view=view)
 
-@bot.command()
+@bot.command(
+	name="ask_group",
+	description="Ask group a question and have davinci summarize"
+)
 async def ask_group(ctx, *, question=""):
-	"""
-	/ask_group ask group a question and have davinci summarize
-	"""
 
 	# Get people in Garden
 	people = members(ctx)
+	responses = []
 
 	# Message Users
 	for person in people:
 		if person.name != "Golden Iris":
-			view = button_view(modal_text=question)
+			view, modal = button_view(modal_text=question)
+			responses.append(modal)
 			await person.send(question, view=view)
+
+	for response in responses:
+		await response.wait()
+		print(response.answer)
 
 	# Gather Answers
 
