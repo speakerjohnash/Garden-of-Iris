@@ -36,14 +36,23 @@ class ask_modal(Modal, title="Ask Modal"):
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
 
+	async def on_timeout(self):
+		self.stop()
+
+class ask_view(View):
+	async def on_timeout(self):
+		self.stop()
+
 def button_view(modal_text="default text"):
 
 	modal = ask_modal(title=modal_text)
+	# modal.timeout = 30
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
 
 	view = View()
+	# view.timeout = 60
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
@@ -53,10 +62,6 @@ def button_view(modal_text="default text"):
 @bot.event
 async def on_ready():
 	print("Iris is online")
-
-@bot.command()
-async def ping(ctx):
-	await ctx.send('Pong!')
 
 @bot.command()
 async def ask(ctx, *, thought):
@@ -108,11 +113,16 @@ async def ask_group(ctx, *, question=""):
 			responses.append(modal)
 			await person.send(question, view=view)
 
+	# Gather Answers
+	all_text = []		
+
 	for response in responses:
 		await response.wait()
 		print(response.answer)
+		all_text.append(response.answer)
 
-	# Gather Answers
+	for t in all_text:
+		print(t.value)
 
 	"""
 
