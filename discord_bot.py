@@ -137,7 +137,12 @@ async def ask_group(ctx, *, question=""):
 		presence_penalty=2,
 		stop=["END"]
 	)
+
+	response_text = summarized.choices[0].text.strip()
 	
-	await ctx.send(summarized)
+	embed = discord.Embed(title = question, description = f"**Answer**\n{response_text}")
+	await ctx.send(embed=embed)
+
+	#await ctx.send(summarized)
 
 bot.run(discord_key)
