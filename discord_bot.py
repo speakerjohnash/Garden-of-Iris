@@ -21,13 +21,14 @@ def members(ctx):
 
 	for guild in bot.guilds:
 		for member in guild.members:
-			members.append(member)
+			if member.name != "Golden Iris":
+				members.append(member)
 
 	unique_members = [*set(members)]
 
 	return unique_members
 
-class ask_modal(Modal, title="Ask Modal"):
+class AskModal(Modal, title="Ask Modal"):
 
 	answer = TextInput(label="Answer")
 
@@ -39,20 +40,15 @@ class ask_modal(Modal, title="Ask Modal"):
 	async def on_timeout(self):
 		self.stop()
 
-class ask_view(View):
-	async def on_timeout(self):
-		self.stop()
-
 def button_view(modal_text="default text"):
 
-	modal = ask_modal(title=modal_text)
-	# modal.timeout = 30
+	modal = AskModal(title=modal_text)
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
 
 	view = View()
-	# view.timeout = 60
+	view.timeout = 90.0
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
@@ -108,25 +104,27 @@ async def ask_group(ctx, *, question=""):
 
 	# Message Users
 	for person in people:
-		if person.name != "Golden Iris":
-			view, modal = button_view(modal_text=question)
-			responses.append(modal)
-			await person.send(question, view=view)
+		view, modal = button_view(modal_text=question)
+		responses.append(modal)
+		await person.send(question, view=view)
 
 	# Gather Answers
 	all_text = []		
 
 	for response in responses:
-		await response.wait()
+		timed_out = await response.wait()
+		print(timed_out)
 		print(response.answer)
-		all_text.append(response.answer)
+		if not timed_out:
+			all_text.append(response.answer)
+
+	print("when do we arrive here?")
+
+	joined_answers = ""
 
 	for t in all_text:
-		print(t.value)
+		joined_answers += t.value + "\n"
 
-	"""
-
-	joined_answers, summarized = "", ""
 	prompt = question + "\n" + joined_answers + "\nWhat is the consensus above?"
 
 	summarized = openai.Completion.create(
@@ -140,8 +138,6 @@ async def ask_group(ctx, *, question=""):
 		stop=["END"]
 	)
 	
-	await ctx.send(summarized) */
-
-	"""
+	await ctx.send(summarized)
 
 bot.run(discord_key)
