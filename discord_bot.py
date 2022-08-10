@@ -1,10 +1,12 @@
 import os
+import random
 
 import openai
 import discord
 
-from pprint import pprint
+import pandas as pd
 
+from pprint import pprint
 from discord.ui import Button, View, TextInput, Modal
 from discord.ext import commands
 
@@ -14,6 +16,11 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix='/', intents=intents)
+
+df = pd.read_csv('tarot_text.csv')
+names = df['card_name'].tolist()
+descriptions = df['text'].tolist()
+tarot_lookup = dict(zip(names, descriptions))
 
 def members(ctx):
 
@@ -83,7 +90,7 @@ async def ask(ctx, *, thought):
 	await ctx.send(text.strip())
 
 @bot.command()
-async def claim(ctx, thought=""):
+async def claim(ctx, *, thought=""):
 	"""
 	/claim log a claim for the iris to learn
 	"""
@@ -91,6 +98,16 @@ async def claim(ctx, thought=""):
 	view = button_view()
 
 	await ctx.send(thought, view=view)
+
+@bot.command()
+async def pullcard(ctx, *, intention=""):
+	with_intention = len(intention) > 0
+	if with_intention: random.seed(hash(intention))
+	card_name = random.choice(list(tarot_lookup.keys()))
+	description = tarot_lookup[card_name].strip()
+	if with_intention: description = "Intention: " + intention + "\n\n" + description
+	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
+	await ctx.send(embed=embed)
 
 @bot.command(
 	name="ask_group",
