@@ -101,6 +101,7 @@ async def claim(ctx, *, thought=""):
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
+
 	with_intention = len(intention) > 0
 	if with_intention: random.seed(hash(intention))
 	card_name = random.choice(list(tarot_lookup.keys()))
@@ -108,6 +109,30 @@ async def pullcard(ctx, *, intention=""):
 	if with_intention: description = "Intention: " + intention + "\n\n" + description
 	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
 	await ctx.send(embed=embed)
+
+	if with_intention:
+		prompt = "My intention in this card pull is: " + intention + "\n\n"
+		prompt += "You pulled the " + card_name + " card\n\n"
+		prompt += description + "\n\n"
+		prompt += "How does the card above connect to the intention? Write a few sentences"
+		prompt += "\n\nYour intention was to "
+
+		response = openai.Completion.create(
+			model="text-davinci-002",
+			prompt=prompt,
+			temperature=0.69,
+			max_tokens=111,
+			top_p=1,
+			frequency_penalty=2,
+			presence_penalty=2,
+			stop=["END"]
+		)
+
+		text = response['choices'][0]['text'].strip()
+		text = "Your intention was " + text
+		embed_b = discord.Embed(title = "How is my intention connected to this draw?", description=text)
+		await ctx.send(embed=embed_b)
+
 
 @bot.command(
 	name="ask_group",
