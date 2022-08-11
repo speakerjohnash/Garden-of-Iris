@@ -103,7 +103,8 @@ async def claim(ctx, *, thought=""):
 async def pullcard(ctx, *, intention=""):
 
 	with_intention = len(intention) > 0
-	if with_intention: random.seed(hash(intention))
+	r_num = random.random()
+	if with_intention: random.seed(intention + str(r_num))
 	card_name = random.choice(list(tarot_lookup.keys()))
 	description = tarot_lookup[card_name].strip()
 	if with_intention: description = "Intention: " + intention + "\n\n" + description
