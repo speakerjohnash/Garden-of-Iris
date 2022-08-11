@@ -3,6 +3,9 @@ import random
 
 import openai
 import discord
+import asyncio
+import aiohttp
+import json
 
 import pandas as pd
 
@@ -21,19 +24,6 @@ df = pd.read_csv('tarot_text.csv')
 names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 tarot_lookup = dict(zip(names, descriptions))
-
-def members(ctx):
-
-	members = []
-
-	for guild in bot.guilds:
-		for member in guild.members:
-			if member.name != "Golden Iris":
-				members.append(member)
-
-	unique_members = [*set(members)]
-
-	return unique_members
 
 class AskModal(Modal, title="Ask Modal"):
 
@@ -61,6 +51,19 @@ def button_view(modal_text="default text"):
 	view.add_item(button)
 
 	return view, modal
+
+def members(ctx):
+
+	members = []
+
+	for guild in bot.guilds:
+		for member in guild.members:
+			if member.name != "Golden Iris":
+				members.append(member)
+
+	unique_members = [*set(members)]
+
+	return unique_members
 
 @bot.event
 async def on_ready():
@@ -103,8 +106,8 @@ async def claim(ctx, *, thought=""):
 async def pullcard(ctx, *, intention=""):
 
 	with_intention = len(intention) > 0
-	r_num = random.random()
-	if with_intention: random.seed(intention + str(r_num))
+	# r_num = random.random()
+	# if with_intention: random.seed(intention + str(r_num))
 	card_name = random.choice(list(tarot_lookup.keys()))
 	description = tarot_lookup[card_name].strip()
 	if with_intention: description = "Intention: " + intention + "\n\n" + description
@@ -115,15 +118,15 @@ async def pullcard(ctx, *, intention=""):
 		prompt = "My intention in this card pull is: " + intention + "\n\n"
 		prompt += "You pulled the " + card_name + " card\n\n"
 		prompt += description + "\n\n"
-		prompt += "How does the card above connect to the intention? Write a few sentences"
+		prompt += "How does the intention above connect to the card? If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation"
 		prompt += "\n\n"
 		# prompt += "\n\nYour intention was to "
 
 		response = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
-			temperature=0.69,
-			max_tokens=111,
+			temperature=1,
+			max_tokens=128,
 			top_p=1,
 			frequency_penalty=2,
 			presence_penalty=2,
@@ -131,7 +134,7 @@ async def pullcard(ctx, *, intention=""):
 		)
 
 		text = response['choices'][0]['text'].strip()
-		embed_b = discord.Embed(title = "One way my intention is connected to this draw", description=text)
+		embed_b = discord.Embed(title = "One Interpretation", description=text)
 		await ctx.send(embed=embed_b)
 
 
