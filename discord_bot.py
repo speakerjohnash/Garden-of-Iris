@@ -116,7 +116,8 @@ async def pullcard(ctx, *, intention=""):
 		prompt += "You pulled the " + card_name + " card\n\n"
 		prompt += description + "\n\n"
 		prompt += "How does the card above connect to the intention? Write a few sentences"
-		prompt += "\n\nYour intention was to "
+		prompt += "\n\n"
+		# prompt += "\n\nYour intention was to "
 
 		response = openai.Completion.create(
 			model="text-davinci-002",
@@ -130,8 +131,7 @@ async def pullcard(ctx, *, intention=""):
 		)
 
 		text = response['choices'][0]['text'].strip()
-		text = "Your intention was " + text
-		embed_b = discord.Embed(title = "How is my intention connected to this draw?", description=text)
+		embed_b = discord.Embed(title = "One way my intention is connected to this draw", description=text)
 		await ctx.send(embed=embed_b)
 
 
