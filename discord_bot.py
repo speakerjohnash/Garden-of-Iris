@@ -10,11 +10,13 @@ import json
 import pandas as pd
 
 from pprint import pprint
+from pyairtable import Table
 from discord.ui import Button, View, TextInput, Modal
 from discord.ext import commands
 
 discord_key = os.getenv("DISCORD_BOT_KEY")
 openai.api_key = os.getenv("OPENAI_API_KEY")
+airtable_key = os.environ["AIRTABLE_API_KEY"]
 
 intents = discord.Intents.default()
 intents.members = True
@@ -23,6 +25,7 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 df = pd.read_csv('tarot_text.csv')
 names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
+airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
 
 class AskModal(Modal, title="Ask Modal"):
@@ -108,24 +111,37 @@ async def pullcard(ctx, *, intention=""):
 	with_intention = len(intention) > 0
 	# r_num = random.random()
 	# if with_intention: random.seed(intention + str(r_num))
+
+	# Get Embed Data
 	card_name = random.choice(list(tarot_lookup.keys()))
 	description = tarot_lookup[card_name].strip()
 	if with_intention: description = "Intention: " + intention + "\n\n" + description
+
+	url = ""
+
+	for page in airtable.iterate():
+		for record in page:
+			if record["fields"]["Card Name"] == card_name:
+				url = record["fields"]["All images"][0]["url"]
+
+	print(url)
+
+	# Make and Send Card
 	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
 	await ctx.send(embed=embed)
 
+	# Make and Send Card Analysis
 	if with_intention:
 		prompt = "My intention in this card pull is: " + intention + "\n\n"
 		prompt += "You pulled the " + card_name + " card\n\n"
 		prompt += description + "\n\n"
-		prompt += "How does the intention above connect to the card? If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation"
+		prompt += "First explain what the intention means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation"
 		prompt += "\n\n"
-		# prompt += "\n\nYour intention was to "
 
 		response = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
-			temperature=1,
+			temperature=0.8,
 			max_tokens=128,
 			top_p=1,
 			frequency_penalty=2,
