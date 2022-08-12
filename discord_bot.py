@@ -109,8 +109,8 @@ async def claim(ctx, *, thought=""):
 async def pullcard(ctx, *, intention=""):
 
 	with_intention = len(intention) > 0
-	# r_num = random.random()
-	# if with_intention: random.seed(intention + str(r_num))
+	r_num = random.random()
+	if with_intention: random.seed(intention + str(r_num))
 
 	# Get Embed Data
 	card_name = random.choice(list(tarot_lookup.keys()))
@@ -135,7 +135,7 @@ async def pullcard(ctx, *, intention=""):
 		prompt = "My intention in this card pull is: " + intention + "\n\n"
 		prompt += "You pulled the " + card_name + " card\n\n"
 		prompt += description + "\n\n"
-		prompt += "First explain what the intention means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation"
+		prompt += "First explain what the intention means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation. If the intention is one word talk more about the intention in detail"
 		prompt += "\n\n"
 
 		response = openai.Completion.create(
