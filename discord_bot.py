@@ -115,7 +115,6 @@ async def pullcard(ctx, *, intention=""):
 	# Get Embed Data
 	card_name = random.choice(list(tarot_lookup.keys()))
 	description = tarot_lookup[card_name].strip()
-	if with_intention: description = "Intention: " + intention + "\n\n" + description
 
 	url = ""
 
@@ -127,6 +126,7 @@ async def pullcard(ctx, *, intention=""):
 
 	# Make and Send Card
 	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
+	if with_intention: embed.add_field(name="Intention", value=intention, inline=False)
 	if len(url) > 0: embed.set_image(url=url)
 	await ctx.send(embed=embed)
 
