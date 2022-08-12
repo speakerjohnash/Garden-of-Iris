@@ -124,10 +124,9 @@ async def pullcard(ctx, *, intention=""):
 			if record["fields"]["Card Name"] == card_name:
 				url = record["fields"]["All images"][0]["url"]
 
-	print(url)
-
 	# Make and Send Card
 	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
+	if len(url) > 0: embed.set_image(url=url)
 	await ctx.send(embed=embed)
 
 	# Make and Send Card Analysis
