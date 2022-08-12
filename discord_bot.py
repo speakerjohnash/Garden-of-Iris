@@ -122,7 +122,8 @@ async def pullcard(ctx, *, intention=""):
 	for page in airtable.iterate():
 		for record in page:
 			if record["fields"]["Card Name"] == card_name:
-				url = record["fields"]["All images"][0]["url"]
+				if "All images" in record["fields"]:
+					url = record["fields"]["All images"][0]["url"]
 
 	# Make and Send Card
 	embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
