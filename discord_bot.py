@@ -1,5 +1,6 @@
 import os
 import random
+import time
 
 import openai
 import discord
@@ -37,18 +38,22 @@ class AskModal(Modal, title="Ask Modal"):
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
 
-	async def on_timeout(self):
-		self.stop()
-
 def button_view(modal_text="default text"):
 
 	modal = AskModal(title=modal_text)
+	modal.auto_defer = False
+	modal.timeout = 30.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
 
+	async def view_timeout():
+		modal.stop()		
+
 	view = View()
-	view.timeout = 90.0
+	view.on_timeout = view_timeout
+	view.timeout = 45.0
+	view.auto_defer = False
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
@@ -163,24 +168,26 @@ async def ask_group(ctx, *, question=""):
 	# Get people in Garden
 	people = members(ctx)
 	responses = []
+	views = []
 
 	# Message Users
 	for person in people:
 		view, modal = button_view(modal_text=question)
-		responses.append(modal)
 		await person.send(question, view=view)
+		responses.append(modal)
+		views.append(view)
 
 	# Gather Answers
-	all_text = []		
+	all_text = []
 
 	for response in responses:
-		timed_out = await response.wait()
-		print(timed_out)
-		print(response.answer)
-		if not timed_out:
-			all_text.append(response.answer)
+		await response.wait()
+		all_text.append(response.answer.value)
 
+	print(all_text)
 	print("when do we arrive here?")
+
+	return
 
 	joined_answers = ""
 
