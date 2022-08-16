@@ -86,7 +86,7 @@ async def ask(ctx, *, thought):
 	print(thought)
 
 	response = openai.Completion.create(
-		model="text-davinci-002",
+		model="davinci:ft-personal:ceres-a-2022-07-01-02-30-41",
 		prompt=thought,
 		temperature=1,
 		max_tokens=114,
@@ -106,9 +106,10 @@ async def claim(ctx, *, thought=""):
 	/claim log a claim for the iris to learn
 	"""
 
-	view = button_view()
+	# TODO
+	# Save claim to datastore
 
-	await ctx.send(thought, view=view)
+	await ctx.send(thought)
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
@@ -190,7 +191,7 @@ async def ask_group(ctx, *, question=""):
 		if t is not None:
 			joined_answers += t + "\n"
 
-	prompt = question + "\n" + joined_answers + "\nWhat is the consensus above?"
+	prompt = question + "\n\nAnswers:\n" + joined_answers + "\nWhat is the general consensus above? Are there any notable outliers. How are the opinions similar or different? What further questions could be asked to the group for more clarification?\n\n###\n"
 
 	summarized = openai.Completion.create(
 		model="text-davinci-002",
@@ -205,9 +206,9 @@ async def ask_group(ctx, *, question=""):
 
 	response_text = summarized.choices[0].text.strip()
 	
+	a_embed = discord.Embed(title = "Responses", description = f"**Responses**\n{joined_answers}")
 	embed = discord.Embed(title = question, description = f"**Consensus**\n{response_text}")
+	await ctx.send(embed=a_embed)
 	await ctx.send(embed=embed)
-
-	#await ctx.send(summarized)
 
 bot.run(discord_key)
