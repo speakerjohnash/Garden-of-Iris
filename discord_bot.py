@@ -184,15 +184,11 @@ async def ask_group(ctx, *, question=""):
 		await response.wait()
 		all_text.append(response.answer.value)
 
-	print(all_text)
-	print("when do we arrive here?")
-
-	return
-
 	joined_answers = ""
 
 	for t in all_text:
-		joined_answers += t.value + "\n"
+		if t is not None:
+			joined_answers += t + "\n"
 
 	prompt = question + "\n" + joined_answers + "\nWhat is the consensus above?"
 
@@ -209,7 +205,7 @@ async def ask_group(ctx, *, question=""):
 
 	response_text = summarized.choices[0].text.strip()
 	
-	embed = discord.Embed(title = question, description = f"**Answer**\n{response_text}")
+	embed = discord.Embed(title = question, description = f"**Consensus**\n{response_text}")
 	await ctx.send(embed=embed)
 
 	#await ctx.send(summarized)
