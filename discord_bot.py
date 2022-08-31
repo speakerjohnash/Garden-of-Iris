@@ -34,7 +34,7 @@ class AskModal(Modal, title="Ask Modal"):
 	answer = TextInput(label="Answer")
 
 	async def on_submit(self, interaction: discord.Interaction):
-		embed = discord.Embed(title = "Confluence Modal", description = f"**Question**\n{self.title}**{self.answer.label}**\n{self.answer}")
+		embed = discord.Embed(title = "Your Response", description = f"**Question**\n{self.title}\n\n**{self.answer.label}**\n{self.answer}")
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
 
@@ -178,8 +178,6 @@ async def ask_group(ctx, *, question=""):
 	responses = []
 	views = []
 
-	print(people)
-
 	# Message Users
 	for person in people:
 		view, modal = button_view(modal_text=question)
@@ -216,7 +214,7 @@ async def ask_group(ctx, *, question=""):
 	response_text = summarized.choices[0].text.strip()
 	
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
-	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}**Consensus**\n{response_text}")
+	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
 	await ctx.send(embed=a_embed)
 	await ctx.send(embed=embed)
 
