@@ -34,7 +34,7 @@ class AskModal(Modal, title="Ask Modal"):
 	answer = TextInput(label="Answer")
 
 	async def on_submit(self, interaction: discord.Interaction):
-		embed = discord.Embed(title = self.title, description = f"**{self.answer.label}**\n{self.answer}")
+		embed = discord.Embed(title = "Confluence Modal", description = f"**Question**\n{self.title}**{self.answer.label}**\n{self.answer}")
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
 
@@ -42,7 +42,7 @@ def button_view(modal_text="default text"):
 
 	modal = AskModal(title=modal_text)
 	modal.auto_defer = False
-	modal.timeout = 30.0
+	modal.timeout = 60.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -52,7 +52,7 @@ def button_view(modal_text="default text"):
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 45.0
+	view.timeout = 60.0
 	view.auto_defer = False
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
@@ -60,14 +60,21 @@ def button_view(modal_text="default text"):
 
 	return view, modal
 
-def members(ctx):
+def members(ctx, debug=False):
 
 	members = []
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
 
-	for guild in bot.guilds:
-		for member in guild.members:
-			if member.name != "Golden Iris":
-				members.append(member)
+	if debug:
+		for guild in bot.guilds:
+			for member in guild.members:
+				if member.name in testers:
+					members.append(member)
+	else:
+		for guild in bot.guilds:
+			for member in guild.members:
+				if member.name != "Golden Iris":
+					members.append(member)
 
 	unique_members = [*set(members)]
 
@@ -141,14 +148,14 @@ async def pullcard(ctx, *, intention=""):
 		prompt = "My intention in this card pull is: " + intention + "\n\n"
 		prompt += "You pulled the " + card_name + " card\n\n"
 		prompt += description + "\n\n"
-		prompt += "First explain what the intention means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation. If the intention is one word talk more about the intention in detail"
+		prompt += "First explain what the intention: '" + intention + "' means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation. If the intention is one word talk more about the intention in detail"
 		prompt += "\n\n"
 
 		response = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
 			temperature=0.8,
-			max_tokens=128,
+			max_tokens=222,
 			top_p=1,
 			frequency_penalty=2,
 			presence_penalty=2,
@@ -167,9 +174,11 @@ async def pullcard(ctx, *, intention=""):
 async def ask_group(ctx, *, question=""):
 
 	# Get people in Garden
-	people = members(ctx)
+	people = members(ctx, debug=True)
 	responses = []
 	views = []
+
+	print(people)
 
 	# Message Users
 	for person in people:
@@ -206,8 +215,8 @@ async def ask_group(ctx, *, question=""):
 
 	response_text = summarized.choices[0].text.strip()
 	
-	a_embed = discord.Embed(title = "Responses", description = f"**Responses**\n{joined_answers}")
-	embed = discord.Embed(title = question, description = f"**Consensus**\n{response_text}")
+	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
+	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}**Consensus**\n{response_text}")
 	await ctx.send(embed=a_embed)
 	await ctx.send(embed=embed)
 
