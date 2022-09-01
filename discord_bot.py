@@ -33,12 +33,24 @@ class AskModal(Modal, title="Ask Modal"):
 
 	answer = TextInput(label="Answer")
 
+	def add_view(self, view: View):
+		self.view = view
+
 	async def on_submit(self, interaction: discord.Interaction):
 		embed = discord.Embed(title = "Your Response", description = f"**Question**\n{self.title}\n\n**{self.answer.label}**\n{self.answer}")
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
+		self.view.stop()
 
-def button_view(modal_text="default text"):
+def button_view(modal_text="default text"):	
+
+	async def view_timeout():
+		modal.stop()	
+
+	view = View()
+	view.on_timeout = view_timeout
+	view.timeout = 60.0
+	view.auto_defer = False
 
 	modal = AskModal(title=modal_text)
 	modal.auto_defer = False
@@ -47,16 +59,10 @@ def button_view(modal_text="default text"):
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
 
-	async def view_timeout():
-		modal.stop()		
-
-	view = View()
-	view.on_timeout = view_timeout
-	view.timeout = 60.0
-	view.auto_defer = False
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
+	modal.add_view(view)
 
 	return view, modal
 
@@ -85,17 +91,15 @@ async def on_ready():
 	print("Iris is online")
 
 @bot.command()
-async def ask(ctx, *, thought):
+async def asko(ctx, *, thought):
 	"""
 	/ask query an iris and get a response
 	"""
 
-	print(thought)
-
 	response = openai.Completion.create(
-		model="davinci:ft-personal:ceres-a-2022-07-01-02-30-41",
+		model="davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 		prompt=thought,
-		temperature=1,
+		temperature=0.69,
 		max_tokens=114,
 		top_p=1,
 		frequency_penalty=1.46,
