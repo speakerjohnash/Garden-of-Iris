@@ -52,7 +52,7 @@ def button_view(modal_text="default text"):
 	view.timeout = 60.0
 	view.auto_defer = False
 
-	modal = AskModal(title=modal_text)
+	modal = AskModal(title="Response")
 	modal.auto_defer = False
 	modal.timeout = 60.0
 
@@ -200,9 +200,11 @@ async def ask_group(ctx, *, question=""):
 
 	for t in all_text:
 		if t is not None:
-			joined_answers += t + "\n"
+			joined_answers += t + "\n\n"
 
-	prompt = question + "\n\nAnswers:\n" + joined_answers + "\nWhat is the general consensus above? Are there any notable outliers. How are the opinions similar or different? What further questions could be asked to the group for more clarification?\n\n###\n"
+	prompt = question + "\n\nAnswers:\n" + joined_answers + "\nIs there a general consensus above? If so what is it? If there are notable outliers address them. How are the opinions similar or different? What further questions could be asked to the group for more clarification? If there are only a few answers summarize them all\n\n###\n"
+
+	print(prompt)
 
 	summarized = openai.Completion.create(
 		model="text-davinci-002",
