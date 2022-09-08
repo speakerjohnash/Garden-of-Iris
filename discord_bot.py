@@ -68,6 +68,18 @@ def button_view(modal_text="default text"):
 
 	return view, modal
 
+def load_card_counts():
+
+	global card_pull_counts, people
+
+	try:
+		with open('card_pull_counts.json') as json_file:
+			card_pull_counts = json.load(json_file)
+			people = list(card_pull_counts.keys())
+	except OSError:
+		print("no such file")
+		members(debug=True)
+
 def members(debug=False):
 
 	members = []
@@ -92,8 +104,12 @@ def members(debug=False):
 
 @bot.event
 async def on_ready():
-	members(debug=True)
+	load_card_counts()
 	print("Iris is online")
+
+@bot.event
+async def on_close():
+	print("Iris is offline")
 
 @bot.command()
 async def asko(ctx, *, thought):
@@ -180,10 +196,12 @@ async def pullcard(ctx, *, intention=""):
 		embed_b = discord.Embed(title = "One Interpretation", description=text)
 		await ctx.send(embed=embed_b)
 
+	# Update Card Pull Counts
 	card_pull_counts[ctx.message.author.name] += 1
-	print(card_pull_counts)
 
-
+	with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
+		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4)
+	
 @bot.command(
 	name="ask_group",
 	description="Ask group a question and have davinci summarize"
