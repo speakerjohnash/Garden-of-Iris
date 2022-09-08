@@ -28,6 +28,8 @@ names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
+card_pull_counts = {}
+people = []
 
 class AskModal(Modal, title="Ask Modal"):
 
@@ -66,10 +68,11 @@ def button_view(modal_text="default text"):
 
 	return view, modal
 
-def members(ctx, debug=False):
+def members(debug=False):
 
 	members = []
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
+	global card_pull_counts, people
 
 	if debug:
 		for guild in bot.guilds:
@@ -83,11 +86,13 @@ def members(ctx, debug=False):
 					members.append(member)
 
 	unique_members = [*set(members)]
-
-	return unique_members
+	names = [member.name for member in unique_members]
+	card_pull_counts = dict(zip(names, [0]*len(names)))
+	people = unique_members
 
 @bot.event
 async def on_ready():
+	members(debug=True)
 	print("Iris is online")
 
 @bot.command()
@@ -124,6 +129,11 @@ async def claim(ctx, *, thought=""):
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
+
+	global card_pull_counts
+
+	if ctx.message.author.name not in list(card_pull_counts.keys()):
+		return
 
 	with_intention = len(intention) > 0
 	r_num = random.random()
@@ -170,6 +180,9 @@ async def pullcard(ctx, *, intention=""):
 		embed_b = discord.Embed(title = "One Interpretation", description=text)
 		await ctx.send(embed=embed_b)
 
+	card_pull_counts[ctx.message.author.name] += 1
+	print(card_pull_counts)
+
 
 @bot.command(
 	name="ask_group",
@@ -178,7 +191,7 @@ async def pullcard(ctx, *, intention=""):
 async def ask_group(ctx, *, question=""):
 
 	# Get people in Garden
-	people = members(ctx, debug=True)
+	global people
 	responses = []
 	views = []
 
