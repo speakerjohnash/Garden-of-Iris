@@ -1,6 +1,8 @@
 import os
 import random
 import time
+import datetime
+import dateutil
 
 import openai
 import discord
@@ -28,7 +30,7 @@ names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
-card_pull_counts = {}
+card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
 people = []
 
 class AskModal(Modal, title="Ask Modal"):
@@ -75,9 +77,18 @@ def load_card_counts():
 	try:
 		with open('card_pull_counts.json') as json_file:
 			card_pull_counts = json.load(json_file)
-			people = list(card_pull_counts.keys())
+			people = list(card_pull_counts["counts"].keys())
 	except OSError:
 		print("no such file")
+		members(debug=True)
+
+	# Reset After a Day
+	created = dateutil.parser.parse(card_pull_counts["created"])
+	now = datetime.datetime.now()
+	time_passed = now - created
+
+	if time_passed.seconds >= 86400:
+		card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
 		members(debug=True)
 
 def members(debug=False):
@@ -99,7 +110,8 @@ def members(debug=False):
 
 	unique_members = [*set(members)]
 	names = [member.name for member in unique_members]
-	card_pull_counts = dict(zip(names, [0]*len(names)))
+	counts = dict(zip(names, [0]*len(names)))
+	card_pull_counts['counts'] = counts
 	people = unique_members
 
 @bot.event
@@ -148,7 +160,7 @@ async def pullcard(ctx, *, intention=""):
 
 	global card_pull_counts
 
-	if ctx.message.author.name not in list(card_pull_counts.keys()):
+	if ctx.message.author.name not in list(card_pull_counts["counts"].keys()):
 		return
 
 	with_intention = len(intention) > 0
@@ -197,10 +209,10 @@ async def pullcard(ctx, *, intention=""):
 		await ctx.send(embed=embed_b)
 
 	# Update Card Pull Counts
-	card_pull_counts[ctx.message.author.name] += 1
+	card_pull_counts["counts"][ctx.message.author.name] += 1
 
 	with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
-		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4)
+		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
 	
 @bot.command(
 	name="ask_group",
