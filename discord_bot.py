@@ -160,7 +160,13 @@ async def pullcard(ctx, *, intention=""):
 
 	global card_pull_counts
 
+	# Only Allow Some Users
 	if ctx.message.author.name not in list(card_pull_counts["counts"].keys()):
+		return
+
+	if card_pull_counts["counts"][ctx.message.author.name] >= 3:
+		embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
+		await ctx.send(embed=embed)
 		return
 
 	with_intention = len(intention) > 0
