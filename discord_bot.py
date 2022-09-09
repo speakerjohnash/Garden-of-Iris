@@ -124,10 +124,16 @@ async def on_close():
 	print("Iris is offline")
 
 @bot.command()
-async def asko(ctx, *, thought):
+async def ask(ctx, *, thought):
 	"""
 	/ask query an iris and get a response
 	"""
+
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
+	
+	# Only Allow Some Users
+	if ctx.message.author.name not in testers:
+		return
 
 	response = openai.Completion.create(
 		model="davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
@@ -227,6 +233,12 @@ async def pullcard(ctx, *, intention=""):
 	description="Ask group a question and have davinci summarize"
 )
 async def ask_group(ctx, *, question=""):
+
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
+
+	# Only Allow Some Users
+	if ctx.message.author.name not in testers:
+		return
 
 	# Get people in Garden
 	global people
