@@ -30,7 +30,7 @@ names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
-card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
+card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
 people = []
 
 class AskModal(Modal, title="Ask Modal"):
@@ -209,6 +209,8 @@ async def pullcard(ctx, *, intention=""):
 			presence_penalty=2,
 			stop=["END"]
 		)
+
+		print(response)
 
 		text = response['choices'][0]['text'].strip()
 		embed_b = discord.Embed(title = "One Interpretation", description=text)
