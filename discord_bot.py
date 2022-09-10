@@ -70,6 +70,21 @@ def button_view(modal_text="default text"):
 
 	return view, modal
 
+def reset_card_counts():
+
+	global card_pull_counts
+
+	# Reset After a Day
+	created = dateutil.parser.parse(card_pull_counts["created"])
+	now = datetime.datetime.now()
+	time_passed = now - created
+
+	if time_passed.seconds >= 86400:
+		card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
+		members(debug=True)
+		with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
+			json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
+
 def load_card_counts():
 
 	global card_pull_counts, people
@@ -83,13 +98,7 @@ def load_card_counts():
 		members(debug=True)
 
 	# Reset After a Day
-	created = dateutil.parser.parse(card_pull_counts["created"])
-	now = datetime.datetime.now()
-	time_passed = now - created
-
-	if time_passed.seconds >= 86400:
-		card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
-		members(debug=True)
+	reset_card_counts()
 
 def members(debug=False):
 
@@ -170,11 +179,13 @@ async def pullcard(ctx, *, intention=""):
 	if ctx.message.author.name not in list(card_pull_counts["counts"].keys()):
 		return
 
+	# Limit Card Pulls
 	if card_pull_counts["counts"][ctx.message.author.name] >= 3:
 		embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
 		await ctx.send(embed=embed)
 		return
 
+	# With Intention
 	with_intention = len(intention) > 0
 	r_num = random.random()
 	if with_intention: random.seed(intention + str(r_num))
@@ -224,6 +235,7 @@ async def pullcard(ctx, *, intention=""):
 
 	# Update Card Pull Counts
 	card_pull_counts["counts"][ctx.message.author.name] += 1
+	reset_card_counts()
 
 	with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
 		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
