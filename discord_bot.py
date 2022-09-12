@@ -12,6 +12,7 @@ import json
 
 import pandas as pd
 
+from discord.utils import get
 from pprint import pprint
 from pyairtable import Table
 from discord.ui import Button, View, TextInput, Modal
@@ -30,6 +31,7 @@ names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
+
 card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
 people = []
 
@@ -70,6 +72,21 @@ def button_view(modal_text="default text"):
 
 	return view, modal
 
+def load_card_counts():
+
+	global card_pull_counts, people
+
+	try:
+		with open('card_pull_counts.json') as json_file:
+			card_pull_counts = json.load(json_file)
+			people = list(card_pull_counts["counts"].keys())
+	except OSError:
+		print("no such file")
+		members(debug=False)
+
+	# Reset After a Day
+	reset_card_counts()
+
 def reset_card_counts():
 
 	global card_pull_counts
@@ -81,24 +98,9 @@ def reset_card_counts():
 
 	if time_passed.seconds >= 86400:
 		card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
-		members(debug=True)
+		members(debug=False)
 		with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
 			json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
-
-def load_card_counts():
-
-	global card_pull_counts, people
-
-	try:
-		with open('card_pull_counts.json') as json_file:
-			card_pull_counts = json.load(json_file)
-			people = list(card_pull_counts["counts"].keys())
-	except OSError:
-		print("no such file")
-		members(debug=True)
-
-	# Reset After a Day
-	reset_card_counts()
 
 def members(debug=False):
 
@@ -227,8 +229,6 @@ async def pullcard(ctx, *, intention=""):
 			stop=["END"]
 		)
 
-		print(response)
-
 		text = response['choices'][0]['text'].strip()
 		embed_b = discord.Embed(title = "One Interpretation", description=text)
 		await ctx.send(embed=embed_b)
@@ -240,10 +240,7 @@ async def pullcard(ctx, *, intention=""):
 	with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
 		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
 	
-@bot.command(
-	name="ask_group",
-	description="Ask group a question and have davinci summarize"
-)
+@bot.command(name="ask_group", description="Ask group a question and auto-summarize")
 async def ask_group(ctx, *, question=""):
 
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
@@ -252,8 +249,16 @@ async def ask_group(ctx, *, question=""):
 	if ctx.message.author.name not in testers:
 		return
 
+	# Debug Mode
+	people = []
+
+	for guild in bot.guilds:
+		for member in guild.members:
+			if member.name in testers:
+				people.append(member)
+
 	# Get people in Garden
-	global people
+	# global people
 	responses = []
 	views = []
 
@@ -277,7 +282,12 @@ async def ask_group(ctx, *, question=""):
 		if t is not None:
 			joined_answers += t + "\n\n"
 
-	prompt = question + "\n\nAnswers:\n" + joined_answers + "\nIs there a general consensus above? If so what is it? If there are notable outliers address them. How are the opinions similar or different? What further questions could be asked to the group for more clarification? If there are only a few answers summarize them all\n\n###\n"
+	prompt = question + "\n\nAnswers are below"
+	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
+	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
+	prompt += "---\n\nThe question was: " + question + "\n\n"
+	prompt += "Write a long detailed paragraph about the question as if you were a singular voice formed from all of the views above. What does this community believe?"
+	prompt += "\n\n"
 
 	print(prompt)
 
@@ -288,7 +298,7 @@ async def ask_group(ctx, *, question=""):
 		max_tokens=128,
 		top_p=1,
 		frequency_penalty=2,
-		presence_penalty=2,
+		presence_penalty=0.5,
 		stop=["END"]
 	)
 
