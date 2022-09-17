@@ -43,7 +43,7 @@ class AskModal(Modal, title="Ask Modal"):
 		self.view = view
 
 	async def on_submit(self, interaction: discord.Interaction):
-		embed = discord.Embed(title = "Your Response", description = f"**Question**\n{self.title}\n\n**{self.answer.label}**\n{self.answer}")
+		embed = discord.Embed(title = "Your Response", description = f"\n{self.answer}")
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
 		self.view.stop()
@@ -55,12 +55,12 @@ def button_view(modal_text="default text"):
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 60.0
+	view.timeout = 3600.0
 	view.auto_defer = False
 
 	modal = AskModal(title="Response")
 	modal.auto_defer = False
-	modal.timeout = 60.0
+	modal.timeout = 3600.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -243,29 +243,40 @@ async def pullcard(ctx, *, intention=""):
 @bot.command(name="ask_group", description="Ask group a question and auto-summarize")
 async def ask_group(ctx, *, question=""):
 
+	if len(question) == 0:
+		return
+
+	global people
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
+	users = []
 
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
 		return
 
 	# Debug Mode
-	people = []
-
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in testers:
-				people.append(member)
+			if member.name in people:
+				users.append(member)
 
 	# Get people in Garden
-	# global people
 	responses = []
 	views = []
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 1 hour of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
+	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
+	c_embed = discord.Embed(title="Confluence Experiment", description = question)
+	c_embed.set_image(url=i_url)
 
 	# Message Users
-	for person in people:
+	for person in users:
 		view, modal = button_view(modal_text=question)
-		await person.send(question, view=view)
+		try: 
+			await person.send(embed=c_embed)
+			await person.send(view=view)
+			await person.send(embed=t_embed)
+		except:
+			continue
 		responses.append(modal)
 		views.append(view)
 
@@ -278,6 +289,11 @@ async def ask_group(ctx, *, question=""):
 
 	joined_answers = ""
 
+	if len(all_text) == 0:
+		r_embed = discord.Embed(title = "No Responses", description = f"No responses provided to summarize")
+		await ctx.send(embed=r_embed)
+		return
+
 	for t in all_text:
 		if t is not None:
 			joined_answers += t + "\n\n"
@@ -287,18 +303,17 @@ async def ask_group(ctx, *, question=""):
 	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
 	prompt += "---\n\nThe question was: " + question + "\n\n"
 	prompt += "Write a long detailed paragraph about the question as if you were a singular voice formed from all of the views above. What does this community believe?"
+	prompt += "\n\nSum the answers into one answer that best represents all the views shared. If many questions are provided respond with a question representing what most people are uncertain about"
 	prompt += "\n\n"
-
-	print(prompt)
 
 	summarized = openai.Completion.create(
 		model="text-davinci-002",
 		prompt=prompt,
 		temperature=0.7,
-		max_tokens=128,
+		max_tokens=222,
 		top_p=1,
 		frequency_penalty=2,
-		presence_penalty=0.5,
+		presence_penalty=0.7,
 		stop=["END"]
 	)
 
@@ -306,7 +321,14 @@ async def ask_group(ctx, *, question=""):
 	
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
 	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
-	await ctx.send(embed=a_embed)
-	await ctx.send(embed=embed)
+	#await ctx.send(embed=a_embed)
+	#await ctx.send(embed=embed)
+
+	for person in users:
+		try:
+			await person.send("Responses", embed=a_embed)
+			await person.send("Consensus", embed=embed)
+		except:
+			continue
 
 bot.run(discord_key)
