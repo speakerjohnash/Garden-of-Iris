@@ -125,6 +125,33 @@ def members(debug=False):
 	card_pull_counts['counts'] = counts
 	people = unique_members
 
+def redo_view(ctx, prompt, question):
+
+	async def button_callback(interaction):
+
+		response = openai.Completion.create(
+			model="text-davinci-002",
+			prompt=prompt,
+			temperature=1,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=2,
+			presence_penalty=2,
+			stop=["END"]
+		)
+
+		response_text = response.choices[0].text.strip()
+		embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
+
+		await ctx.send(embed=embed)
+
+	view = View()
+	button = Button(label="Redo", style=discord.ButtonStyle.blurple)
+	button.callback = button_callback
+	view.add_item(button)
+
+	return view
+
 @bot.event
 async def on_ready():
 	load_card_counts()
@@ -257,7 +284,7 @@ async def ask_group(ctx, *, question=""):
 	# Debug Mode
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in people:
+			if member.name in testers:
 				users.append(member)
 
 	# Get people in Garden
@@ -298,6 +325,8 @@ async def ask_group(ctx, *, question=""):
 		if t is not None:
 			joined_answers += t + "\n\n"
 
+	# TODO: Make sure prompt doesn't go over character count
+
 	prompt = question + "\n\nAnswers are below"
 	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
 	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
@@ -321,8 +350,6 @@ async def ask_group(ctx, *, question=""):
 	
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
 	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
-	#await ctx.send(embed=a_embed)
-	#await ctx.send(embed=embed)
 
 	for person in users:
 		try:
@@ -330,5 +357,9 @@ async def ask_group(ctx, *, question=""):
 			await person.send("Consensus", embed=embed)
 		except:
 			continue
+
+	# Send a Redo Option
+	r_view = redo_view(ctx, prompt, question)
+	await ctx.send(view=r_view)
 
 bot.run(discord_key)
