@@ -4,6 +4,7 @@ import time
 import datetime
 import dateutil
 
+import textwrap
 import openai
 import discord
 import asyncio
@@ -37,10 +38,10 @@ people = []
 
 class AskModal(Modal, title="Ask Modal"):
 
-	answer = TextInput(label="Answer", max_length=256, style=discord.TextStyle.paragraph)
+	answer = TextInput(label="Answer", max_length=256, style=discord.TextStyle.long)
 
 	def add_view(self, question, view: View):
-		self.answer.placeholder = question
+		self.answer.placeholder = question[0:100]
 		self.view = view
 
 	async def on_submit(self, interaction: discord.Interaction):
@@ -56,12 +57,12 @@ def button_view(modal_text="default text"):
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 180.0
+	view.timeout = 3600.0
 	view.auto_defer = False
 
 	modal = AskModal(title="Response")
 	modal.auto_defer = False
-	modal.timeout = 180.0
+	modal.timeout = 3600.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -153,6 +154,18 @@ def redo_view(ctx, prompt, question):
 	view.add_item(button)
 
 	return view
+
+def make_prompt(question, joined_answers):
+
+	prompt = question + "\n\nAnswers are below"
+	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
+	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
+	prompt += "---\n\nThe question was: " + question + "\n\n"
+	prompt += "Write a long detailed paragraph about the question as if you were a singular voice formed from all of the views above. What does this community believe?"
+	prompt += "\n\nSum the answers into one answer that best represents all the views shared. If many questions are provided respond with a question representing what most people are uncertain about"
+	prompt += "\n\n"
+
+	return prompt
 
 @bot.event
 async def on_ready():
@@ -292,7 +305,7 @@ async def ask_group(ctx, *, question=""):
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 30 minutes of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 60 minutes of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
@@ -327,30 +340,30 @@ async def ask_group(ctx, *, question=""):
 		await ctx.send(embed=r_embed)
 		return
 
-	# TODO: Make sure prompt doesn't go over character count
-	print(len(joined_answers))
+	# Chunk Answers
+	prompts = []
+	answer_chunks = textwrap.wrap(joined_answers, 1750)
 
-	prompt = question + "\n\nAnswers are below"
-	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
-	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
-	prompt += "---\n\nThe question was: " + question + "\n\n"
-	prompt += "Write a long detailed paragraph about the question as if you were a singular voice formed from all of the views above. What does this community believe?"
-	prompt += "\n\nSum the answers into one answer that best represents all the views shared. If many questions are provided respond with a question representing what most people are uncertain about"
-	prompt += "\n\n"
+	for chunk in answer_chunks:
+		prompts.append(make_prompt(question, joined_answers))
 
-	summarized = openai.Completion.create(
-		model="text-davinci-002",
-		prompt=prompt,
-		temperature=0.7,
-		max_tokens=222,
-		top_p=1,
-		frequency_penalty=2,
-		presence_penalty=0.7,
-		stop=["END"]
-	)
+	# Query OpenAI
+	response_text = ""
 
-	response_text = summarized.choices[0].text.strip()
+	for prompt in prompts:
+		summarized = openai.Completion.create(
+			model="text-davinci-002",
+			prompt=prompt,
+			temperature=0.7,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=2,
+			presence_penalty=0.7,
+			stop=["END"]
+		)
+		response_text += summarized.choices[0].text.strip()
 	
+	# Send Results to People
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
 	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
 
