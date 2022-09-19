@@ -37,7 +37,7 @@ people = []
 
 class AskModal(Modal, title="Ask Modal"):
 
-	answer = TextInput(label="Answer")
+	answer = TextInput(label="Answer", max_length=256, style=discord.TextStyle.paragraph)
 
 	def add_view(self, view: View):
 		self.view = view
@@ -55,12 +55,12 @@ def button_view(modal_text="default text"):
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 3600.0
+	view.timeout = 180.0
 	view.auto_defer = False
 
 	modal = AskModal(title="Response")
 	modal.auto_defer = False
-	modal.timeout = 3600.0
+	modal.timeout = 180.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -146,6 +146,7 @@ def redo_view(ctx, prompt, question):
 		await ctx.send(embed=embed)
 
 	view = View()
+	view.timeout = None
 	button = Button(label="Redo", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
@@ -290,7 +291,7 @@ async def ask_group(ctx, *, question=""):
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 1 hour of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 30 minutes of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
