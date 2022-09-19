@@ -38,7 +38,7 @@ people = []
 
 class AskModal(Modal, title="Ask Modal"):
 
-	answer = TextInput(label="Answer", max_length=256, style=discord.TextStyle.long)
+	answer = TextInput(label="Answer", max_length=400, style=discord.TextStyle.long)
 
 	def add_view(self, question, view: View):
 		self.answer.placeholder = question[0:100]
@@ -57,12 +57,12 @@ def button_view(modal_text="default text"):
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 3600.0
+	view.timeout = 180.0
 	view.auto_defer = False
 
 	modal = AskModal(title="Response")
 	modal.auto_defer = False
-	modal.timeout = 3600.0
+	modal.timeout = 180.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -85,6 +85,8 @@ def load_card_counts():
 	except OSError:
 		print("no such file")
 		members(debug=False)
+		with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
+			json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
 
 	# Reset After a Day
 	reset_card_counts()
@@ -219,9 +221,9 @@ async def pullcard(ctx, *, intention=""):
 
 	global card_pull_counts
 
-	# Only Allow Some Users
+	# Add to Counts
 	if ctx.message.author.name not in list(card_pull_counts["counts"].keys()):
-		return
+		card_pull_counts["counts"][ctx.message.author.name] = 0
 
 	# Limit Card Pulls
 	if card_pull_counts["counts"][ctx.message.author.name] >= 3:
@@ -299,13 +301,13 @@ async def ask_group(ctx, *, question=""):
 	# Debug Mode
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in testers:
+			if member.name in people:
 				users.append(member)
 
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 60 minutes of receipt. We do this so we can collect the data in timely manner and deliver it to people.")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 3 minutes of receipt")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
