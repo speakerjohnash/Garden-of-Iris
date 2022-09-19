@@ -39,7 +39,8 @@ class AskModal(Modal, title="Ask Modal"):
 
 	answer = TextInput(label="Answer", max_length=256, style=discord.TextStyle.paragraph)
 
-	def add_view(self, view: View):
+	def add_view(self, question, view: View):
+		self.answer.placeholder = question
 		self.view = view
 
 	async def on_submit(self, interaction: discord.Interaction):
@@ -68,7 +69,7 @@ def button_view(modal_text="default text"):
 	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
-	modal.add_view(view)
+	modal.add_view(modal_text, view)
 
 	return view, modal
 
