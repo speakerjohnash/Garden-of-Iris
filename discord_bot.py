@@ -317,16 +317,17 @@ async def ask_group(ctx, *, question=""):
 
 	joined_answers = ""
 
-	if len(all_text) == 0:
-		r_embed = discord.Embed(title = "No Responses", description = f"No responses provided to summarize")
-		await ctx.send(embed=r_embed)
-		return
-
 	for t in all_text:
 		if t is not None:
 			joined_answers += t + "\n\n"
 
+	if len(joined_answers.strip()) == 0:
+		r_embed = discord.Embed(title = "No Responses", description = f"No responses provided to summarize")
+		await ctx.send(embed=r_embed)
+		return
+
 	# TODO: Make sure prompt doesn't go over character count
+	print(len(joined_answers))
 
 	prompt = question + "\n\nAnswers are below"
 	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
