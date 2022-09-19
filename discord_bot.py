@@ -118,7 +118,7 @@ def members(debug=False):
 	else:
 		for guild in bot.guilds:
 			for member in guild.members:
-				if member.name != "Golden Iris":
+				if member.name != "Hidden Iris":
 					members.append(member)
 
 	unique_members = [*set(members)]
@@ -375,7 +375,8 @@ async def ask_group(ctx, *, question=""):
 			continue
 
 	# Send a Redo Option
-	r_view = redo_view(ctx, prompt, question)
-	await ctx.send(view=r_view)
+	for prompt in prompts:
+		r_view = redo_view(ctx, prompt, question)
+		await ctx.send(view=r_view)
 
 bot.run(discord_key)
