@@ -57,12 +57,12 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 180.0
+	view.timeout = 10800.0
 	view.auto_defer = False
 
 	modal = AskModal(title=modal_label)
 	modal.auto_defer = False
-	modal.timeout = 180.0
+	modal.timeout = 10800.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -236,7 +236,7 @@ async def pullcard(ctx, *, intention=""):
 		card_pull_counts["counts"][ctx.message.author.name] = 0
 
 	# Limit Card Pulls
-	if card_pull_counts["counts"][ctx.message.author.name] >= 3:
+	if card_pull_counts["counts"][ctx.message.author.name] >= 10:
 		embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
 		await ctx.send(embed=embed)
 		return
@@ -304,6 +304,11 @@ async def ask_group(ctx, *, question=""):
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
 	users = []
 
+	# Get Birdies
+	guild = bot.get_guild(989662771329269890)
+	members = discord.utils.get(guild.roles, name="Birdies").members
+	birdies = [x.name for x in members]
+
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
 		return
@@ -317,7 +322,7 @@ async def ask_group(ctx, *, question=""):
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 3 minutes of receipt")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 3 HOURS of receipt")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
@@ -373,7 +378,7 @@ async def ask_group(ctx, *, question=""):
 			presence_penalty=0.7,
 			stop=["END"]
 		)
-		response_text += summarized.choices[0].text.strip()
+		response_text += summarized.choices[0].text.strip() + "\n\n"
 	
 	# Send Results to People
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
