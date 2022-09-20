@@ -213,7 +213,7 @@ async def ask(ctx, *, thought):
 	await ctx.send(view=view)
 
 	await modal.wait()
-	print(response.answer.value)
+	print(modal.answer.value)
 
 @bot.command()
 async def claim(ctx, *, thought=""):
