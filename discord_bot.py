@@ -50,7 +50,7 @@ class AskModal(Modal, title="Ask Modal"):
 		await interaction.response.send_message(embed=embed)
 		self.view.stop()
 
-def button_view(modal_text="default text"):	
+def response_view(modal_text="default text", modal_label="Response", button_label="Answer"):	
 
 	async def view_timeout():
 		modal.stop()	
@@ -60,19 +60,47 @@ def button_view(modal_text="default text"):
 	view.timeout = 180.0
 	view.auto_defer = False
 
-	modal = AskModal(title="Response")
+	modal = AskModal(title=modal_label)
 	modal.auto_defer = False
 	modal.timeout = 180.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
 
-	button = Button(label="Answer", style=discord.ButtonStyle.blurple)
+	button = Button(label=button_label, style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
 	view.add_item(button)
 	modal.add_view(modal_text, view)
 
 	return view, modal
+
+def redo_view(ctx, prompt, question):
+
+	async def button_callback(interaction):
+
+		response = openai.Completion.create(
+			model="text-davinci-002",
+			prompt=prompt,
+			temperature=1,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=2,
+			presence_penalty=2,
+			stop=["END"]
+		)
+
+		response_text = response.choices[0].text.strip()
+		embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
+
+		await ctx.send(embed=embed)
+
+	view = View()
+	view.timeout = None
+	button = Button(label="Redo", style=discord.ButtonStyle.blurple)
+	button.callback = button_callback
+	view.add_item(button)
+
+	return view
 
 def load_card_counts():
 
@@ -129,38 +157,10 @@ def members(debug=False):
 	card_pull_counts['counts'] = counts
 	people = unique_members
 
-def redo_view(ctx, prompt, question):
-
-	async def button_callback(interaction):
-
-		response = openai.Completion.create(
-			model="text-davinci-002",
-			prompt=prompt,
-			temperature=1,
-			max_tokens=222,
-			top_p=1,
-			frequency_penalty=2,
-			presence_penalty=2,
-			stop=["END"]
-		)
-
-		response_text = response.choices[0].text.strip()
-		embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
-
-		await ctx.send(embed=embed)
-
-	view = View()
-	view.timeout = None
-	button = Button(label="Redo", style=discord.ButtonStyle.blurple)
-	button.callback = button_callback
-	view.add_item(button)
-
-	return view
-
 def make_prompt(question, joined_answers):
 
 	prompt = question + "\n\nAnswers are below"
-	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers?"
+	prompt += "\n\nWrite a long detail paragraph summarizing and analyzing the answers below. What are the commonalities and differences in the answers? Are there any outliers?"
 	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
 	prompt += "---\n\nThe question was: " + question + "\n\n"
 	prompt += "Write a long detailed paragraph about the question as if you were a singular voice formed from all of the views above. What does this community believe?"
@@ -191,7 +191,7 @@ async def ask(ctx, *, thought):
 		return
 
 	response = openai.Completion.create(
-		model="davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
+		model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
 		prompt=thought,
 		temperature=0.69,
 		max_tokens=114,
@@ -202,8 +202,18 @@ async def ask(ctx, *, thought):
 	)
 
 	text = response['choices'][0]['text']
+	text = text.replace("###", "").strip()
+	embed = discord.Embed(title = "", description=text)
 
-	await ctx.send(text.strip())
+	await ctx.send(embed=embed)
+
+	# Allow clarification
+	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="clarify")
+
+	await ctx.send(view=view)
+
+	await modal.wait()
+	print(response.answer.value)
 
 @bot.command()
 async def claim(ctx, *, thought=""):
@@ -301,7 +311,7 @@ async def ask_group(ctx, *, question=""):
 	# Debug Mode
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in people:
+			if member.name in testers:
 				users.append(member)
 
 	# Get people in Garden
@@ -314,7 +324,7 @@ async def ask_group(ctx, *, question=""):
 
 	# Message Users
 	for person in users:
-		view, modal = button_view(modal_text=question)
+		view, modal = response_view(modal_text=question)
 		try: 
 			await person.send(embed=c_embed)
 			await person.send(view=view)
