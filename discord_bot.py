@@ -78,7 +78,7 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 def group_share(thought="thought"):
 
 	channel = bot.get_channel(989662771329269893)
-	embed = discord.Embed(title = "Iris", description = thought)
+	embed = discord.Embed(title = "Seeds of Wisdom", description = thought)
 	view = View()
 	view.timeout = 3600.0
 	view.auto_defer = False
@@ -128,7 +128,7 @@ def load_training_data():
 		training_data = pd.read_csv('iris_training-data.csv')
 	except:
 		with open('iris_training-data.csv', 'w', encoding='utf-8') as f:
-			training_data = pd.DataFrame(columns=['prompt', 'completion'])
+			training_data = pd.DataFrame(columns=['prompt', 'completion', 'speaker'])
 			training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
 
 def load_card_counts():
@@ -201,6 +201,7 @@ def make_prompt(question, joined_answers):
 @bot.event
 async def on_ready():
 	load_card_counts()
+	load_training_data()
 	print("Iris is online")
 
 @bot.event
@@ -213,20 +214,23 @@ async def ask(ctx, *, thought):
 	/ask query an iris and get a response
 	"""
 
-	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax"]
+	global training_data
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
 		return
 
+	thought = thought + "\n\n###\n\n"
+
 	response = openai.Completion.create(
 		model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
 		prompt=thought,
-		temperature=0.42,
-		max_tokens=114,
+		temperature=0.77,
+		max_tokens=222,
 		top_p=1,
-		frequency_penalty=1.46,
-		presence_penalty=1.54,
+		frequency_penalty=2,
+		presence_penalty=1.1,
 		stop=["END"]
 	)
 
@@ -244,7 +248,10 @@ async def ask(ctx, *, thought):
 
 	# Save Clarification
 	await modal.wait()
-	# print(modal.answer.value)
+
+	if modal.answer.value is not None:
+		training_data.loc[len(training_data.index)] = [text, modal.answer.value, ctx.message.author.name] 
+		training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
 
 @bot.command()
 async def claim(ctx, *, thought=""):
