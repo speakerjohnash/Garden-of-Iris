@@ -58,12 +58,12 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 3600.0
+	view.timeout = 300.0
 	view.auto_defer = False
 
 	modal = AskModal(title=modal_label)
 	modal.auto_defer = False
-	modal.timeout = 3600.0
+	modal.timeout = 300.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -198,6 +198,17 @@ def make_prompt(question, joined_answers):
 
 	return prompt
 
+def pool_prompt(question, joined_answers):
+
+	prompt = question + "\n\nAnswers are below"
+	prompt += "\n\nPool all of the answers into a single response or question"
+	prompt += "\n\n---\n\nAnswers:\n\n" + joined_answers
+	prompt += "---\n\nThe question was: " + question + "\n\n"
+	prompt += "Pool all of the answers into a single response or question that reflects the views of all the responders. Also write a long detailed paragraph extrapolating on the thoughts above"
+	prompt += "\n\n"
+
+	return prompt
+
 @bot.event
 async def on_ready():
 	load_card_counts()
@@ -221,11 +232,11 @@ async def ask(ctx, *, thought):
 	if ctx.message.author.name not in testers:
 		return
 
-	thought = thought + "\n\n###\n\n"
+	thought_prompt = thought + "\n\n###\n\n"
 
 	response = openai.Completion.create(
 		model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
-		prompt=thought,
+		prompt=thought_prompt,
 		temperature=0.77,
 		max_tokens=222,
 		top_p=1,
@@ -236,7 +247,7 @@ async def ask(ctx, *, thought):
 
 	text = response['choices'][0]['text']
 	text = text.replace("###", "").strip()
-	embed = discord.Embed(title = "", description=text)
+	embed = discord.Embed(title = "", description=f"**Prompt**\n{thought}\n\n**Response**\n{text}")
 
 	await ctx.send(embed=embed)
 
@@ -249,8 +260,10 @@ async def ask(ctx, *, thought):
 	# Save Clarification
 	await modal.wait()
 
+	prompt = thought + "\n\n" + text
+
 	if modal.answer.value is not None:
-		training_data.loc[len(training_data.index)] = [text, modal.answer.value, ctx.message.author.name] 
+		training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, ctx.message.author.name] 
 		training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
 
 @bot.command()
@@ -354,13 +367,13 @@ async def ask_group(ctx, *, question=""):
 	# Debug Mode
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in birdies:
+			if member.name in testers:
 				users.append(member)
 
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 1 hour of receipt")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 5 minutes of receipt")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
@@ -405,7 +418,7 @@ async def ask_group(ctx, *, question=""):
 	answer_chunks = textwrap.wrap(joined_answers, 1750)
 
 	for chunk in answer_chunks:
-		prompts.append(make_prompt(question, joined_answers))
+		prompts.append(pool_prompt(question, joined_answers))
 
 	# Query OpenAI
 	response_text = ""
@@ -414,11 +427,11 @@ async def ask_group(ctx, *, question=""):
 		summarized = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
-			temperature=0.6,
+			temperature=0.9,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=2,
-			presence_penalty=0.7,
+			presence_penalty=1.3,
 			stop=["END"]
 		)
 		response_text += summarized.choices[0].text.strip() + "\n\n"
