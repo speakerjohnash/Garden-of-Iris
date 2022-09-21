@@ -32,6 +32,7 @@ names = df['card_name'].tolist()
 descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
+training_data = ""
 
 card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
 people = []
@@ -57,12 +58,12 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 10800.0
+	view.timeout = 3600.0
 	view.auto_defer = False
 
 	modal = AskModal(title=modal_label)
 	modal.auto_defer = False
-	modal.timeout = 10800.0
+	modal.timeout = 3600.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -73,6 +74,23 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 	modal.add_view(modal_text, view)
 
 	return view, modal
+
+def group_share(thought="thought"):
+
+	channel = bot.get_channel(989662771329269893)
+	embed = discord.Embed(title = "Iris", description = thought)
+	view = View()
+	view.timeout = 3600.0
+	view.auto_defer = False
+
+	async def button_callback(interaction):
+		await channel.send(embed=embed)
+
+	button = Button(label="share", style=discord.ButtonStyle.blurple)
+	button.callback = button_callback
+	view.add_item(button)
+
+	return button
 
 def redo_view(ctx, prompt, question):
 
@@ -101,6 +119,17 @@ def redo_view(ctx, prompt, question):
 	view.add_item(button)
 
 	return view
+
+def load_training_data():
+
+	global training_data
+
+	try:
+		training_data = pd.read_csv('iris_training-data.csv')
+	except:
+		with open('iris_training-data.csv', 'w', encoding='utf-8') as f:
+			training_data = pd.DataFrame(columns=['prompt', 'completion'])
+			training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
 
 def load_card_counts():
 
@@ -184,7 +213,7 @@ async def ask(ctx, *, thought):
 	/ask query an iris and get a response
 	"""
 
-	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
@@ -193,7 +222,7 @@ async def ask(ctx, *, thought):
 	response = openai.Completion.create(
 		model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
 		prompt=thought,
-		temperature=0.69,
+		temperature=0.42,
 		max_tokens=114,
 		top_p=1,
 		frequency_penalty=1.46,
@@ -207,13 +236,15 @@ async def ask(ctx, *, thought):
 
 	await ctx.send(embed=embed)
 
-	# Allow clarification
-	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="clarify")
-
+	# Send Clarification and Share UI
+	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="feedback")
+	share_button = group_share(thought=text)
+	view.add_item(share_button)
 	await ctx.send(view=view)
 
+	# Save Clarification
 	await modal.wait()
-	print(modal.answer.value)
+	# print(modal.answer.value)
 
 @bot.command()
 async def claim(ctx, *, thought=""):
@@ -316,13 +347,13 @@ async def ask_group(ctx, *, question=""):
 	# Debug Mode
 	for guild in bot.guilds:
 		for member in guild.members:
-			if member.name in testers:
+			if member.name in birdies:
 				users.append(member)
 
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 3 HOURS of receipt")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 1 hour of receipt")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
@@ -353,8 +384,13 @@ async def ask_group(ctx, *, question=""):
 			joined_answers += t + "\n\n"
 
 	if len(joined_answers.strip()) == 0:
-		r_embed = discord.Embed(title = "No Responses", description = f"No responses provided to summarize")
-		await ctx.send(embed=r_embed)
+		j_embed = discord.Embed(title = "No Responses", description = f"No responses provided to summarize")
+		await ctx.send(embed=j_embed)
+		return
+
+	if len(responses) == 1:
+		k_embed = discord.Embed(title = "One Response", description = all_text[0])
+		await ctx.send(embed=k_embed)
 		return
 
 	# Chunk Answers
@@ -371,7 +407,7 @@ async def ask_group(ctx, *, question=""):
 		summarized = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
-			temperature=0.7,
+			temperature=0.6,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=2,
