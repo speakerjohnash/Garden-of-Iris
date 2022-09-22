@@ -59,10 +59,10 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 	view = View()
 	view.on_timeout = view_timeout
 	view.timeout = 3000.0
-	view.auto_defer = False
+	view.auto_defer = True
 
 	modal = AskModal(title=modal_label)
-	modal.auto_defer = False
+	modal.auto_defer = True
 	modal.timeout = 3000.0
 
 	async def button_callback(interaction):
@@ -79,16 +79,47 @@ def group_share(thought="thought", prompt="prompt"):
 
 	channel = bot.get_channel(989662771329269893)
 	embed = discord.Embed(title = "Seeds of Wisdom", description = thought)
-	view = View()
-	view.timeout = 3600.0
-	view.auto_defer = False
 
 	async def button_callback(interaction):
 		await channel.send(embed=embed)
 
 	button = Button(label="share", style=discord.ButtonStyle.blurple)
 	button.callback = button_callback
-	view.add_item(button)
+
+	return button
+
+def elaborate(ctx, prompt="prompt"):
+
+	e_prompt = prompt + ". Elaborate."
+
+	button = Button(label="elaborate", style=discord.ButtonStyle.blurple)
+
+	async def button_callback(interaction):
+
+		if button.disabled:
+			return
+
+		button.disabled = True
+		await interaction.response.defer()
+
+		response = openai.Completion.create(
+			model="text-davinci-002",
+			prompt=e_prompt,
+			temperature=1,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=2,
+			presence_penalty=2,
+			stop=["END"]
+		)
+
+		response_text = response.choices[0].text.strip()
+		embed = discord.Embed(title = "Elaboration", description = f"**Prompt**\n{prompt}\n\n**Elaboration**\n{response_text}")
+
+		await ctx.send(embed=embed)
+
+
+	button.callback = button_callback
 
 	return button
 
@@ -254,7 +285,9 @@ async def ask(ctx, *, thought):
 	# Send Clarification and Share UI
 	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="feedback")
 	share_button = group_share(thought=text)
+	elaborate_button = elaborate(ctx, prompt=text)
 	view.add_item(share_button)
+	view.add_item(elaborate_button)
 	await ctx.send(view=view)
 
 	# Save Clarification
