@@ -81,6 +81,7 @@ def group_share(thought="thought", prompt="prompt"):
 	embed = discord.Embed(title = "Seeds of Wisdom", description = thought)
 
 	async def button_callback(interaction):
+		await interaction.response.defer()
 		await channel.send(embed=embed)
 
 	button = Button(label="share", style=discord.ButtonStyle.blurple)
@@ -285,7 +286,8 @@ async def ask(ctx, *, thought):
 	# Send Clarification and Share UI
 	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="feedback")
 	share_button = group_share(thought=text)
-	elaborate_button = elaborate(ctx, prompt=text)
+	el_prompt = thought + "\n\n" + text
+	elaborate_button = elaborate(ctx, prompt=el_prompt)
 	view.add_item(share_button)
 	view.add_item(elaborate_button)
 	await ctx.send(view=view)
