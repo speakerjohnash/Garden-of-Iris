@@ -49,6 +49,7 @@ class AskModal(Modal, title="Ask Modal"):
 		embed = discord.Embed(title = "Your Response", description = f"\n{self.answer}")
 		embed.set_author(name = interaction.user)
 		await interaction.response.send_message(embed=embed)
+		print(self.answer)
 		self.view.stop()
 
 def response_view(modal_text="default text", modal_label="Response", button_label="Answer"):	
@@ -58,12 +59,12 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 3000.0
+	view.timeout = 2700.0
 	view.auto_defer = True
 
 	modal = AskModal(title=modal_label)
 	modal.auto_defer = True
-	modal.timeout = 3000.0
+	modal.timeout = 2700.0
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -75,10 +76,10 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	return view, modal
 
-def group_share(thought="thought", prompt="prompt"):
+def group_share(thought="thought", prompt="", prompter="latent space"):
 
-	channel = bot.get_channel(989662771329269893)
-	embed = discord.Embed(title = "Seeds of Wisdom", description = thought)
+	channel = bot.get_channel(1022572367244967979)
+	embed = discord.Embed(title="Seeds of Wisdom", description=f"{thought}\n\n**Gardener**\n{prompter}")
 
 	async def button_callback(interaction):
 		await interaction.response.defer()
@@ -91,7 +92,7 @@ def group_share(thought="thought", prompt="prompt"):
 
 def elaborate(ctx, prompt="prompt"):
 
-	e_prompt = prompt + ". Elaborate."
+	e_prompt = prompt + ". \n\n More thoughts in detail below. \n\n"
 
 	button = Button(label="elaborate", style=discord.ButtonStyle.blurple)
 
@@ -104,9 +105,9 @@ def elaborate(ctx, prompt="prompt"):
 		await interaction.response.defer()
 
 		response = openai.Completion.create(
-			model="text-davinci-002",
+			model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
 			prompt=e_prompt,
-			temperature=1,
+			temperature=0.22,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=2,
@@ -115,7 +116,25 @@ def elaborate(ctx, prompt="prompt"):
 		)
 
 		response_text = response.choices[0].text.strip()
-		embed = discord.Embed(title = "Elaboration", description = f"**Prompt**\n{prompt}\n\n**Elaboration**\n{response_text}")
+
+		if len(response_text) == 0:
+
+			response = openai.Completion.create(
+				model="text-davinci-002",
+				prompt=e_prompt,
+				temperature=1,
+				max_tokens=222,
+				top_p=1,
+				frequency_penalty=2,
+				presence_penalty=2,
+				stop=["END"]
+			)
+
+			response_text = response.choices[0].text.strip()
+
+		response_text = response_text.replace("###", "").strip()
+
+		embed = discord.Embed(title = "Elaboration (beta)", description = f"**Prompt**\n{prompt}\n\n**Elaboration**\n{response_text}")
 
 		await ctx.send(embed=embed)
 
@@ -127,6 +146,8 @@ def elaborate(ctx, prompt="prompt"):
 def redo_view(ctx, prompt, question):
 
 	async def button_callback(interaction):
+
+		await interaction.response.defer()
 
 		response = openai.Completion.create(
 			model="text-davinci-002",
@@ -251,14 +272,14 @@ async def on_ready():
 async def on_close():
 	print("Iris is offline")
 
-@bot.command()
-async def ask(ctx, *, thought):
+@bot.command(aliases=['ask'])
+async def iris(ctx, *, thought):
 	"""
 	/ask query an iris and get a response
 	"""
 
 	global training_data
-	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga"]
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga", "Tej"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
@@ -285,7 +306,7 @@ async def ask(ctx, *, thought):
 
 	# Send Clarification and Share UI
 	view, modal = response_view(modal_text="Write your clarification here", modal_label="Clarification", button_label="feedback")
-	share_button = group_share(thought=text)
+	share_button = group_share(thought=text, prompter=ctx.message.author.name)
 	el_prompt = thought + "\n\n" + text
 	elaborate_button = elaborate(ctx, prompt=el_prompt)
 	view.add_item(share_button)
@@ -330,22 +351,28 @@ async def davinci(ctx, *, thought):
 	view = View()
 	text = response['choices'][0]['text'].strip()
 	embed = discord.Embed(title = "", description=f"**Prompt**\n{thought}\n\n**Response**\n{text}")
-	share_button = group_share(thought=text, prompt=thought_prompt)
+	share_button = group_share(thought=text, prompt=thought_prompt, prompter=ctx.message.author.name)
 	view.add_item(share_button)
 
 	await ctx.send(embed=embed)
 	await ctx.send(view=view)
 
 @bot.command()
-async def claim(ctx, *, thought=""):
+async def claim(ctx, *, thought):
 	"""
 	/claim log a claim for the iris to learn
 	"""
 
-	# TODO
-	# Save claim to datastore
+	global training_data
 
-	await ctx.send(thought)
+	# Send Clarification and Share UI
+	prompt = "Share something about in the general latent space of Cognicism"
+
+	if thought is not None:
+		training_data.loc[len(training_data.index)] = [prompt, thought, ctx.message.author.name] 
+		training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
+
+	await ctx.send("Attestation saved")
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
@@ -405,7 +432,7 @@ async def pullcard(ctx, *, intention=""):
 		)
 
 		text = response['choices'][0]['text'].strip()
-		embed_b = discord.Embed(title = "One Interpretation", description=text)
+		embed_b = discord.Embed(title = "One Interpretation (beta)", description=text)
 		await ctx.send(embed=embed_b)
 
 	# Update Card Pull Counts
@@ -443,7 +470,7 @@ async def ask_group(ctx, *, question=""):
 	# Get people in Garden
 	responses = []
 	views = []
-	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 60 minutes of receipt")
+	t_embed = discord.Embed(title = "Time Limit", description = f"Please reply within 45 minutes of receipt")
 	i_url = "https://media.discordapp.net/attachments/989662771329269893/1019641048407998464/chrome_Drbki2l0Qq.png"
 	c_embed = discord.Embed(title="Confluence Experiment", description = question)
 	c_embed.set_image(url=i_url)
@@ -497,10 +524,10 @@ async def ask_group(ctx, *, question=""):
 		summarized = openai.Completion.create(
 			model="text-davinci-002",
 			prompt=prompt,
-			temperature=0.5,
+			temperature=0.6,
 			max_tokens=222,
 			top_p=1,
-			frequency_penalty=1.8,
+			frequency_penalty=1.5,
 			presence_penalty=1,
 			stop=["END"]
 		)
@@ -508,7 +535,7 @@ async def ask_group(ctx, *, question=""):
 	
 	# Send Results to People
 	a_embed = discord.Embed(title = "Responses", description = f"{joined_answers}")
-	embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
+	embed = discord.Embed(title = "Consensus (beta)", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
 
 	for person in users:
 		try:
