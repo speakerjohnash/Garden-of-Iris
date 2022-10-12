@@ -150,7 +150,7 @@ async def ceres(ctx, *, thought):
 	"""
 
 	global training_data
-	testers = ["John Ash's Username for Discord", "Gregory | RND"]
+	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
@@ -191,6 +191,43 @@ async def ceres(ctx, *, thought):
 		training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, ctx.message.author.name] 
 		training_data.to_csv('ceres_training-data.csv', encoding='utf-8', index=False)
 
+
+@bot.command()
+async def clarify(ctx, *, thought):
+	"""
+	/clarify send thourght to Greogy for clarification
+	"""
+
+	global training_data
+	testers = ["John Ash's Username for Discord"]
+
+	# Only Allow Some Users
+	if ctx.message.author.name not in testers:
+		return
+
+	eve = 1005212665259495544
+	gregory = 644279763065634851
+
+	guild = bot.get_guild(989662771329269890)
+	clarifier = guild.get_member(eve)
+
+	question_embed = discord.Embed(title="Please clarify the below", description = thought)
+	view, modal = response_view(modal_text=thought)
+	sent_embed = discord.Embed(title = "Sent", description = f"Message sent for clarification")
+
+	await clarifier.send(embed=question_embed)
+	await clarifier.send(view=view)
+	await ctx.send(embed=sent_embed)
+
+	# Save Clarification
+	await modal.wait()
+
+	prompt = thought
+
+	if modal.answer.value is not None:
+		training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, clarifier.name] 
+		training_data.to_csv('ceres_training-data.csv', encoding='utf-8', index=False)
+
 @bot.command()
 async def claim(ctx, *, thought):
 	"""
@@ -215,7 +252,7 @@ async def davinci(ctx, *, thought):
 	"""
 
 	global training_data
-	testers = ["John Ash's Username for Discord", "Gregory | RND"]
+	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
