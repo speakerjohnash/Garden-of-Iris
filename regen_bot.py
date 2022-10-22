@@ -51,12 +51,12 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	view = View()
 	view.on_timeout = view_timeout
-	view.timeout = 2700.0
+	view.timeout = None
 	view.auto_defer = True
 
 	modal = AskModal(title=modal_label)
 	modal.auto_defer = True
-	modal.timeout = 2700.0
+	modal.timeout = None
 
 	async def button_callback(interaction):
 		answer = await interaction.response.send_modal(modal)
@@ -83,7 +83,7 @@ def elaborate(ctx, prompt="prompt"):
 		await interaction.response.defer()
 
 		response = openai.Completion.create(
-			model="davinci:ft-personal:ceres-a-2022-07-01-02-30-41",
+			model="davinci:ft-personal:ceres-refined-2022-10-21-02-46-56",
 			prompt=e_prompt,
 			temperature=0.22,
 			max_tokens=222,
@@ -98,7 +98,7 @@ def elaborate(ctx, prompt="prompt"):
 		if len(response_text) == 0:
 
 			response = openai.Completion.create(
-				model="davinci:ft-personal:ceres-a-2022-07-01-02-30-41",
+				model="davinci:ft-personal:ceres-refined-2022-10-21-02-46-56",
 				prompt=e_prompt,
 				temperature=0.8,
 				max_tokens=222,
@@ -150,7 +150,7 @@ async def ceres(ctx, *, thought):
 	"""
 
 	global training_data
-	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh"]
+	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh", "Dan | Regen Network"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
@@ -159,7 +159,7 @@ async def ceres(ctx, *, thought):
 	thought_prompt = thought + "\n\n###\n\n"
 
 	response = openai.Completion.create(
-		model="davinci:ft-personal:ceres-a-2022-07-01-02-30-41",
+		model="davinci:ft-personal:ceres-refined-2022-10-21-02-46-56",
 		prompt=thought_prompt,
 		temperature=0.69,
 		max_tokens=222,
@@ -207,26 +207,39 @@ async def clarify(ctx, *, thought):
 
 	eve = 1005212665259495544
 	gregory = 644279763065634851
+	dan = 474842514407292930
+	sja = 572900074779049984
+
+	clarifiers = [dan, gregory]
 
 	guild = bot.get_guild(989662771329269890)
-	clarifier = guild.get_member(eve)
 
-	question_embed = discord.Embed(title="Please clarify the below", description = thought)
-	view, modal = response_view(modal_text=thought)
-	sent_embed = discord.Embed(title = "Sent", description = f"Message sent for clarification")
+	clarifier_accounts, modals = [], {}
 
-	await clarifier.send(embed=question_embed)
-	await clarifier.send(view=view)
+	for clarifier in clarifiers:
+		member = guild.get_member(clarifier)
+		clarifier_accounts.append(member)
+		question_embed = discord.Embed(title="Please clarify the below", description = thought)
+		view, modal = response_view(modal_text=thought)
+		modals[member.name] = modal
+		sent_embed = discord.Embed(title = "Sent", description = f"Message sent for clarification")
+		await member.send(embed=question_embed)
+		await member.send(view=view)
+
 	await ctx.send(embed=sent_embed)
 
 	# Save Clarification
-	await modal.wait()
+	for clarifier in modals:
 
-	prompt = thought
+		modal = modals[clarifier]
 
-	if modal.answer.value is not None:
-		training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, clarifier.name] 
-		training_data.to_csv('ceres_training-data.csv', encoding='utf-8', index=False)
+		await modal.wait()
+
+		prompt = thought
+
+		if modal.answer.value is not None:
+			training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, clarifier] 
+			training_data.to_csv('ceres_training-data.csv', encoding='utf-8', index=False)
 
 @bot.command()
 async def claim(ctx, *, thought):
@@ -252,7 +265,7 @@ async def davinci(ctx, *, thought):
 	"""
 
 	global training_data
-	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh"]
+	testers = ["John Ash's Username for Discord", "Gregory | RND", "JohnAsh", "Dan | Regen Network"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
