@@ -78,20 +78,31 @@ text = '. '.join(formatted_sentences)
 text_chunks = [text[i:i+chunk_length] for i in range(0, len(text), chunk_length)]
 
 # Send each text chunk to OpenAI for processing with progress bar
+
+explanation = "The fourThought dialectic is about the tensing of the language and the certainty behind it. It has four thought types: predictions, statements, reflections and questions. Predictions are claims about the future, reflections are claims about the past, statements are claims about the present. Questions are not declarations of truth. They are the opposite, they query the world based on uncertainty.\n\nI want you to read this text and break it into predictions, reflections, statements and questions.\n\nPrint each thought like this THOUGHT_TEXT, THOUGHT_TYPE. \n\nThe world will continue on well past 2042, PREDICTION\nIn the early 1900's the Spanish flu became a pandemic, REFLECTION\nThe world is a vampire, STATEMENT\nThe future is bright and prosperous, PREDICTION\nThis will require new tools PREDICTION\nWhere did I leave my keys? QUESTION?\n\nThe text you are receiving is scraped from the internet. It may be noisy and contain non-standard capitalization. Strip white space and recase the claims to be readable by humans. Follow the format above in printing with one line between each discrete thought.\n\nYou will be reading text from the internet and parsing it into four thought types. Reflections are about the past. Statements are about now. Predictions are about the future. Predictions can't be verified until time passes. Memories can be verified by referencing a record. If a thought is a reflection we should be able to check the record to see if it matches. Statements are about now and can be verified through a democratic process of asking the community. Predictions can not be verified immediately. Time must pass for predictions to be verified."
 claims = []
+conversation = [{"role": "system", "content": "You are a kind and prophetic assistant that takes in noisy text scraped from the internet parses it into the FourThought Dialectic: Predictions, Statements, Reflections and Questions"}]
+conversation.append({"role": "user", "content": explanation})
 
 for i, text_chunk in tqdm(enumerate(text_chunks), total=len(text_chunks), unit='chunk'):
+
     # Prepend the text with the prompt string
-    text_prompt = "The text you are receiving is scraped from the internet using beautiful soup and PyPDF2. That means it may be quite noisy and contain non-standard capitalization. We are working on a protocol for making sense of discrete claims of truth. These are simple sentences that are full thoughts and make some discrete claim of truth. Can you parse the following text into a list of well formatted claims in simple english? Strip white space and recase the claims to be readable by humans. Print them out in a list with no numbers with a space between each line" + text_chunk
+    text_prompt = "Here is the current chunk of text \n" + text_chunk + "\n"
+    conversation.append({"role": "user", "content": text_prompt})
+    truncated_convo = []
+    truncated_convo.append({"role": "user", "content": explanation})
+    truncated_convo.append({"role": "assistant", "content": "Okay I will print one thought per line with the thought type at the end. Thoughts about the future will be labeled as PREDICTION and thoughts about the past will be labeled as REFLECTION. All other thoughts will be labeled STATEMENT or QUESTION"})
+    truncated_convo += conversation[-4:]
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", 
-        messages=[{"role": "user", "content": text_prompt}]
+        messages=truncated_convo
     )
 
     # Extract the claims from the response and add them to the claims array
     for choice in response.choices:
         assistant_message = choice.message.content
+        conversation.append({"role": "assistant", "content": assistant_message})
         claims += [c.strip() for c in assistant_message.split("\n") if c.strip()]
 
 # Pretty-print the array of claims
