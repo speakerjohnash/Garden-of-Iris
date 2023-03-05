@@ -16,7 +16,7 @@ import csv
 #  presence_penalty=2
 #)
 
-a_file = open("The Purple Pill Manifesto")
+a_file = open("ceresonepage")
 file_contents = a_file.read()
 contents_split = file_contents.splitlines()
 
@@ -37,7 +37,7 @@ for i in range(len(sentences)):
     "completion": sentences[i+1]
     })
 
-with open('purple_pill.csv', 'w',) as csvfile:
+with open('ceresonepage.csv', 'w',) as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(['prompt', 'completion'])
     for pair in pairs:

@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 import time
 import datetime
@@ -33,6 +34,15 @@ descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 tarot_lookup = dict(zip(names, descriptions))
 training_data = ""
+
+models = {
+	"living": "davinci:ft-personal:living-iris-2022-09-04-04-45-28",
+	"osiris": "davinci:ft-personal:osiris-the-unstructured-2022-09-28-02-31-57",
+	"2020": "davinci:ft-personal:2020-iris-2022-10-06-04-00-37",
+	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
+	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
+	"davinci": "text-davinci-003"
+}
 
 card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
 people = []
@@ -92,6 +102,8 @@ def group_share(thought="thought", prompt="", prompter="latent space"):
 
 def elaborate(ctx, prompt="prompt"):
 
+	global models
+
 	e_prompt = prompt + ". \n\n More thoughts in detail below. \n\n"
 
 	button = Button(label="elaborate", style=discord.ButtonStyle.blurple)
@@ -105,13 +117,13 @@ def elaborate(ctx, prompt="prompt"):
 		await interaction.response.defer()
 
 		response = openai.Completion.create(
-			model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
+			model=models["semantic"],
 			prompt=e_prompt,
-			temperature=0.22,
+			temperature=0.11,
 			max_tokens=222,
 			top_p=1,
-			frequency_penalty=2,
-			presence_penalty=2,
+			frequency_penalty=1.2,
+			presence_penalty=1.2,
 			stop=["END"]
 		)
 
@@ -278,8 +290,8 @@ async def iris(ctx, *, thought):
 	/ask query an iris and get a response
 	"""
 
-	global training_data
-	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga", "Tej"]
+	global training_data, models
+	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga", "Tej", "Gregory | RND", "futurememe"]
 	
 	# Only Allow Some Users
 	if ctx.message.author.name not in testers:
@@ -288,7 +300,7 @@ async def iris(ctx, *, thought):
 	thought_prompt = thought + "\n\n###\n\n"
 
 	response = openai.Completion.create(
-		model="davinci:ft-personal:living-iris-2022-09-04-04-45-28",
+		model=models["semantic"],
 		prompt=thought_prompt,
 		temperature=0.69,
 		max_tokens=222,
@@ -384,10 +396,10 @@ async def pullcard(ctx, *, intention=""):
 		card_pull_counts["counts"][ctx.message.author.name] = 0
 
 	# Limit Card Pulls
-	if card_pull_counts["counts"][ctx.message.author.name] >= 10:
-		embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
-		await ctx.send(embed=embed)
-		return
+	# if card_pull_counts["counts"][ctx.message.author.name] >= 10:
+	#	embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
+	#	await ctx.send(embed=embed)
+	#	return
 
 	# With Intention
 	with_intention = len(intention) > 0
