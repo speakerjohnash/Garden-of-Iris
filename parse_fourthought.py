@@ -16,7 +16,7 @@ pattern = r"^(.*),\s*(PREDICTION|REFLECTION|STATEMENT|QUESTION)$"
 models = {
     "semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
     "davinci": "text-davinci-003",
-    "thought_type": ""
+    "thought_type": "davinci:ft-personal:thought-type-2023-03-05-06-24-25"
 }
 
 # Usage
@@ -117,7 +117,12 @@ for i, text_chunk in tqdm(enumerate(text_chunks), total=len(text_chunks), unit='
 
 # Pretty-print the array of claims
 for claim in claims:
+
     match = re.match(pattern, claim)
+
     if match:
-        print(match.group(1))
+        thought = match.group(1)
+        print(thought)  
+        print("\n")
+        print(match.group(2).upper())
         print("\n")
