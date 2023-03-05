@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import openai
 import PyPDF2
@@ -8,6 +9,15 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from pprint import pprint
+
+# Define a regular expression pattern to match the thought types
+pattern = r"^(.*),\s*(PREDICTION|REFLECTION|STATEMENT|QUESTION)$"
+
+models = {
+    "semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
+    "davinci": "text-davinci-003",
+    "thought_type": ""
+}
 
 # Usage
 # python3 parse_claims.py http://example.com
@@ -107,5 +117,7 @@ for i, text_chunk in tqdm(enumerate(text_chunks), total=len(text_chunks), unit='
 
 # Pretty-print the array of claims
 for claim in claims:
-    print(claim)
-    print("\n")
+    match = re.match(pattern, claim)
+    if match:
+        print(match.group(1))
+        print("\n")
