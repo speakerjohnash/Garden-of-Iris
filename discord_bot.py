@@ -320,7 +320,27 @@ async def on_message(message):
 				if len(messages) == 5:
 					break
 
-		print(messages)
+		conversation = [{"role": "system", "content": "You are are an oracle and integrated wisdom bot. You do tarot interpretations based on intentions"}]
+		text_prompt = message.content
+
+		for m in messages:
+			if m[0] == bot.user:
+				conversation.append({"role": "assistant", "content": m[1]})
+			else:
+				conversation.append({"role": "user", "content": m[0]})
+
+		conversation.append({"role": "user", "content": text_prompt})
+
+		response = openai.ChatCompletion.create(
+			model="gpt-3.5-turbo", 
+			messages=conversation
+		)
+
+		response = response.choices[0].message.content.strip()
+
+		await message.channel.send(response)
+
+		#print(messages) 
 
 	await bot.process_commands(message)
 
