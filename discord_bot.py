@@ -102,6 +102,25 @@ def group_share(thought="thought", prompt="", prompter="latent space"):
 
 	return button
 
+async def interpretation(ctx, prompt):
+    response = openai.Completion.create(
+        model=models["semantic"],
+        prompt=prompt,
+        temperature=0.8,
+        max_tokens=222,
+        top_p=1,
+        frequency_penalty=2,
+        presence_penalty=2,
+        stop=["END"]
+    )
+    text = response['choices'][0]['text'].strip()
+    embed = discord.Embed(title="Interpretation", description=text)
+    view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
+    view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
+    view.add_item(elaborate(ctx, prompt=text))
+    view.add_item(modal)
+    await ctx.send(embed=embed, view=view)
+
 def elaborate(ctx, prompt="prompt"):
 
 	global models
@@ -285,6 +304,25 @@ async def on_ready():
 @bot.event
 async def on_close():
 	print("Iris is offline")
+
+@bot.event
+async def on_message(message):
+
+	if not message.content.startswith("/") and message.author != bot.user:
+
+		messages = []
+		async for hist in message.channel.history(limit=25):
+			if not hist.content.startswith('/'):
+				if hist.embeds:
+					messages.append((hist.author, hist.embeds[0].description))
+				else:
+					messages.append((hist.author.name, hist.content))
+				if len(messages) == 5:
+					break
+
+		print(messages)
+
+	await bot.process_commands(message)
 
 @bot.command(aliases=['ask'])
 async def iris(ctx, *, thought):
