@@ -306,12 +306,12 @@ async def prophecy_pool(message):
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
 				messages.append((hist.author.name, hist.content))
-			if len(messages) == 3:
+			if len(messages) == 5:
 				break
 
 	messages.reverse()
 	conversation = [{"role": "system", "content": "You are are an oracle and prediction integration. You monitor a group chat of predictions and keep a running summary of what the groups thinks about the future"}]
-	text_prompt = "You have been auto-summarizing a running list of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected. If there are no predictions say there are none. \n\n" + message.content
+	text_prompt = "You have been auto-summarizing a running thread of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis. If there are no predictions say there are none. \n\n" + message.content
 
 	for m in messages:
 		if m[0] == bot.user:
