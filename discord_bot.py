@@ -27,12 +27,14 @@ airtable_key = os.environ["AIRTABLE_API_KEY"]
 intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix='/', intents=intents)
-
-df = pd.read_csv('tarot_text.csv')
-names = df['card_name'].tolist()
-descriptions = df['text'].tolist()
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
-tarot_lookup = dict(zip(names, descriptions))
+
+# Get Card Names and Text
+records = []
+for page in airtable.iterate():
+    records += page
+
+tarot_lookup = {record['fields']['Card Name']: record['fields'].get('Short Description', '') for record in records}
 training_data = ""
 
 models = {
