@@ -299,19 +299,25 @@ async def prophecy_pool(message):
 
 	channel = bot.get_channel(1083409321754378290)
 	messages = []
+	summary_count = 0
 
 	async for hist in channel.history(limit=50):
 		if not hist.content.startswith('/'):
 			if hist.embeds:
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
-				messages.append((hist.author.name, hist.content))
-			if len(messages) == 5:
+				if hist.author == bot.user: 
+					summary_count += 1
+					if summary_count < 2:
+						messages.append((hist.author.name, hist.content))
+				else:
+					messages.append((hist.author.name, hist.content))
+			if len(messages) == 10:
 				break
 
 	messages.reverse()
 	conversation = [{"role": "system", "content": "You are are an oracle and prediction integration. You monitor a group chat of predictions and keep a running summary of what the groups thinks about the future"}]
-	text_prompt = "You have been auto-summarizing a running thread of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis. If there are no predictions say there are none. \n\n" + message.content
+	text_prompt = "You have been auto-summarizing a running thread of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis. Start with the last message you received and explain how the old predictions are connected to the new one  \n\n" + message.content
 
 	for m in messages:
 		if m[0] == bot.user:
