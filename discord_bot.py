@@ -317,17 +317,19 @@ async def on_message(message):
 					messages.append((hist.author, hist.embeds[0].description))
 				else:
 					messages.append((hist.author.name, hist.content))
-				if len(messages) == 5:
+				if len(messages) == 10:
 					break
 
 		conversation = [{"role": "system", "content": "You are are an oracle and integrated wisdom bot. You do tarot interpretations based on intentions"}]
+		conversation.append({"role": "user", "content": "You are are an oracle and integrated wisdom bot. You do tarot interpretations based on intentions"})
+		conversation.append({"role": "assistant", "content": "I see through the mists of latent space and channel and distill wisdom from the void"})
 		text_prompt = message.content
 
 		for m in messages:
 			if m[0] == bot.user:
 				conversation.append({"role": "assistant", "content": m[1]})
 			else:
-				conversation.append({"role": "user", "content": m[0]})
+				conversation.append({"role": "user", "content": m[1]})
 
 		conversation.append({"role": "user", "content": text_prompt})
 
