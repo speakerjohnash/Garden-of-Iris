@@ -306,10 +306,29 @@ async def prophecy_pool(message):
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
 				messages.append((hist.author.name, hist.content))
-			if len(messages) == 20:
+			if len(messages) == 3:
 				break
 
-	print(messages)
+	messages.reverse()
+	conversation = [{"role": "system", "content": "You are are an oracle and prediction integration. You monitor a group chat of predictions and keep a running summary of what the groups thinks about the future"}]
+	text_prompt = "You have been auto-summarizing a running list of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected. If there are no predictions say there are none. \n\n" + message.content
+
+	for m in messages:
+		if m[0] == bot.user:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	conversation.append({"role": "user", "content": text_prompt})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-3.5-turbo", 
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	await message.channel.send(response)
 
 @bot.event
 async def on_ready():
@@ -325,7 +344,7 @@ async def on_close():
 async def on_message(message):
 
 	# Manage Prophecy Pool
-	if message.channel.id == 1083409321754378290:
+	if message.channel.id == 1083409321754378290 and message.author != bot.user:
 		await prophecy_pool(message)
 		await bot.process_commands(message)
 		return
