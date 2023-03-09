@@ -295,6 +295,22 @@ def pool_prompt(question, joined_answers):
 
 	return prompt
 
+async def prophecy_pool(message):
+
+	channel = bot.get_channel(1083409321754378290)
+	messages = []
+
+	async for hist in channel.history(limit=50):
+		if not hist.content.startswith('/'):
+			if hist.embeds:
+				messages.append((hist.author, hist.embeds[0].description))
+			else:
+				messages.append((hist.author.name, hist.content))
+			if len(messages) == 20:
+				break
+
+	print(messages)
+
 @bot.event
 async def on_ready():
 	load_card_counts()
@@ -308,16 +324,23 @@ async def on_close():
 @bot.event
 async def on_message(message):
 
+	# Manage Prophecy Pool
+	if message.channel.id == 1083409321754378290:
+		await prophecy_pool(message)
+		await bot.process_commands(message)
+		return
+
+	# Handle DM Chat
 	if not message.content.startswith("/") and message.author != bot.user:
 
 		messages = []
-		async for hist in message.channel.history(limit=25):
+		async for hist in message.channel.history(limit=50):
 			if not hist.content.startswith('/'):
 				if hist.embeds:
 					messages.append((hist.author, hist.embeds[0].description))
 				else:
 					messages.append((hist.author.name, hist.content))
-				if len(messages) == 6:
+				if len(messages) == 20:
 					break
 
 		messages.reverse()
