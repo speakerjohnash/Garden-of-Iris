@@ -394,7 +394,26 @@ async def on_message(message):
 
 		response = response.choices[0].message.content.strip()
 
-		await message.channel.send(response)
+		# Chat Response
+		membed = discord.Embed(title="ChatGPT Says", description=response)
+		await message.channel.send(embed=membed)
+		
+		# Iris Response
+		iris_response = openai.Completion.create(
+			model=models["semantic"],
+			prompt=message.content,
+			temperature=0.3,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=1,
+			presence_penalty=1,
+			stop=["END"]
+		)
+
+		text = iris_response['choices'][0]['text']
+		text = text.replace("###", "").strip()
+		embed = discord.Embed(title="Iris Says", description=text)
+		await message.channel.send(embed=embed)
 
 		#print(messages) 
 
