@@ -400,6 +400,7 @@ async def on_message(message):
 			else:
 				conversation.append({"role": "user", "content": m[1]})
 
+		conversation.append({"role": "system", "content": iris_answer})
 		conversation.append({"role": "user", "content": text_prompt})
 
 		response = openai.ChatCompletion.create(
