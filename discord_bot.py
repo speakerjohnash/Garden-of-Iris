@@ -14,6 +14,10 @@ import json
 
 import pandas as pd
 
+from selenium import webdriver
+from bs4 import BeautifulSoup
+from tqdm import tqdm
+
 from discord.utils import get
 from pprint import pprint
 from pyairtable import Table
@@ -392,6 +396,87 @@ async def on_message(message):
 		#print(messages) 
 
 	await bot.process_commands(message)
+
+def chunk_text(text, chunk_length=1000):
+
+	# Clean the Text
+	text = text.replace('\n', ' ')
+
+	# Split the text into individual sentences
+	sentences = text.split('. ')
+
+	# Capitalize the first letter and make the remaining letters lowercase in each sentence
+	formatted_sentences = []
+	for sentence in sentences:
+		formatted_sentence = sentence.capitalize()
+		formatted_sentence = formatted_sentence[0] + formatted_sentence[1:].lower()
+		formatted_sentences.append(formatted_sentence)
+
+	# Join the sentences back into a single string
+	text = '. '.join(formatted_sentences)
+
+	# Split the text into chunks of maximum length
+	text_chunks = [text[i:i+chunk_length] for i in range(0, len(text), chunk_length)]
+
+	return text_chunks
+
+@bot.command(aliases=['in', 'inject'])
+async def infuse(ctx, *, link):
+	"""
+	Bring in a source into the stream via scraping and parsing
+	"""
+
+	infusion = []
+
+	if link.startswith('http'):
+	
+		# set up the browser
+		options = webdriver.ChromeOptions()
+		options.add_argument('headless')
+		options.add_argument('disable-gpu')
+		driver = webdriver.Chrome(options=options)
+
+		# navigate to the page
+		driver.get(link)
+
+		# get the page source with JavaScript
+		html_content = driver.page_source
+
+		# close the browser
+		soup = BeautifulSoup(html_content, 'html.parser')
+		text = soup.get_text()
+		driver.quit()
+
+		# chunk text
+		text_chunks = chunk_text(text)
+
+		# Send each text chunk to OpenAI for processing with progress bar
+		conversation = [{"role": "system", "content": "You are a parser and summarizer that takes in noisy text scraped from the internet or pdfs and summarizes it into a paragraph"}]
+		conversation.append({"role": "user", "content": "The text you are receiving is scraped from the internet using beautiful soup and PyPDF2. That means it may be quite noisy and contain non-standard capitalization. Please summarize the content of this text into a cleanly written paragraph"})
+
+		for i, text_chunk in tqdm(enumerate(text_chunks), total=len(text_chunks), unit='chunk'):
+
+			# Prepend the text with the prompt string
+			text_prompt = "Here is the current chunk of text \n" + text_chunk + "\n"
+			text_prompt += "Print a clear short paragraph describing the full content of the text. This will be injected into a stream for further analysis. Only describe the content. IGNORE links"
+			conversation.append({"role": "user", "content": text_prompt})
+			truncated_convo = [{"role": "system", "content": "You are a parser and summarizer that takes text and summarizes it for injection into a chat stream for further analysis. You write a clear short clean analytical paragraph"}]
+			truncated_convo.append({"role": "assistant", "content": "There is a parser and summarizer that is designed to take in noisy text scraped from the internet or PDFs and summarize it into a clean paragraph. The parser includes a prompt for the user to summarize the content of a specific web link and inject it into a chat stream for further analysis"})
+			truncated_convo += conversation[-3:]
+
+			response = openai.ChatCompletion.create(
+				model="gpt-3.5-turbo",
+				messages=truncated_convo
+			)
+
+			# Extract the claims from the response and add them to the claims array
+			for choice in response.choices:
+				assistant_message = choice.message.content
+				conversation.append({"role": "assistant", "content": assistant_message})
+				infusion += [(c.strip(), text_chunk) for c in assistant_message.split("\n") if c.strip()]
+
+		for i in infusion:
+			await ctx.send(i[0])
 
 @bot.command(aliases=['ask'])
 async def iris(ctx, *, thought):
