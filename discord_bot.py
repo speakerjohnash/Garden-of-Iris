@@ -373,7 +373,7 @@ async def on_message(message):
 					break
 
 		messages.reverse()
-		conversation = [{"role": "system", "content": "You are are an oracle and integrated wisdom bot. You do tarot interpretations based on intentions"}]
+		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
 		text_prompt = message.content
 
 		for m in messages:
