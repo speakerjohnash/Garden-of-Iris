@@ -374,6 +374,8 @@ async def on_message(message):
 
 		messages.reverse()
 		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
+		conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
+		conversation.append({"role": "assistant", "content": "That's crazy dude but I'll try. Bangarang"})
 		text_prompt = message.content
 
 		for m in messages:
@@ -385,7 +387,8 @@ async def on_message(message):
 		conversation.append({"role": "user", "content": text_prompt})
 
 		response = openai.ChatCompletion.create(
-			model="gpt-3.5-turbo", 
+			model="gpt-3.5-turbo",
+			temperature=1,
 			messages=conversation
 		)
 
@@ -466,6 +469,7 @@ async def infuse(ctx, *, link):
 
 			response = openai.ChatCompletion.create(
 				model="gpt-3.5-turbo",
+				temperature=1,
 				messages=truncated_convo
 			)
 
@@ -499,7 +503,7 @@ async def iris(ctx, *, thought):
 		temperature=0.69,
 		max_tokens=222,
 		top_p=1,
-		frequency_penalty=1.8,
+		frequency_penalty=1.5,
 		presence_penalty=1.5,
 		stop=["END"]
 	)
