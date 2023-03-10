@@ -34,11 +34,18 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 airtable = Table(airtable_key, 'app2X00KuiIxPwGsf', 'cards')
 
 # Get Card Names and Text
-records = []
-for page in airtable.iterate():
-    records += page
+try:
+	records = []
+	for page in airtable.iterate():
+		records += page
 
-tarot_lookup = {record['fields']['Card Name']: record['fields'].get('Short Description', '') for record in records}
+	tarot_lookup = {record['fields']['Card Name']: record['fields'].get('Short Description', '') for record in records}
+except:
+	df = pd.read_csv('tarot_text.csv')
+	names = df['card_name'].tolist()
+	descriptions = df['text'].tolist()
+	tarot_lookup = dict(zip(names, descriptions))
+
 training_data = ""
 
 models = {
@@ -47,7 +54,8 @@ models = {
 	"2020": "davinci:ft-personal:2020-iris-2022-10-06-04-00-37",
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
-	"davinci": "text-davinci-003"
+	"davinci": "text-davinci-003",
+	"chat-iris": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
 }
 
 card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
@@ -364,34 +372,42 @@ async def on_message(message):
 
 		# Get Iris One Shot Answer First
 
-		distillation = openai.Completion.create(
-			model=models["semantic"],
-			prompt=message.content,
-			temperature=0.69,
-			max_tokens=222,
-			top_p=1,
-			frequency_penalty=1.5,
-			presence_penalty=1.5,
-			stop=["END"]
-		)
+		try:
+			distillation = openai.Completion.create(
+				model=models["chat-iris"],
+				prompt=message.content,
+				temperature=0.69,
+				max_tokens=222,
+				top_p=1,
+				frequency_penalty=1.5,
+				presence_penalty=1.5,
+				stop=["END"]
+			)
 
-		iris_answer = distillation['choices'][0]['text']
-		iris_answer = iris_answer.replace("###", "").strip()
+			iris_answer = distillation['choices'][0]['text']
+			iris_answer = iris_answer.replace("###", "").strip()
+		except Exception as e:
+			print(f"Error: {e}")
+			iris_answer = ""
 
+		# Load Chat Context
 		messages = []
+
 		async for hist in message.channel.history(limit=50):
 			if not hist.content.startswith('/'):
 				if hist.embeds:
 					messages.append((hist.author, hist.embeds[0].description))
 				else:
 					messages.append((hist.author.name, hist.content))
-				if len(messages) == 20:
+				if len(messages) == 18:
 					break
 
 		messages.reverse()
+
+		# Construct Chat Thread for API
 		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
 		conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way. I asked Iris and she said: " + iris_answer})
-		conversation.append({"role": "assistant", "content": "I will answer using Iris as a guide as well as the rest of the conversation. Iris said " + iris_answer + " and I will take that into account in my response as best I can"})
+		conversation.append({"role": "assistant", "content": "I am speaking as Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said " + iris_answer + " and I will take that into account in my response as best I can"})
 		text_prompt = message.content
 
 		for m in messages:
@@ -410,7 +426,13 @@ async def on_message(message):
 		)
 
 		response = response.choices[0].message.content.strip()
-		await message.channel.send(response)
+
+		# Split response into chunks if longer than 2000 characters
+		if len(response) > 2000:
+			for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
+				await message.channel.send(chunk)
+		else:
+			await message.channel.send(response)
 
 	await bot.process_commands(message)
 
@@ -494,7 +516,7 @@ async def infuse(ctx, *, link):
 				infusion += [(c.strip(), text_chunk) for c in assistant_message.split("\n") if c.strip()]
 
 		for i in infusion:
-			await ctx.send(i[0])
+			await ctx.send(i[0] + "\n")
 
 @bot.command(aliases=['ask'])
 async def iris(ctx, *, thought):
