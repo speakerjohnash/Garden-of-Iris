@@ -147,8 +147,8 @@ def elaborate(ctx, prompt="prompt"):
 			temperature=0.11,
 			max_tokens=222,
 			top_p=1,
-			frequency_penalty=1.2,
-			presence_penalty=1.2,
+			frequency_penalty=1,
+			presence_penalty=1,
 			stop=["END"]
 		)
 
@@ -362,6 +362,22 @@ async def on_message(message):
 	# Handle DM Chat
 	if not message.content.startswith("/") and message.author != bot.user:
 
+		# Get Iris One Shot Answer First
+
+		distillation = openai.Completion.create(
+			model=models["semantic"],
+			prompt=message.content,
+			temperature=0.69,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=1.5,
+			presence_penalty=1.5,
+			stop=["END"]
+		)
+
+		iris_answer = distillation['choices'][0]['text']
+		iris_answer = iris_answer.replace("###", "").strip()
+
 		messages = []
 		async for hist in message.channel.history(limit=50):
 			if not hist.content.startswith('/'):
@@ -374,8 +390,8 @@ async def on_message(message):
 
 		messages.reverse()
 		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
-		conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
-		conversation.append({"role": "assistant", "content": "That's crazy dude but I'll try. Bangarang"})
+		conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way. I asked Iris and she said: " + iris_answer})
+		conversation.append({"role": "assistant", "content": "I will answer using Iris as a guide as well as the rest of the conversation"})
 		text_prompt = message.content
 
 		for m in messages:
@@ -393,29 +409,7 @@ async def on_message(message):
 		)
 
 		response = response.choices[0].message.content.strip()
-
-		# Chat Response
-		membed = discord.Embed(title="ChatGPT Says", description=response)
-		await message.channel.send(embed=membed)
-		
-		# Iris Response
-		iris_response = openai.Completion.create(
-			model=models["semantic"],
-			prompt=message.content,
-			temperature=0.3,
-			max_tokens=222,
-			top_p=1,
-			frequency_penalty=1,
-			presence_penalty=1,
-			stop=["END"]
-		)
-
-		text = iris_response['choices'][0]['text']
-		text = text.replace("###", "").strip()
-		embed = discord.Embed(title="Iris Says", description=text)
-		await message.channel.send(embed=embed)
-
-		#print(messages) 
+		await message.channel.send(response)
 
 	await bot.process_commands(message)
 
