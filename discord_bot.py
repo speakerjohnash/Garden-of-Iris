@@ -389,9 +389,9 @@ async def on_message(message):
 					break
 
 		messages.reverse()
-		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
+		conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
 		conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way. I asked Iris and she said: " + iris_answer})
-		conversation.append({"role": "assistant", "content": "I will answer using Iris as a guide as well as the rest of the conversation"})
+		conversation.append({"role": "assistant", "content": "I will answer using Iris as a guide as well as the rest of the conversation. Iris said " + iris_answer + " and I will take that into account in my response as best I can"})
 		text_prompt = message.content
 
 		for m in messages:
