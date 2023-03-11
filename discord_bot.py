@@ -439,8 +439,7 @@ async def on_message(message):
 		return
 
 	# Handle DM Chat
-	if not message.content.startswith("/") and message.author != bot.user:
-
+	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
 		await frankeniris(message)
 
 	await bot.process_commands(message)
