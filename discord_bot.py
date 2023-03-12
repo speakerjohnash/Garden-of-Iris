@@ -444,6 +444,18 @@ async def frankeniris(message, answer=""):
 	conversation.append({"role": "system", "content": iris_answer})
 	conversation.append({"role": "user", "content": text_prompt})
 
+	# Calculate Total Length of Messages
+	total_length = sum(len(msg["content"]) for msg in conversation)
+
+	print(total_length)
+
+	# Check Total Length
+	if total_length > 10000:
+		# Iterate over messages in conversation in reverse order and remove them until total length is below maximum
+		while total_length > 10000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
+			removed_msg = conversation.pop(1)  # remove the second message (first message after Iris's answer)
+		total_length -= len(removed_msg["content"])
+
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo",
 		temperature=1,
