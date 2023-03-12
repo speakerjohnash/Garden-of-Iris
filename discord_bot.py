@@ -56,7 +56,8 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
+	"chat-iris": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
+	"chat-iris-a": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
 	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
 }
 
@@ -115,25 +116,6 @@ def group_share(thought="thought", prompt="", prompter="latent space"):
 	button.callback = button_callback
 
 	return button
-
-async def interpretation(ctx, prompt):
-    response = openai.Completion.create(
-        model=models["semantic"],
-        prompt=prompt,
-        temperature=0.8,
-        max_tokens=222,
-        top_p=1,
-        frequency_penalty=2,
-        presence_penalty=2,
-        stop=["END"]
-    )
-    text = response['choices'][0]['text'].strip()
-    embed = discord.Embed(title="Interpretation", description=text)
-    view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
-    view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
-    view.add_item(elaborate(ctx, prompt=text))
-    view.add_item(modal)
-    await ctx.send(embed=embed, view=view)
 
 def elaborate(ctx, prompt="prompt"):
 
@@ -309,6 +291,49 @@ def pool_prompt(question, joined_answers):
 
 	return prompt
 
+def chunk_text(text, chunk_length=1000):
+
+	# Clean the Text
+	text = text.replace('\n', ' ')
+
+	# Split the text into individual sentences
+	sentences = text.split('. ')
+
+	# Capitalize the first letter and make the remaining letters lowercase in each sentence
+	formatted_sentences = []
+	for sentence in sentences:
+		formatted_sentence = sentence.capitalize()
+		formatted_sentence = formatted_sentence[0] + formatted_sentence[1:].lower()
+		formatted_sentences.append(formatted_sentence)
+
+	# Join the sentences back into a single string
+	text = '. '.join(formatted_sentences)
+
+	# Split the text into chunks of maximum length
+	text_chunks = [text[i:i+chunk_length] for i in range(0, len(text), chunk_length)]
+
+	return text_chunks
+
+async def interpretation(ctx, prompt):
+
+    response = openai.Completion.create(
+        model=models["semantic"],
+        prompt=prompt,
+        temperature=0.8,
+        max_tokens=222,
+        top_p=1,
+        frequency_penalty=2,
+        presence_penalty=2,
+        stop=["END"]
+    )
+    text = response['choices'][0]['text'].strip()
+    embed = discord.Embed(title="Interpretation", description=text)
+    view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
+    view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
+    view.add_item(elaborate(ctx, prompt=text))
+    view.add_item(modal)
+    await ctx.send(embed=embed, view=view)
+
 async def prophecy_pool(message):
 
 	channel = bot.get_channel(1083409321754378290)
@@ -326,7 +351,7 @@ async def prophecy_pool(message):
 						messages.append((hist.author.name, hist.content))
 				else:
 					messages.append((hist.author.name, hist.content))
-			if len(messages) == 10:
+			if len(messages) == 14:
 				break
 
 	messages.reverse()
@@ -360,7 +385,7 @@ async def on_ready():
 async def on_close():
 	print("Iris is offline")
 
-async def frankeniris(message):
+async def frankeniris(message, answer=""):
 
 	"""
 	Queries Frankeniris
@@ -371,8 +396,8 @@ async def frankeniris(message):
 		distillation = openai.Completion.create(
 			model=models["chat-iris"],
 			prompt=message.content,
-			temperature=0.69,
-			max_tokens=333,
+			temperature=0.55,
+			max_tokens=222,
 			top_p=1,
 			frequency_penalty=1.5,
 			presence_penalty=1.5,
@@ -384,6 +409,11 @@ async def frankeniris(message):
 	except Exception as e:
 		print(f"Error: {e}")
 		iris_answer = ""
+
+	if len(answer) > 0:
+		iris_answer = answer + " \n\n" + iris_answer  
+
+	print(iris_answer)
 
 	# Load Chat Context
 	messages = []
@@ -444,44 +474,33 @@ async def on_message(message):
 
 	await bot.process_commands(message)
 
-def chunk_text(text, chunk_length=1000):
-
-	# Clean the Text
-	text = text.replace('\n', ' ')
-
-	# Split the text into individual sentences
-	sentences = text.split('. ')
-
-	# Capitalize the first letter and make the remaining letters lowercase in each sentence
-	formatted_sentences = []
-	for sentence in sentences:
-		formatted_sentence = sentence.capitalize()
-		formatted_sentence = formatted_sentence[0] + formatted_sentence[1:].lower()
-		formatted_sentences.append(formatted_sentence)
-
-	# Join the sentences back into a single string
-	text = '. '.join(formatted_sentences)
-
-	# Split the text into chunks of maximum length
-	text_chunks = [text[i:i+chunk_length] for i in range(0, len(text), chunk_length)]
-
-	return text_chunks
-
 @bot.command()
 async def faq(ctx, *, topic=""):
 
 	df = pd.read_csv('chat-iris.csv')
 	prompts = df['prompt'].tolist()
-	question_pattern = r'^(what|why|when|where|who|how)\s.*\?$'
-	questions = list(filter(lambda x: re.match(question_pattern, x, re.IGNORECASE), prompts))
+	question_pattern = r'^(.*)\?\s*$'
+	questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
+	questions = list(set(questions))
+
+	question_completion_pairs = []
+
+	# Iterate through each question and find its corresponding completions
+	for question in questions:
+		completions = df.loc[df['prompt'] == question, 'completion'].tolist()
+		for completion in completions:
+			question_completion_pairs.append((question, completion))
+
+	# Remove any duplicate question-completion pairs from the list
+	question_completion_pairs = list(set(question_completion_pairs))
 
 	message = ctx.message
-	random_question = random.choice(questions)
-	embed = discord.Embed(title = "FAQ", description=random_question)
-	message.content = random_question
+	random_question = random.choice(question_completion_pairs)
+	embed = discord.Embed(title = "FAQ", description=random_question[0])
+	message.content = random_question[0]
 
 	await ctx.send(embed=embed)
-	await frankeniris(message)
+	await frankeniris(message, answer=random_question[1])
 
 @bot.command(aliases=['in', 'inject'])
 async def infuse(ctx, *, link):
