@@ -362,7 +362,7 @@ async def prophecy_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of predictions (future tense thoughts) and questions about the future. Please summarize any predictions and questions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis unless you are asked to be brief or structure the information differently. As a default, start with the last message you received and explain how the old predictions are connected to the new one"})
+	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of predictions (future tense thoughts) and questions about the future. Please summarize any predictions and questions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis unless you are asked to be brief or structure the information differently. As a default, start with the last message you received and explain how the old questions or predictions are connected to the new question or prediction"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo", 
