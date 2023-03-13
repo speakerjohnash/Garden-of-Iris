@@ -337,34 +337,32 @@ async def interpretation(ctx, prompt):
 async def prophecy_pool(message):
 
 	channel = bot.get_channel(1083409321754378290)
-	messages = []
 	summary_count = 0
+
+	# Load Chat Context
+	messages = []
 
 	async for hist in channel.history(limit=50):
 		if not hist.content.startswith('/'):
 			if hist.embeds:
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
-				if hist.author == bot.user: 
-					summary_count += 1
-					if summary_count < 2:
-						messages.append((hist.author.name, hist.content))
-				else:
-					messages.append((hist.author.name, hist.content))
-			if len(messages) == 14:
+				messages.append((hist.author, hist.content))
+			if len(messages) == 20:
 				break
 
 	messages.reverse()
-	conversation = [{"role": "system", "content": "You are are an oracle and prediction integration. You monitor a group chat of predictions and keep a running summary of what the groups thinks about the future"}]
-	text_prompt = "You have been auto-summarizing a running thread of predictions. Please summarize any predictions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis. Start with the last message you received and explain how the old predictions are connected to the new one  \n\n" + message.content
+
+	conversation = [{"role": "system", "content": "You are are an oracle and prediction / question integration bot. You monitor a group chat of predictions and questions about the future and keep a running summary of what the groups thinks about the future. Sometimes people will ask questions. You will summarize those questions as uncertainty about the future"}]
+	text_prompt = message.content
 
 	for m in messages:
-		if m[0] == bot.user:
+		if  m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "user", "content": text_prompt})
+	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of predictions (future tense thoughts) and questions about the future. Please summarize any predictions and questions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis unless you are asked to be brief or structure the information differently. As a default, start with the last message you received and explain how the old predictions are connected to the new one"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo", 
@@ -396,7 +394,7 @@ async def frankeniris(message, answer=""):
 		distillation = openai.Completion.create(
 			model=models["chat-iris"],
 			prompt=message.content,
-			temperature=0.55,
+			temperature=0.9,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=1.5,
@@ -432,7 +430,7 @@ async def frankeniris(message, answer=""):
 	# Construct Chat Thread for API
 	conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
 	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
-	conversation.append({"role": "system", "content": "I am speaking as a relay for Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
+	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
 	text_prompt = message.content
 
 	for m in messages:
@@ -493,6 +491,20 @@ async def on_message(message):
 		await frankeniris(message)
 
 	await bot.process_commands(message)
+
+@bot.command()
+async def channel(ctx, *, topic=""):
+
+	df = pd.read_csv('data/chat-iris.csv')
+	prompts = df['prompt'].tolist()
+	question_pattern = r'^(.*)\?\s*$'
+	non_questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
+
+	random_non_question = random.choice(non_questions)
+	message = ctx.message
+	message.content = "Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: " + random_non_question
+
+	await frankeniris(message, answer="")
 
 @bot.command()
 async def faq(ctx, *, topic=""):
