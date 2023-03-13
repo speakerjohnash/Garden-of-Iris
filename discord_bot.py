@@ -344,8 +344,10 @@ async def prophecy_pool(message):
 
 	async for hist in channel.history(limit=50):
 		if not hist.content.startswith('/'):
-			if hist.embeds:
-				messages.append((hist.author, hist.embeds[0].description))
+			if hist.author == bot.user: 
+				summary_count += 1
+				if summary_count < 2:
+					messages.append((hist.author, hist.content))
 			else:
 				messages.append((hist.author, hist.content))
 			if len(messages) == 20:
