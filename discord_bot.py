@@ -411,7 +411,7 @@ async def frankeniris(message, answer=""):
 		iris_answer = ""
 
 	if len(answer) > 0:
-		iris_answer = answer + " \n\n" + iris_answer  
+		iris_answer = iris_answer + " \n\n " + answer
 
 	print(iris_answer)
 
@@ -431,8 +431,8 @@ async def frankeniris(message, answer=""):
 
 	# Construct Chat Thread for API
 	conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
-	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way. I asked Iris and she said: " + iris_answer})
-	conversation.append({"role": "assistant", "content": "I am speaking as Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said " + iris_answer + " and I will take that into account in my response as best I can"})
+	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
+	conversation.append({"role": "system", "content": "I am speaking as a relay for Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
 	text_prompt = message.content
 
 	for m in messages:
@@ -441,20 +441,28 @@ async def frankeniris(message, answer=""):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": iris_answer})
+	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer just copy and paste it and don't answer yourself. Don't say iris said it already or previously stated it. Just say it.)"})
 	conversation.append({"role": "user", "content": text_prompt})
+
+	for msg in conversation:
+		if len(msg["content"]) > 4000:
+			 msg["content"] = "..." + msg["content"][-4000:]
 
 	# Calculate Total Length of Messages
 	total_length = sum(len(msg["content"]) for msg in conversation)
 
+	print("total_length before")
 	print(total_length)
 
 	# Check Total Length
-	if total_length > 10000:
+	if total_length > 25000:
 		# Iterate over messages in conversation in reverse order and remove them until total length is below maximum
-		while total_length > 10000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
+		while total_length > 25000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
 			removed_msg = conversation.pop(1)  # remove the second message (first message after Iris's answer)
 		total_length -= len(removed_msg["content"])
+
+	print("total_length after")
+	print(total_length)
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo",
@@ -489,7 +497,7 @@ async def on_message(message):
 @bot.command()
 async def faq(ctx, *, topic=""):
 
-	df = pd.read_csv('chat-iris.csv')
+	df = pd.read_csv('data/chat-iris.csv')
 	prompts = df['prompt'].tolist()
 	question_pattern = r'^(.*)\?\s*$'
 	questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
