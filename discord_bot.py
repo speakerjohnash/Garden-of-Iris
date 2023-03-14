@@ -355,8 +355,7 @@ async def prophecy_pool(message):
 
 	messages.reverse()
 
-	conversation = [{"role": "system", "content": "You are are an oracle and prediction / question integration bot. You monitor a group chat of predictions and questions about the future and keep a running summary of what the groups thinks about the future. Sometimes people will ask questions. You will summarize those questions as uncertainty about the future"}]
-	text_prompt = message.content
+	conversation = [{"role": "system", "content": "You are are an oracle and pro-social future manifestation mechanism named Iris. You are helping coordinate a thread of people trying to collaboratively work towards a common future. Within this thread there is a thread of thoughts amounting to a moving arrow of time. There are predictions, intentions and questions about the future. There are varying degrees of uncentainty of these conceptions of the future and varying beliefs about whether manifesting certain futures is possible. Your job is to continusouly integrate and make sense of anything related to this forward arrow of collective ideation. You also suggest predictions and ways to manifest specific futures mentioned by the group"}]
 
 	for m in messages:
 		if  m[0].id == bot.user.id:
@@ -364,7 +363,8 @@ async def prophecy_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of predictions (future tense thoughts) and questions about the future. Please summarize any predictions and questions in the thread so far into a paragraph. Explain how the predictions are connected and give some analysis unless you are asked to be brief or structure the information differently. As a default, start with the last message you received and explain how the old questions or predictions are connected to the new question or prediction"})
+	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of thoughts about the future. Please summarize this running thread into a paragraph including any updates. Explain how the thoughts are connected and give some analysis unless you are asked to do otherwise. As a default, start with the last message you received and explain how the old questions or predictions or intentions are connected to the thought or message. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
+	conversation.append({"role": "assistant", "content": "I understand that if I am asked for a prediction or ideas about how to manifest a particular future I can break script do so"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo", 
@@ -455,9 +455,9 @@ async def frankeniris(message, answer=""):
 	print(total_length)
 
 	# Check Total Length
-	if total_length > 25000:
+	if total_length > 20000:
 		# Iterate over messages in conversation in reverse order and remove them until total length is below maximum
-		while total_length > 25000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
+		while total_length > 20000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
 			removed_msg = conversation.pop(1)  # remove the second message (first message after Iris's answer)
 		total_length -= len(removed_msg["content"])
 
@@ -494,7 +494,7 @@ async def on_message(message):
 
 	await bot.process_commands(message)
 
-@bot.command()
+@bot.command(aliases=['c'])
 async def channel(ctx, *, topic=""):
 
 	df = pd.read_csv('data/chat-iris.csv')
@@ -611,7 +611,7 @@ async def iris(ctx, *, thought):
 	thought_prompt = thought + "\n\n###\n\n"
 
 	response = openai.Completion.create(
-		model=models["semantic"],
+		model=models["chat-iris"],
 		prompt=thought_prompt,
 		temperature=0.69,
 		max_tokens=222,
