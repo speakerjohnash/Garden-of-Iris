@@ -5,6 +5,14 @@ from datetime import datetime
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
+from sklearn.model_selection import train_test_split
+
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.metrics import SparseCategoricalAccuracy
+
 # Load the CSV file
 def load_csv(file_path):
     data = pd.read_csv(file_path)
@@ -54,6 +62,38 @@ input_ids, source_data, timestamp_data = preprocess_data(data, tokenizer, max_le
 
 # Create tensor representations
 input_ids_tensor, source_data_tensor, timestamp_data_tensor = create_tensors(input_ids, source_data, timestamp_data)
+
+# Split the data into training and validation sets
+train_frac = 0.8
+(input_ids_train, input_ids_val,
+ source_data_train, source_data_val,
+ timestamp_data_train, timestamp_data_val) = train_test_split(input_ids_tensor, source_data_tensor, timestamp_data_tensor, train_size=train_frac, random_state=42)
+
+# Set the model hyperparameters
+d_model = 512
+num_heads = 8
+num_layers = 6
+dropout_rate = 0.1
+
+# Create the DemocraticLLM model
+model = DemocraticLLM(d_model=d_model, num_heads=num_heads, num_layers=num_layers, dropout_rate=dropout_rate,
+                      vocab_size=vocab_size, max_length=max_length, num_sources=len(unique_sources), temporal_emb=temporal_emb)
+
+# Compile the model with an appropriate loss function and optimizer
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Set the training hyperparameters
+epochs = 10
+batch_size = 32
+
+# Train the model using the fit method
+history = model.fit(
+    x=[input_ids_train, source_data_train, timestamp_data_train],
+    y=input_ids_train,
+    validation_data=([input_ids_val, source_data_val, timestamp_data_val], input_ids_val),
+    epochs=epochs,
+    batch_size=batch_size,
+    verbose=1)
 
 def create_source_embeddings(data, d_model):
     # Assuming data is a list of unique source ids
@@ -309,9 +349,9 @@ class Encoder(tf.keras.layers.Layer):
 
         return x, attention_weights
 
-class Iris(tf.keras.Model):
+class DemocraticLLM(tf.keras.Model):
     def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size, target_vocab_size, max_position_encoding, rate=0.1):
-        super(Iris, self).__init__()
+        super(DemocraticLLM, self).__init__()
 
         self.encoder = Encoder(num_layers, d_model, num_heads, dff, input_vocab_size, max_position_encoding, rate)
         self.decoder = Decoder(num_layers, d_model, num_heads, dff, target_vocab_size, max_position_encoding, rate)
