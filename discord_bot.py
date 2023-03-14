@@ -346,11 +346,11 @@ async def prophecy_pool(message):
 		if not hist.content.startswith('/'):
 			if hist.author == bot.user: 
 				summary_count += 1
-				if summary_count < 2:
+				if summary_count < 1:
 					messages.append((hist.author, hist.content))
 			else:
 				messages.append((hist.author, hist.content))
-			if len(messages) == 20:
+			if len(messages) == 15:
 				break
 
 	messages.reverse()
@@ -363,8 +363,8 @@ async def prophecy_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "You have been auto-summarizing a running thread of thoughts about the future. Please summarize this running thread into a paragraph including any updates. Explain how the thoughts are connected and give some analysis unless you are asked to do otherwise. As a default, start with the last message you received and explain how the old questions or predictions or intentions are connected to the thought or message. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
-	conversation.append({"role": "assistant", "content": "I understand that if I am asked for a prediction or ideas about how to manifest a particular future I can break script do so"})
+	conversation.append({"role": "system", "content": "You have been moderating a running thread of thoughts about the future. Please aid in any tasks related to the arrow of time. If someon asks you to summarize, create a summary of thre thread and explain how the thoughts about the future are connected and give some analysis about these potential futures. If contextually relevant, feel free to share any wisdom or summarization or help relevant to the future. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
+	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future."})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo", 
