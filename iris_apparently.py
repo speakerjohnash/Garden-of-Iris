@@ -1,6 +1,59 @@
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras import layers
+import pandas as pd
+from datetime import datetime
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Load the CSV file
+def load_csv(file_path):
+    data = pd.read_csv(file_path)
+    return data
+
+# Preprocess the data
+def preprocess_data(data, tokenizer, max_length, source_id_to_idx, timestamp_to_idx):
+    text_data = data['text'].tolist()
+    source_data = data['source_id'].apply(lambda x: source_id_to_idx[x]).tolist()
+    timestamp_data = data['timestamp'].apply(lambda x: timestamp_to_idx[x]).tolist()
+
+    # Tokenize the text data
+    sequences = tokenizer.texts_to_sequences(text_data)
+    input_ids = pad_sequences(sequences, maxlen=max_length, padding='post', truncating='post')
+
+    return input_ids, source_data, timestamp_data
+
+# Create tensor representations for the data
+def create_tensors(input_ids, source_data, timestamp_data):
+    input_ids_tensor = tf.convert_to_tensor(input_ids, dtype=tf.int32)
+    source_data_tensor = tf.convert_to_tensor(source_data, dtype=tf.int32)
+    timestamp_data_tensor = tf.convert_to_tensor(timestamp_data, dtype=tf.int32)
+
+    return input_ids_tensor, source_data_tensor, timestamp_data_tensor
+
+# Load and preprocess the CSV data
+file_path = "your_csv_file.csv"
+data = load_csv(file_path)
+
+# Set up tokenizer, source_id_to_idx, timestamp_to_idx, and max_length
+vocab_size = 30000  # Set the desired vocabulary size
+tokenizer = Tokenizer(num_words=vocab_size, oov_token="<OOV>")
+tokenizer.fit_on_texts(data['text'])
+
+unique_sources = data['source_id'].unique()
+source_id_to_idx = {source: idx for idx, source in enumerate(unique_sources)}
+
+# Convert the timestamp strings to datetime objects
+data['timestamp'] = pd.to_datetime(data['timestamp'])
+timestamps = data['timestamp'].unique()
+temporal_emb, timestamp_to_idx = create_sinusoidal_embeddings(timestamps, d_model=512)
+
+max_length = 256
+
+# Preprocess the data
+input_ids, source_data, timestamp_data = preprocess_data(data, tokenizer, max_length, source_id_to_idx, timestamp_to_idx)
+
+# Create tensor representations
+input_ids_tensor, source_data_tensor, timestamp_data_tensor = create_tensors(input_ids, source_data, timestamp_data)
 
 def create_source_embeddings(data, d_model):
     # Assuming data is a list of unique source ids
@@ -12,15 +65,38 @@ def create_source_embeddings(data, d_model):
 
     return source_emb, source_id_to_idx
 
-def create_temporal_embeddings(data, d_model):
+def create_sinusoidal_embeddings(data, d_model):
     # Assuming data is a list of timestamps
     num_timestamps = len(data)
-    temporal_emb = tf.Variable(initial_value=tf.random.normal((num_timestamps, d_model)), dtype=tf.float32, trainable=True, name="temporal_embeddings")
+    temporal_emb = np.zeros((num_timestamps, d_model))
 
     # Create a mapping from timestamps to indices in the temporal_emb tensor
     timestamp_to_idx = {timestamp: idx for idx, timestamp in enumerate(data)}
 
-    return temporal_emb, timestamp_to_idx
+    # Compute sinusoidal embeddings
+    for idx, timestamp in enumerate(data):
+        position = idx
+        div_term = np.exp(np.arange(0, d_model, 2) * -(np.log(10000.0) / d_model))
+
+        second = timestamp.second / 60
+        minute = timestamp.minute / 60
+        hour = timestamp.hour / 24
+        day = timestamp.day / 31
+        month = timestamp.month / 12
+        year = (timestamp.year - 1970) / 50  # Assuming a range of 50 years, adjust as needed
+
+        time_factors = [second, minute, hour, day, month, year]
+        sinusoidal_factors = np.array(time_factors)[:, np.newaxis] * div_term
+
+        # Apply sin and cos to even and odd indices
+        temporal_emb[position, 0::2] = np.sin(sinusoidal_factors)
+        temporal_emb[position, 1::2] = np.cos(sinusoidal_factors)
+
+    return tf.convert_to_tensor(temporal_emb, dtype=tf.float32), timestamp_to_idx
+
+def create_temporal_embeddings(data, d_model):
+    # Use the create_sinusoidal_embeddings function to create temporal embeddings
+    return create_sinusoidal_embeddings(data, d_model)
 
 def positional_encoding(position, d_model):
     angle_rads = get_angles(np.arange(position)[:, np.newaxis],
@@ -233,9 +309,9 @@ class Encoder(tf.keras.layers.Layer):
 
         return x, attention_weights
 
-class Transformer(tf.keras.Model):
+class Iris(tf.keras.Model):
     def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size, target_vocab_size, max_position_encoding, rate=0.1):
-        super(Transformer, self).__init__()
+        super(Iris, self).__init__()
 
         self.encoder = Encoder(num_layers, d_model, num_heads, dff, input_vocab_size, max_position_encoding, rate)
         self.decoder = Decoder(num_layers, d_model, num_heads, dff, target_vocab_size, max_position_encoding, rate)
