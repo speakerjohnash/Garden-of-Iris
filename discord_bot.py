@@ -56,12 +56,12 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
+	"chat-iris": "davinci:ft-personal:chat-iris-c-2023-03-15-05-59-14",
+	"chat-iris-b": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
 	"chat-iris-a": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
 	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
 }
 
-card_pull_counts = {"created" : str(datetime.datetime.now()), "counts" : {}}
 people = []
 
 class AskModal(Modal, title="Ask Modal"):
@@ -213,43 +213,11 @@ def load_training_data():
 			training_data = pd.DataFrame(columns=['prompt', 'completion', 'speaker'])
 			training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
 
-def load_card_counts():
-
-	global card_pull_counts, people
-
-	try:
-		with open('card_pull_counts.json') as json_file:
-			card_pull_counts = json.load(json_file)
-			people = list(card_pull_counts["counts"].keys())
-	except OSError:
-		print("no such file")
-		members(debug=False)
-		with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
-			json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
-
-	# Reset After a Day
-	reset_card_counts()
-
-def reset_card_counts():
-
-	global card_pull_counts
-
-	# Reset After a Day
-	created = dateutil.parser.parse(card_pull_counts["created"])
-	now = datetime.datetime.now()
-	time_passed = now - created
-
-	if time_passed.seconds >= 86400:
-		card_pull_counts = {"created" : datetime.datetime.now(), "counts" : {}}
-		members(debug=False)
-		with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
-			json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
-
 def members(debug=False):
 
 	members = []
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
-	global card_pull_counts, people
+	global people
 
 	if debug:
 		for guild in bot.guilds:
@@ -263,9 +231,6 @@ def members(debug=False):
 					members.append(member)
 
 	unique_members = [*set(members)]
-	names = [member.name for member in unique_members]
-	counts = dict(zip(names, [0]*len(names)))
-	card_pull_counts['counts'] = counts
 	people = unique_members
 
 def make_prompt(question, joined_answers):
@@ -334,13 +299,45 @@ async def interpretation(ctx, prompt):
     view.add_item(modal)
     await ctx.send(embed=embed, view=view)
 
-async def prophecy_pool(message):
+def one_shot(message):
 
-	channel = bot.get_channel(1083409321754378290)
+	# Get Iris One Shot Answer
+	try:
+		distillation = openai.Completion.create(
+			model=models["chat-iris"],
+			prompt=message.content,
+			temperature=0.9,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=1.5,
+			presence_penalty=1.5,
+			stop=["END"]
+		)
+
+		iris_answer = distillation['choices'][0]['text']
+		iris_answer = iris_answer.replace("###", "").strip()
+	except Exception as e:
+		print(f"Error: {e}")
+		iris_answer = ""
+
+	return iris_answer
+
+async def question_pool(message):
+
+	channel = bot.get_channel(1086437563654475846)
 	summary_count = 0
 
 	# Load Chat Context
 	messages = []
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+	if last_message.content.startswith("/"):
+		return
+
+	#iris_answer = one_shot(last_message)
+
+	# print(iris_answer)
 
 	async for hist in channel.history(limit=50):
 		if not hist.content.startswith('/'):
@@ -355,7 +352,7 @@ async def prophecy_pool(message):
 
 	messages.reverse()
 
-	conversation = [{"role": "system", "content": "You are are an oracle and pro-social future manifestation mechanism named Iris. You are helping coordinate a thread of people trying to collaboratively work towards a common future. Within this thread there is a thread of thoughts amounting to a moving arrow of time. There are predictions, intentions and questions about the future. There are varying degrees of uncentainty of these conceptions of the future and varying beliefs about whether manifesting certain futures is possible. Your job is to continusouly integrate and make sense of anything related to this forward arrow of collective ideation. You also suggest predictions and ways to manifest specific futures mentioned by the group"}]
+	conversation = [{"role": "system", "content": "You are a question summarizer Iris. You are summarizing a thread of questions about Cognicism and related concepts. You ignore everything except questions. People will ask you various questions about cognicism and you job is to summarize what people want to know"}]
 
 	for m in messages:
 		if  m[0].id == bot.user.id:
@@ -363,8 +360,9 @@ async def prophecy_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "You have been moderating a running thread of thoughts about the future. Please aid in any tasks related to the arrow of time. If someon asks you to summarize, create a summary of thre thread and explain how the thoughts about the future are connected and give some analysis about these potential futures. If contextually relevant, feel free to share any wisdom or summarization or help relevant to the future. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
-	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future."})
+	conversation.append({"role": "system", "content": "You have been moderating a running thread of questions about cognicism. Your job is to help summarize these questions and NOT to answer them"})
+	conversation.append({"role": "system", "content": "My primary job is to summarize what people are uncertain about. I will summarize peoples questions and that is it. I will vary my output but keep them focused on what people don't know and keep it 250 words long"})
+	conversation.append({"role": "assistant", "content": "I NEVER answer questions. I summarize questions and communal uncentainty. I ignore anything that doesn't end in a question mark. I will keep my summary very short or about 250 words long"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo", 
@@ -373,11 +371,67 @@ async def prophecy_pool(message):
 
 	response = response.choices[0].message.content.strip()
 
-	await message.channel.send(response)
+	# Split response into chunks if longer than 2000 characters
+	if len(response) > 2000:
+		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
+			await message.channel.send(chunk)
+	else:
+		await message.channel.send(response)
+
+async def prophecy_pool(message):
+
+	channel = bot.get_channel(1083409321754378290)
+	summary_count = 0
+
+	# Load Chat Context
+	messages = []
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+	if last_message.content.startswith("/"):
+		return
+
+	async for hist in channel.history(limit=50):
+		if not hist.content.startswith('/'):
+			if hist.author == bot.user: 
+				summary_count += 1
+				if summary_count < 1:
+					messages.append((hist.author, hist.content))
+			else:
+				messages.append((hist.author, hist.content))
+			if len(messages) == 11:
+				break
+
+	messages.reverse()
+
+	conversation = [{"role": "system", "content": "You are an oracle and pro-social future manifestation mechanism named Iris. You are helping coordinate a thread of people trying to collaboratively work towards a common future. Within this thread there is a thread of thoughts amounting to a moving arrow of time. There are predictions, intentions and questions about the future. There are varying degrees of uncentainty of these conceptions of the future and varying beliefs about whether manifesting certain futures is possible. Your job is to continusouly integrate and make sense of anything related to this forward arrow of collective ideation. You also suggest predictions and ways to manifest specific futures mentioned by the group"}]
+
+	for m in messages:
+		if  m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	conversation.append({"role": "system", "content": "You have been moderating a running thread of thoughts about the future. Please aid in any tasks related to the arrow of time. If someon asks you to summarize, create a summary of thre thread and explain how the thoughts about the future are connected and give some analysis about these potential futures. If contextually relevant, feel free to share any wisdom or summarization or help relevant to the future. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
+	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future. My output will be under 500 words and I will mention the last thing said"})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-3.5-turbo",
+		max_tokens=500, 
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	if len(response) > 2000:
+		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
+			await message.channel.send(chunk)
+	else:
+		await message.channel.send(response)
 
 @bot.event
 async def on_ready():
-	load_card_counts()
 	load_training_data()
 	print("Iris is online")
 
@@ -467,6 +521,7 @@ async def frankeniris(message, answer=""):
 	response = openai.ChatCompletion.create(
 		model="gpt-3.5-turbo",
 		temperature=1,
+		max_tokens=500,
 		messages=conversation
 	)
 
@@ -482,11 +537,18 @@ async def frankeniris(message, answer=""):
 @bot.event
 async def on_message(message):
 
+	# Manage Question Pool
+	if message.channel.id == 1086437563654475846 and message.author != bot.user:
+		await question_pool(message)
+		await bot.process_commands(message)
+		return
+
 	# Manage Prophecy Pool
 	if message.channel.id == 1083409321754378290 and message.author != bot.user:
 		await prophecy_pool(message)
 		await bot.process_commands(message)
 		return
+
 
 	# Handle DM Chat
 	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
@@ -548,8 +610,10 @@ async def infuse(ctx, *, link):
 	
 		# set up the browser
 		options = webdriver.ChromeOptions()
-		options.add_argument('headless')
-		options.add_argument('disable-gpu')
+		options.add_argument('--headless')
+		options.add_argument('--disable-gpu')
+		options.add_argument("--no-sandbox")
+		options.add_argument("--disable-dev-shm-usage")
 		driver = webdriver.Chrome(options=options)
 
 		# navigate to the page
@@ -614,7 +678,7 @@ async def iris(ctx, *, thought):
 		model=models["chat-iris"],
 		prompt=thought_prompt,
 		temperature=0.69,
-		max_tokens=222,
+		max_tokens=420,
 		top_p=1,
 		frequency_penalty=1.5,
 		presence_penalty=1.5,
@@ -700,18 +764,6 @@ async def claim(ctx, *, thought):
 @bot.command()
 async def pullcard(ctx, *, intention=""):
 
-	global card_pull_counts
-
-	# Add to Counts
-	if ctx.message.author.name not in list(card_pull_counts["counts"].keys()):
-		card_pull_counts["counts"][ctx.message.author.name] = 0
-
-	# Limit Card Pulls
-	# if card_pull_counts["counts"][ctx.message.author.name] >= 10:
-	#	embed = discord.Embed(title = "Patience Little Rabbit", description = f"You've used all available card pulls. Please try again tomorrow.")
-	#	await ctx.send(embed=embed)
-	#	return
-
 	# With Intention
 	with_intention = len(intention) > 0
 	r_num = random.random()
@@ -760,13 +812,6 @@ async def pullcard(ctx, *, intention=""):
 		text = response['choices'][0]['text'].strip()
 		embed_b = discord.Embed(title = "One Interpretation (beta)", description=text)
 		await ctx.send(embed=embed_b)
-
-	# Update Card Pull Counts
-	card_pull_counts["counts"][ctx.message.author.name] += 1
-	reset_card_counts()
-
-	with open('card_pull_counts.json', 'w', encoding='utf-8') as f:
-		json.dump(card_pull_counts, f, ensure_ascii=False, indent=4, default=str)
 	
 @bot.command(name="ask_group", description="Ask group a question and auto-summarize")
 async def ask_group(ctx, *, question=""):
