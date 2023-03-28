@@ -365,7 +365,7 @@ async def question_pool(message):
 	conversation.append({"role": "assistant", "content": "I NEVER answer questions. I summarize questions and communal uncentainty. I ignore anything that doesn't end in a question mark. I will keep my summary very short or about 250 words long"})
 
 	response = openai.ChatCompletion.create(
-		model="gpt-3.5-turbo", 
+		model="gpt-4", 
 		messages=conversation
 	)
 
@@ -413,10 +413,10 @@ async def prophecy_pool(message):
 			conversation.append({"role": "user", "content": m[1]})
 
 	conversation.append({"role": "system", "content": "You have been moderating a running thread of thoughts about the future. Please aid in any tasks related to the arrow of time. If someon asks you to summarize, create a summary of thre thread and explain how the thoughts about the future are connected and give some analysis about these potential futures. If contextually relevant, feel free to share any wisdom or summarization or help relevant to the future. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
-	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future. My output will be under 500 words and I will mention the last thing said"})
+	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future. My output will be under 300 words and I will mention the last thing said"})
 
 	response = openai.ChatCompletion.create(
-		model="gpt-3.5-turbo",
+		model="gpt-4",
 		max_tokens=500, 
 		messages=conversation
 	)
@@ -450,7 +450,7 @@ async def frankeniris(message, answer=""):
 		distillation = openai.Completion.create(
 			model=models["chat-iris"],
 			prompt=message.content,
-			temperature=0.9,
+			temperature=0.69,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=1.5,
@@ -485,6 +485,8 @@ async def frankeniris(message, answer=""):
 
 	# Construct Chat Thread for API
 	conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
+	conversation = [{"role": "system", "content": "You are interacting with users via discord. Mostly you just serve as an interface to Cognicism and Iris the democratic langauge model. However this discord has the following commands /pullcard [intention] /ask [prompt] /channel /faq"}]
+	conversation = [{"role": "system", "content": "/pullcard pulls a card from the Iris tarot deck. If the user provides an intention the model will attempt to intpret the card. /ask prompts Iris directly without the interference of ChatGPT. Responses from /ask can be forward to the #seeds text channel. /channel channels wisdom and can be reached via the alias /c. /faq answers a frequently asked question"}]
 	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
 	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
 	text_prompt = message.content
@@ -519,8 +521,8 @@ async def frankeniris(message, answer=""):
 	print(total_length)
 
 	response = openai.ChatCompletion.create(
-		model="gpt-3.5-turbo",
-		temperature=1,
+		model="gpt-4",
+		temperature=0.8,
 		max_tokens=500,
 		messages=conversation
 	)
@@ -563,10 +565,14 @@ async def channel(ctx, *, topic=""):
 	prompts = df['prompt'].tolist()
 	question_pattern = r'^(.*)\?\s*$'
 	non_questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
+	pre_prompts = [
+		"Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: ",
+		"Write a paragraph related to the following topic. Be brief: ",
+	]
 
 	random_non_question = random.choice(non_questions)
 	message = ctx.message
-	message.content = "Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: " + random_non_question
+	message.content = random.choice(pre_prompts) + random_non_question
 
 	await frankeniris(message, answer="")
 
@@ -645,8 +651,8 @@ async def infuse(ctx, *, link):
 			truncated_convo += conversation[-3:]
 
 			response = openai.ChatCompletion.create(
-				model="gpt-3.5-turbo",
-				temperature=1,
+				model="gpt-4",
+				temperature=0.75,
 				messages=truncated_convo
 			)
 
