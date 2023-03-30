@@ -1,5 +1,8 @@
 import os
 import re
+import csv
+import time
+import random
 import pandas as pd
 from datetime import datetime
 from itertools import islice
@@ -89,29 +92,49 @@ def create_daily_summaries(df):
     # for each day, providing a brief overview of the main topics discussed on that day.
 
     def create_summary(conversation):
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=conversation
-        )
-        response = response.choices[0].message.content.strip()
-        return response
+        while True:
+            try:
+                response = openai.ChatCompletion.create(
+                    model=random.choice(["gpt-4", "gpt-3.5-turbo"]),
+                    messages=conversation
+                )
+                response = response.choices[0].message.content.strip()
+                return response
+            except openai.error.RateLimitError:
+                print("Rate limit error encountered. Retrying in 5 seconds...")
+                time.sleep(5)
 
     # Group the data by date (daily) and include all columns for each group
     df.set_index('Post date', inplace=True)
     daily_groups = df.groupby(df.index.date)
 
-    summaries = []
+    # islice(daily_groups, 20)
 
-    for day_date, day in islice(daily_groups, 20):
-        # Extract the date from the index of the DataFrame daily_groups
+    # Load daily_summaries.csv if it exists, otherwise create a new DataFrame and save it
+    if os.path.isfile('daily_summaries.csv'):
+        summary_df = pd.read_csv('daily_summaries.csv', parse_dates=['Date'])
+    else:
+        summary_df = pd.DataFrame(columns=['Date', 'Summary'])
+        summary_df.to_csv('daily_summaries.csv', index=False)
+
+    for day_date, day in daily_groups:
+        
+        # Check if there's already a cached summary for the day
+        cached_summary = summary_df.loc[summary_df['Date'] == day_date.strftime('%Y-%m-%d')]
+
+        if not cached_summary.empty:
+            # print(f"Using cached summary for {day_date.strftime('%Y-%m-%d')}: {cached_summary['Summary'].values[0]}")
+            continue
 
         conversation = [
-            {"role": "system", "content": "You read in a sequence of John Ash's thoughts from a day and summarize what he thinking about that day"},
+            {"role": "system", "content": "You read in a sequence of a Speaker's thoughts from a day and summarize what he thinking about that day"},
             {"role": "system", "content": "These thoughts have metadata from a dialectic called fourthought to help contextualize the flow of cognition"},
             {"role": "system", "content": "Each thought is tagged with a thought type: prediction, statements, reflection, or question"},
             {"role": "system", "content": "Predictions, reflections and statements are about the future, past and present respectively. Each has two voting systems: truth and good"},
             {"role": "system", "content": "Truth is a scale of 0 to 100. 50 means uncertain. Anything below 50 means the thought is leaning false, anything over means leaning true. 75 is a medium level of certainty of truth. 25 is a medium level of certainty of falsity. If there is no vote, no one provided any certainty vote"},
-            {"role": "system", "content": "You are receiving timestamps and can make inferences about the length of time between thoughts as to whether they're connected"}
+            {"role": "system", "content": "Sentiment is on a scale of -1, 0, 1 with 0 indicating neutrality"},
+            {"role": "system", "content": "You are receiving timestamps and can make inferences about the length of time between thoughts as to whether they're connected"},
+            {"role": "system", "content": "The thoughts you are receiving are from the past. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         ]
 
         text = f"Date: {day_date.strftime('%Y-%m-%d')}\n"
@@ -120,22 +143,26 @@ def create_daily_summaries(df):
 
         for index, row in day.iterrows():
 
-            sentiment_votes = row['Positive'] + row['Negative']
-            positivity = " " if sentiment_votes == 0 else row['Positive'] / sentiment_votes
+            sentiment_votes = abs(row['Positive']) + abs(row['Negative'])
+            positivity = "N/A" if sentiment_votes == 0 else (abs(row['Positive']) - abs(row['Negative'])) / sentiment_votes
 
             thought_text = row['Thought']
+
+            # Add Privacy information
+            privacy_status = "Public" if row['Privacy'] == 0 else "Private"
 
             text += f"Timestamp: {index.strftime('%m/%d/%y %I:%M %p')}\n"
             text += f"Thought: {thought_text}\n"
             text += f"Sentiment: " + str(positivity) + "\n"
             text += f"Good Votes: {row['Positive']}\n"
-            text += f"Bad Votes: {row['Negative']}\n"
+            text += f"Bad Votes: {abs(row['Negative'])}\n"
             text += f"Average Certainty: {row['Truth']}\n"
-            text += f"Speaker: John Ash\n"
+            text += f"Privacy: {privacy_status}\n"
+            text += f"Speaker: {row['Seer']}\n"
             text += f"Thought Type: {row['Type']}\n\n"
 
         # Print the concatenated text for each day
-        conversation.append({"role": "system", "content": "Only say what is in the text itself"})
+        conversation.append({"role": "system", "content": "Only say what is in the text itself. Be careful about summarizing private thoughts. Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking"})
 
         # Split the text into chunks of 4000 characters or less
         text_chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
@@ -147,7 +174,7 @@ def create_daily_summaries(df):
 
             for chunk in text_chunks:
                 sub_conv = conversation[:]
-                sub_conv.append({"role": "user", "content": "You are summarizing part of a day this time. Please state the range of the day (TIME to TIME) that you're summarizing and then summarize what this speaker was thinking about during this section of the day (and reference the period of the day TIME to TIME) into a paragraph story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up: " + chunk})
+                sub_conv.append({"role": "user", "content": "You are summarizing part of a day this time. Please state the range of the day (TIME to TIME) that you're summarizing and then summarize what this speaker was thinking about during this section of the day (and reference the period of the day TIME to TIME) into a paragraph story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up. Be detailed and reference every thought: " + chunk})
                 response = create_summary(sub_conv)
                 summaries.append(response)
 
@@ -157,8 +184,13 @@ def create_daily_summaries(df):
             response = create_summary(sub_conv)
 
         else:
-            conversation.append({"role": "user", "content": "Please summarize what this speaker was thinking about into a story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up: " + text})
+            conversation.append({"role": "user", "content": "Please summarize what this speaker was thinking about into a story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up. Be detailed and reference every thought: " + text})
             response = create_summary(conversation)
+
+        # Append the new summary to the CSV file
+        with open('daily_summaries.csv', 'a', newline='') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([day_date.strftime('%Y-%m-%d'), response])
 
         print(response + "\n")
 
