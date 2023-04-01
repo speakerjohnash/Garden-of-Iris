@@ -1,6 +1,7 @@
 import os
 import re
 import csv
+import sys
 import time
 import random
 import pandas as pd
@@ -71,7 +72,7 @@ def create_trackable_summaries(df):
 def load_and_preprocess_csv(csv_file):
 
     df = pd.read_csv(csv_file)
-    df['Post date'] = pd.to_datetime(df['Post date'], format='%m/%d/%y %I:%M %p')
+    df['Post date'] = pd.to_datetime(df['Post date'], format='%m/%d/%y %I:%M %p').dt.tz_localize('US/Pacific')
 
     # Split the 'Good' column into positive and negative values
     split_good = df['Good'].str.split('\n', expand=True)
@@ -84,7 +85,9 @@ def load_and_preprocess_csv(csv_file):
 
     # Drop the original 'Good' column
     df.drop(columns=['Good'], inplace=True)
-    
+    df['Positive'] = df['Positive'].astype("Int64")
+    df['Negative'] = df['Negative'].astype("Int64")
+
     return df
 
 def create_daily_summaries(df):
@@ -126,15 +129,18 @@ def create_daily_summaries(df):
             # print(f"Using cached summary for {day_date.strftime('%Y-%m-%d')}: {cached_summary['Summary'].values[0]}")
             continue
 
+        truth_scale = "0: \"100 percent certain false\"\n25: \"Moderate certainty of falsity\"\n50: \"Complete uncertainty\"\n75: \"Moderate certainty of truth\"\n100: \"100 percent certain true\""
+
         conversation = [
-            {"role": "system", "content": "You read in a sequence of a Speaker's thoughts from a day and summarize what he thinking about that day"},
-            {"role": "system", "content": "These thoughts have metadata from a dialectic called fourthought to help contextualize the flow of cognition"},
-            {"role": "system", "content": "Each thought is tagged with a thought type: prediction, statements, reflection, or question"},
+            {"role": "system", "content": "You read in a sequence of John Ash's thoughts from a day and summarize what he thinking about that day"},
+            {"role": "system", "content": "These thoughts are either from Twitter or have metadata from a dialectic called fourthought to help contextualize the flow of cognition"},
+            {"role": "system", "content": "In Fourthought, each thought is tagged with a thought type: prediction, statements, reflection, or question"},
             {"role": "system", "content": "Predictions, reflections and statements are about the future, past and present respectively. Each has two voting systems: truth and good"},
-            {"role": "system", "content": "Truth is a scale of 0 to 100. 50 means uncertain. Anything below 50 means the thought is leaning false, anything over means leaning true. 75 is a medium level of certainty of truth. 25 is a medium level of certainty of falsity. If there is no vote, no one provided any certainty vote"},
-            {"role": "system", "content": "Sentiment is on a scale of -1, 0, 1 with 0 indicating neutrality"},
+            {"role": "system", "content": "Truth is measured on a scale from 0 to 100. In the absence of any votes, no certainty level has been provided. Here is the scale: " + truth_scale},
+            {"role": "system", "content": "Sentiment is calculated from good votes and bad votes and is on a scale of -1, 0, 1 with 0 indicating neutrality"},
             {"role": "system", "content": "You are receiving timestamps and can make inferences about the length of time between thoughts as to whether they're connected"},
-            {"role": "system", "content": "The thoughts you are receiving are from the past. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            {"role": "system", "content": "The thoughts you are receiving are from the past. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+            {"role": "system", "content": "Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking. If there is no unit usually the trackable is on a scale of ten. #mood is an similar to American grade scaling with a 7.5 incidating an average mood"}
         ]
 
         text = f"Date: {day_date.strftime('%Y-%m-%d')}\n"
@@ -143,26 +149,46 @@ def create_daily_summaries(df):
 
         for index, row in day.iterrows():
 
-            sentiment_votes = abs(row['Positive']) + abs(row['Negative'])
-            positivity = "N/A" if sentiment_votes == 0 else (abs(row['Positive']) - abs(row['Negative'])) / sentiment_votes
+            platform = row['Platform']
+            any_twitter = False
 
-            thought_text = row['Thought']
+            if platform == 'fourthought':
 
-            # Add Privacy information
-            privacy_status = "Public" if row['Privacy'] == 0 else "Private"
+                sentiment_votes = abs(row['Positive']) + abs(row['Negative'])
+                positivity = "N/A" if sentiment_votes == 0 else (abs(row['Positive']) - abs(row['Negative'])) / sentiment_votes
 
-            text += f"Timestamp: {index.strftime('%m/%d/%y %I:%M %p')}\n"
-            text += f"Thought: {thought_text}\n"
-            text += f"Sentiment: " + str(positivity) + "\n"
-            text += f"Good Votes: {row['Positive']}\n"
-            text += f"Bad Votes: {abs(row['Negative'])}\n"
-            text += f"Average Certainty: {row['Truth']}\n"
-            text += f"Privacy: {privacy_status}\n"
-            text += f"Speaker: {row['Seer']}\n"
-            text += f"Thought Type: {row['Type']}\n\n"
+                # Manual Alterations for Privacy
+                thought_text = row['Thought']
+
+                # Add Privacy information
+                privacy_status = "Public" if row['Privacy'] == 0 else "Private"
+
+                text += f"Dialectic: {platform}\n"
+                text += f"Timestamp: {index.strftime('%m/%d/%y %I:%M %p')}\n"
+                text += f"Thought: {thought_text}\n"
+                text += f"Sentiment: " + str(positivity) + "\n"
+                text += f"Good Votes: {row['Positive']}\n"
+                text += f"Bad Votes: {abs(row['Negative'])}\n"
+                text += f"Average Certainty: {row['Truth']}\n"
+                text += f"Privacy: {privacy_status}\n"
+                text += f"Speaker: John Ash\n"
+                text += f"Thought Type: {row['Type']}\n\n"
+
+            elif platform == 'twitter':
+
+                any_twitter = True
+                tweet_text = row['full_text']
+                retweet_count = row['retweet_count']
+                favorite_count = row['favorite_count']
+        
+                text += f"Platform: {platform}\n"
+                text += f"Timestamp: {index.strftime('%m/%d/%y %I:%M %p')}\n"
+                text += f"Tweet: {tweet_text}\n"
+                text += f"Retweet Count: {retweet_count}\n"
+                text += f"Favorite Count: {favorite_count}\n\n"
 
         # Print the concatenated text for each day
-        conversation.append({"role": "system", "content": "Only say what is in the text itself. Be careful about summarizing private thoughts. Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking"})
+        conversation.append({"role": "system", "content": "Only say what is in the text itself. Be careful about summarizing private thoughts"})
 
         # Split the text into chunks of 4000 characters or less
         text_chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
@@ -197,5 +223,30 @@ def create_daily_summaries(df):
 # Load and preprocess the CSV into a DataFrame
 df = load_and_preprocess_csv('prophet_thought_dump_ALL_THOUGHTS_2023.csv')
 
+# Load fourthought labeled thoughts
+df_thoughts = load_and_preprocess_csv('prophet_thought_dump_ALL_THOUGHTS_2023.csv')
+df_thoughts['Platform'] = 'fourthought'
+
+df_tweets = pd.read_csv('twitter_archive.csv')
+df_tweets['Platform'] = 'twitter'
+
+# Rename 'created_at' column to 'Post date' in df_tweets to match df_thoughts
+df_tweets.rename(columns={'created_at': 'Post date'}, inplace=True)
+
+# Drop the 'lang' column from df_tweets
+df_tweets.drop(columns=['lang'], inplace=True)
+
+# Convert 'Post date' column to datetime in df_tweets
+df_tweets['Post date'] = pd.to_datetime(df_tweets['Post date'], format='%a %b %d %H:%M:%S %z %Y').dt.tz_convert('US/Pacific')
+df_tweets['retweet_count'] = df_tweets['retweet_count'].astype("Int64")
+df_tweets['favorite_count'] = df_tweets['favorite_count'].astype("Int64")
+
+# Merge the two dataframes based on 'Post date'
+df_merged = pd.concat([df_thoughts, df_tweets], axis=0, ignore_index=True, sort=False)
+
+# Sort the merged dataframe by 'Post date'
+df_merged.sort_values(by='Post date', inplace=True)
+df_merged.reset_index(drop=True, inplace=True)
+
 # Generate daily summaries using the preprocessed DataFrame
-daily_summaries = create_daily_summaries(df)
+daily_summaries = create_daily_summaries(df_merged)
