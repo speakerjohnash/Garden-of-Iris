@@ -16,6 +16,7 @@ def create_summary(conversation):
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4",
+                temperature=0.42,
                 messages=conversation
             )
             response = response.choices[0].message.content.strip()
@@ -30,11 +31,13 @@ def create_weekly_summaries():
 
     def generate_conversation(text, is_part=False):
 
-        prompt = "Write this section of John Ash's thoughts as a story. Do not make anything up."
+        prompt = "You read in a sequence of John Ash's thoughts from a week and summarize what he thinking. These thoughts are predictive. Note any accurate predictions"
+        prompt += "Write John Ash's thoughts as a story. Do not make anything up."
         prompt += "It's over a Week so say what week you're covering and then explain what he focused on that week. " if not is_part else "It's over part of a Week so explain what he focused on during this part. "
         
         conversation = [
             {"role": "system", "content": prompt},
+            {"role": "system", "content": "The thoughts you are receiving are from the past. You can validate the predictions with current information. Specifically say which predictions have been validated by time. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
             {"role": "system", "content": "Form a narrative. Find a through thread of his focus through this time. Be very detailed but don't share unncessary tangents. Do not share anything indicated to be private. Note any predictions he got particularly right"},
             {"role": "user", "content": text}
         ]
@@ -45,8 +48,12 @@ def create_weekly_summaries():
     daily_summaries_df.set_index('Date', inplace=True)
     weekly_groups = daily_summaries_df.resample('W-MON')
 
-    # Initialize an empty DataFrame to store the weekly summaries
-    weekly_summaries_df = pd.DataFrame(columns=['Week_Start_Date', 'Summary'])
+    # Load weekly_summaries.csv if it exists, otherwise create a new DataFrame and save it
+    if os.path.isfile('weekly_summaries.csv'):
+        weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
+    else:
+        weekly_summaries_df = pd.DataFrame(columns=['Week_Start_Date', 'Summary'])
+        weekly_summaries_df.to_csv('weekly_summaries.csv', index=False)
 
     # Loop through each week
     for week_start_date, week in weekly_groups:
@@ -69,14 +76,19 @@ def create_weekly_summaries():
                 summaries.append(summary_part)
 
             summary_text = ' '.join([summary.strip() for summary in summaries])
-            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a week into one. You remove line breaks and make minor edits to make multiple sections into one."}]
-            sub_conv.append({"role": "user", "content": "Write this as one paragraph with no line breaks. Copy everything and miss nothing: " + summary_text})
+            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a week into one. You remove unncessary line breaks and make minor edits to make multiple sections into one."}]
+            sub_conv.append({"role": "user", "content": "Write this as one paragraph with no unnecessary line breaks. Copy everything and miss nothing: " + summary_text})
 
             summary = create_summary(sub_conv)
 
         else:
             conversation = generate_conversation(week_text)
             summary = create_summary(conversation)
+
+        # Append the new summary to the CSV file
+        with open('weekly_summaries.csv', 'a', newline='') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([week_start_date.strftime('%Y-%m-%d'), summary])
 
         print("---\n\n")
         print(summary)
