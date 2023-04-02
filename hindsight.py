@@ -11,10 +11,75 @@ import openai
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def create_weekly_summaries(df):
+def create_summary(conversation):
+    while True:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=conversation
+            )
+            response = response.choices[0].message.content.strip()
+            return response
+        except openai.error.RateLimitError:
+            print("Rate limit error encountered. Retrying in 5 seconds...")
+            time.sleep(5)
+
+def create_weekly_summaries():
     # This function will aggregate and summarize the daily summaries for each week,
     # highlighting key themes and insights for the week.
-    pass
+
+    def generate_conversation(text, is_part=False):
+
+        prompt = "Write this section of John Ash's thoughts as a story. Do not make anything up."
+        prompt += "It's over a Week so say what week you're covering and then explain what he focused on that week. " if not is_part else "It's over part of a Week so explain what he focused on during this part. "
+        
+        conversation = [
+            {"role": "system", "content": prompt},
+            {"role": "system", "content": "Form a narrative. Find a through thread of his focus through this time. Be very detailed but don't share unncessary tangents. Do not share anything indicated to be private. Note any predictions he got particularly right"},
+            {"role": "user", "content": text}
+        ]
+
+        return conversation
+
+    daily_summaries_df = pd.read_csv('daily_summaries.csv', parse_dates=['Date'])
+    daily_summaries_df.set_index('Date', inplace=True)
+    weekly_groups = daily_summaries_df.resample('W-MON')
+
+    # Initialize an empty DataFrame to store the weekly summaries
+    weekly_summaries_df = pd.DataFrame(columns=['Week_Start_Date', 'Summary'])
+
+    # Loop through each week
+    for week_start_date, week in weekly_groups:
+
+        # Prepend the week start date to the list of summaries
+        summaries_list = [f"Week of {week_start_date.strftime('%Y-%m-%d')}:"]
+        summaries_list.extend(week['Summary'].tolist())
+        week_text = '\n\n'.join(summaries_list)
+
+        # Chunk Text
+        text_chunks = [week_text[i:i+4000] for i in range(0, len(week_text), 4000)]
+
+        if len(text_chunks) > 1:
+
+            summaries = []
+
+            for chunk in text_chunks:
+                sub_conv = generate_conversation(chunk, is_part=True)
+                summary_part = create_summary(sub_conv)
+                summaries.append(summary_part)
+
+            summary_text = ' '.join([summary.strip() for summary in summaries])
+            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a week into one. You remove line breaks and make minor edits to make multiple sections into one."}]
+            sub_conv.append({"role": "user", "content": "Write this as one paragraph with no line breaks. Copy everything and miss nothing: " + summary_text})
+
+            summary = create_summary(sub_conv)
+
+        else:
+            conversation = generate_conversation(week_text)
+            summary = create_summary(conversation)
+
+        print("---\n\n")
+        print(summary)
 
 def create_monthly_summaries(df):
     # This function will aggregate and summarize the daily or weekly summaries for each month,
@@ -94,19 +159,6 @@ def create_daily_summaries(df):
     # This function will create summaries of thoughts, reflections, questions, and predictions
     # for each day, providing a brief overview of the main topics discussed on that day.
 
-    def create_summary(conversation):
-        while True:
-            try:
-                response = openai.ChatCompletion.create(
-                    model=random.choice(["gpt-4", "gpt-3.5-turbo"]),
-                    messages=conversation
-                )
-                response = response.choices[0].message.content.strip()
-                return response
-            except openai.error.RateLimitError:
-                print("Rate limit error encountered. Retrying in 5 seconds...")
-                time.sleep(5)
-
     # Group the data by date (daily) and include all columns for each group
     df.set_index('Post date', inplace=True)
     daily_groups = df.groupby(df.index.date)
@@ -140,7 +192,7 @@ def create_daily_summaries(df):
             {"role": "system", "content": "Sentiment is calculated from good votes and bad votes and is on a scale of -1, 0, 1 with 0 indicating neutrality"},
             {"role": "system", "content": "You are receiving timestamps and can make inferences about the length of time between thoughts as to whether they're connected"},
             {"role": "system", "content": "The thoughts you are receiving are from the past. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-            {"role": "system", "content": "Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking. If there is no unit usually the trackable is on a scale of ten. #mood is an similar to American grade scaling with a 7.5 incidating an average mood"}
+            #{"role": "system", "content": "Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking. If there is no unit usually the trackable is on a scale of ten. #mood is an similar to American grade scaling with a 7.5 incidating an average mood"}
         ]
 
         text = f"Date: {day_date.strftime('%Y-%m-%d')}\n"
@@ -249,4 +301,5 @@ df_merged.sort_values(by='Post date', inplace=True)
 df_merged.reset_index(drop=True, inplace=True)
 
 # Generate daily summaries using the preprocessed DataFrame
-daily_summaries = create_daily_summaries(df_merged)
+# daily_summaries = create_daily_summaries(df_merged)
+weekly_summaries = create_weekly_summaries()
