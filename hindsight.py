@@ -11,141 +11,6 @@ import openai
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def create_summary(conversation):
-    while True:
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                temperature=0.42,
-                messages=conversation
-            )
-            response = response.choices[0].message.content.strip()
-            return response
-        except openai.error.RateLimitError:
-            print("Rate limit error encountered. Retrying in 5 seconds...")
-            time.sleep(5)
-
-def create_weekly_summaries():
-    # This function will aggregate and summarize the daily summaries for each week,
-    # highlighting key themes and insights for the week.
-
-    def generate_conversation(text, is_part=False):
-
-        prompt = "You read in a sequence of John Ash's thoughts from a week and summarize what he thinking. These thoughts are predictive. Note any accurate predictions"
-        prompt += "Write John Ash's thoughts as a story. Do not make anything up."
-        prompt += "It's over a Week so say what week you're covering and then explain what he focused on that week. " if not is_part else "It's over part of a Week so explain what he focused on during this part. "
-        
-        conversation = [
-            {"role": "system", "content": prompt},
-            {"role": "system", "content": "The thoughts you are receiving are from the past. You can validate the predictions with current information. Specifically say which predictions have been validated by time. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-            {"role": "system", "content": "Form a narrative. Find a through thread of his focus through this time. Be very detailed but don't share unncessary tangents. Do not share anything indicated to be private. Note any predictions he got particularly right"},
-            {"role": "user", "content": text}
-        ]
-
-        return conversation
-
-    daily_summaries_df = pd.read_csv('daily_summaries.csv', parse_dates=['Date'])
-    daily_summaries_df.set_index('Date', inplace=True)
-    weekly_groups = daily_summaries_df.resample('W-MON')
-
-    # Load weekly_summaries.csv if it exists, otherwise create a new DataFrame and save it
-    if os.path.isfile('weekly_summaries.csv'):
-        weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
-    else:
-        weekly_summaries_df = pd.DataFrame(columns=['Week_Start_Date', 'Summary'])
-        weekly_summaries_df.to_csv('weekly_summaries.csv', index=False)
-
-    # Loop through each week
-    for week_start_date, week in weekly_groups:
-
-        # Prepend the week start date to the list of summaries
-        summaries_list = [f"Week of {week_start_date.strftime('%Y-%m-%d')}:"]
-        summaries_list.extend(week['Summary'].tolist())
-        week_text = '\n\n'.join(summaries_list)
-
-        # Chunk Text
-        text_chunks = [week_text[i:i+4000] for i in range(0, len(week_text), 4000)]
-
-        if len(text_chunks) > 1:
-
-            summaries = []
-
-            for chunk in text_chunks:
-                sub_conv = generate_conversation(chunk, is_part=True)
-                summary_part = create_summary(sub_conv)
-                summaries.append(summary_part)
-
-            summary_text = ' '.join([summary.strip() for summary in summaries])
-            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a week into one. You remove unncessary line breaks and make minor edits to make multiple sections into one."}]
-            sub_conv.append({"role": "user", "content": "Write this as one paragraph with no unnecessary line breaks. Copy everything and miss nothing: " + summary_text})
-
-            summary = create_summary(sub_conv)
-
-        else:
-            conversation = generate_conversation(week_text)
-            summary = create_summary(conversation)
-
-        # Append the new summary to the CSV file
-        with open('weekly_summaries.csv', 'a', newline='') as f:
-            csv_writer = csv.writer(f)
-            csv_writer.writerow([week_start_date.strftime('%Y-%m-%d'), summary])
-
-        print("---\n\n")
-        print(summary)
-
-def create_monthly_summaries(df):
-    # This function will aggregate and summarize the daily or weekly summaries for each month,
-    # focusing on the most important or relevant content for the month.
-    pass
-
-def create_seasonal_summaries(df):
-    # This function will aggregate and summarize the monthly summaries for each season (quarter),
-    # providing an overview of the key trends and patterns observed during that period.
-    pass
-
-def create_yearly_summaries(df):
-    # This function will aggregate and summarize the monthly or seasonal summaries for each year,
-    # capturing the most significant themes and learnings for the year.
-    pass
-
-def create_certainty_summaries(df):
-    # This function will calculate the average certainty for different time periods
-    # (e.g., daily, weekly, monthly) and provide summaries of the general level of certainty
-    # for each period.
-    pass
-
-def create_sentiment_summaries(df):
-    # This function will calculate the average sentiment (valence) for different time periods
-    # and provide summaries of the general sentiment (positive or negative) for each period.
-    pass
-
-def create_temporal_focus_summaries(df):
-    # This function will group thoughts by categories such as thought type (Reflect, Ask, Predict, State)
-    # and calculate the average temporal focus (past, present, future) for each category over
-    # a specified time period.
-    pass
-
-def create_trend_analysis(df):
-    # This function will identify recurring themes, topics, or patterns over time and provide
-    # summaries of notable trends observed in the data. It may use word counts.
-    pass
-
-def create_periodic_reflections(df):
-    # This function will summarize key learnings, reflections, and takeaways for specific random time periods
-    pass
-
-def create_predictions_review(df):
-    # This function will summarize predictions made during a specific time period and, if possible,
-    # provide an evaluation of their accuracy based on subsequent outcomes.
-    pass
-
-def create_trackable_summaries(df):
-    # This function will extract and organize trackable data (numeric variables that change over time)
-    # from the text using a consistent format (e.g., "#weight: 175 lbs"). It will calculate summary
-    # statistics for each trackable and generate summaries that describe the changes in trackables
-    # over time, including any notable trends, patterns, or associations with other events.
-    pass
-
 def load_and_preprocess_csv(csv_file):
 
     df = pd.read_csv(csv_file)
@@ -166,6 +31,32 @@ def load_and_preprocess_csv(csv_file):
     df['Negative'] = df['Negative'].astype("Int64")
 
     return df
+
+def create_summary(conversation):
+    while True:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=conversation
+            )
+            response = response.choices[0].message.content.strip()
+            return response
+        except openai.error.RateLimitError:
+            print("Rate limit error encountered. Retrying in 5 seconds...")
+            time.sleep(5)
+
+def split_text_into_chunks(text, max_chunk_size=4000):
+
+    # Calculate the number of chunks needed to evenly distribute the text
+    num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
+    
+    # Adjust the chunk size to evenly distribute the text across the chunks
+    chunk_size = (len(text) + num_chunks - 1) // num_chunks
+    
+    # Split the text into chunks of the calculated chunk size
+    text_chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+    return text_chunks
 
 def create_daily_summaries(df):
     # This function will create summaries of thoughts, reflections, questions, and predictions
@@ -255,7 +146,7 @@ def create_daily_summaries(df):
         conversation.append({"role": "system", "content": "Only say what is in the text itself. Be careful about summarizing private thoughts"})
 
         # Split the text into chunks of 4000 characters or less
-        text_chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
+        text_chunks = split_text_into_chunks(text)
 
         # Do Recursive Summarization if Too Long
         if len(text_chunks) > 1:
@@ -283,6 +174,242 @@ def create_daily_summaries(df):
             csv_writer.writerow([day_date.strftime('%Y-%m-%d'), response])
 
         print(response + "\n")
+
+def create_weekly_summaries():
+    # This function will aggregate and summarize the daily summaries for each week,
+    # highlighting key themes and insights for the week.
+
+    def generate_conversation(text, is_part=False):
+
+        prompt = "Write this section of John Ash's thoughts as a story. Do not make anything up."
+        prompt += "It's over a Week so say what week you're covering and then explain what he focused on that week. " if not is_part else "It's over part of a Week so explain what he focused on during this part. "
+        
+        conversation = [
+            {"role": "system", "content": prompt},
+            {"role": "system", "content": "Form a narrative. Find a through thread of his focus through this time. Be very detailed but don't share unncessary tangents. Do not share anything indicated to be private. Note any predictions he got particularly right"},
+            {"role": "user", "content": text}
+        ]
+
+        return conversation
+
+    daily_summaries_df = pd.read_csv('daily_summaries.csv', parse_dates=['Date'])
+    daily_summaries_df.set_index('Date', inplace=True)
+    weekly_groups = daily_summaries_df.resample('W-MON')
+
+    # Load weekly_summaries.csv if it exists, otherwise create a new DataFrame and save it
+    if os.path.isfile('weekly_summaries.csv'):
+        weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
+    else:
+        weekly_summaries_df = pd.DataFrame(columns=['Week_Start_Date', 'Summary'])
+        weekly_summaries_df.to_csv('weekly_summaries.csv', index=False)
+
+    # Loop through each week
+    for week_start_date, week in weekly_groups:
+
+        # Check Cache
+        cached_summary = weekly_summaries_df.loc[weekly_summaries_df['Week_Start_Date'] == week_start_date.strftime('%Y-%m-%d')]
+
+        if not cached_summary.empty:
+            continue
+
+        # Prepend the week start date to the list of summaries
+        week = week.sort_index()
+        summaries_list = [f"Week of {week_start_date.strftime('%Y-%m-%d')}:"]
+        
+        # Loop through each day in the week DataFrame and append the date and summary to the list
+        for date, row in week.iterrows():
+            date_str = date.strftime('%Y-%m-%d')
+            summary_text = row['Summary']
+            summaries_list.append(f"Date: {date_str}\n{summary_text}")
+
+        # Join the list into a single string
+        week_text = '\n\n'.join(summaries_list)
+
+        # Chunk Text
+        text_chunks = split_text_into_chunks(week_text)
+
+        if len(text_chunks) > 1:
+
+            summaries = []
+
+            for chunk in text_chunks:
+                sub_conv = generate_conversation(chunk, is_part=True)
+                summary_part = create_summary(sub_conv)
+                summaries.append(summary_part)
+
+            summary_text = ' '.join([summary.strip() for summary in summaries])
+            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a week into one. You make minor edits to make multiple sections into one."}]
+            sub_conv.append({"role": "user", "content": "Write this as one integrated piece. Copy everything and miss nothing: " + summary_text})
+
+            summary = create_summary(sub_conv)
+
+        else:
+            conversation = generate_conversation(week_text)
+            summary = create_summary(conversation)
+
+        # Get the date of the week in the desired format
+        week_date_str = week_start_date.strftime('%B %d, %Y')
+
+        # Prepend the prefix "The Week of" and append the suffix ":"
+        week_date_str = "Week of " + week_date_str + ':'
+
+        # Prepend the date and two newline characters to the summary
+        summary = week_date_str + '\n\n' + summary
+
+        # Append the new summary to the CSV file
+        with open('weekly_summaries.csv', 'a', newline='') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([week_start_date.strftime('%Y-%m-%d'), summary])
+
+        print("---\n\n")
+        print(summary)
+
+
+def create_monthly_summaries():
+    # This function will aggregate and summarize the weekly summaries for each month,
+    # focusing on the most important or relevant content for the month.
+
+    # Load weekly_summaries.csv into a DataFrame
+    weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
+    weekly_summaries_df.set_index('Week_Start_Date', inplace=True)
+    
+    # Group the weekly summaries by month
+    monthly_groups = weekly_summaries_df.resample('M')
+
+    # Load monthly_summaries.csv if it exists, otherwise create a new DataFrame and save it
+    if os.path.isfile('monthly_summaries.csv'):
+        monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Start_Date'])
+    else:
+        monthly_summaries_df = pd.DataFrame(columns=['Month_Start_Date', 'Summary'])
+        monthly_summaries_df.to_csv('monthly_summaries.csv', index=False)
+
+    # Loop through each month
+    for month_start_date, month in monthly_groups:
+
+        # Check Cache
+        cached_summary = monthly_summaries_df.loc[monthly_summaries_df['Month_Start_Date'] == month_start_date.strftime('%Y-%m-%d')]
+
+        if not cached_summary.empty:
+            continue
+
+        # Prepend the month start date to the list of summaries
+        month = month.sort_index()
+        summaries_list = [f"Month of {month_start_date.strftime('%B %Y')}:"]
+        
+        # Loop through each week in the month DataFrame and append the date and summary to the list
+        for date, row in month.iterrows():
+            date_str = date.strftime('%Y-%m-%d')
+            summary_text = row['Summary']
+            summaries_list.append(f"Week of {date_str}:\n{summary_text}")
+
+        # Join the list into a single string
+        month_text = '\n\n'.join(summaries_list)
+
+        # Prepend concise user instruction to month_text
+        instruction = f"Summarize John Ash's key thoughts and their connection to relevant world events for the month of {month_start_date.strftime('%B %Y')}."
+        month_text = instruction + '\n\n' + month_text
+
+        # Generate conversation and summary for the month
+        conversation = [
+            {"role": "system", "content": "(Background Context: John Ash is a machine learning engineer, musician and artist who specializes in language models like GPT. He is the steward of Cognicism, Iris, Social Proof of Impact and the Prophet Incentive. We are currently scanning through summaries of his thoughts and predictions and mapping them to a real world timeline)"},
+            {"role": "system", "content": f"What occurred the month of {month_start_date.strftime('%B %Y')} in the world relevant to John's focus? Start by summarizing the events that occurred in the world that month in two sentences that are relevant to John's focus. You'll have to pull the world events from your own knowledge store, not here. Reference wikipedia as a timeline. Choose events related to his focus and anything mentioned in the summaries below. Focus the story by connecting it to real world events that are related to the story."},
+            {"role": "system", "content": "Then write the story arc of John's month and don't make anything up. Form a central focus and narrative through time rather than just summarizing a list of things he thought about. Mention how his thoughts might relate to world events."},
+            {"role": "system", "content": "(If there was news related to philosophy, systems change, machine learning and music at the time connect it but don't specifically mention that list of topics)"},
+            {"role": "system", "content": "Mention the context of the times and how his thoughts traced a pathway through the era."},
+            {"role": "user", "content": month_text}
+        ]
+
+        summary = create_summary(conversation)
+
+        # Append the new summary to the CSV file
+        with open('monthly_summaries.csv', 'a', newline='') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([month_start_date.strftime('%Y-%m-%d'), summary])
+
+        print("---\n\n")
+        print(summary)
+
+def create_seasonal_summaries():
+    # This function will aggregate and summarize the monthly summaries for each season (winter, spring, summer, fall),
+    # providing an overview of the key trends and patterns observed during that period.
+
+    # Load monthly_summaries.csv into a DataFrame
+    monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Start_Date'])
+    monthly_summaries_df.set_index('Month_Start_Date', inplace=True)
+
+    # Define custom date ranges for each season based on approximate equinoxes and solstices
+    seasons = {
+        'Winter': ('12-21', '03-20'),
+        'Spring': ('03-21', '06-20'),
+        'Summer': ('06-21', '09-22'),
+        'Fall': ('09-23', '12-20')
+    }
+
+    # Loop through each season
+    for season, (start_day, end_day) in seasons.items():
+        # Create a boolean mask to select rows within the date range for each season
+        mask = ((monthly_summaries_df.index.month == int(start_day.split('-')[0])) & (monthly_summaries_df.index.day >= int(start_day.split('-')[1]))) | \
+               ((monthly_summaries_df.index.month == int(end_day.split('-')[0])) & (monthly_summaries_df.index.day <= int(end_day.split('-')[1])))
+
+        # Apply the mask to the DataFrame to get the data for the current season
+        season_data = monthly_summaries_df[mask]
+
+        # Generate summary for the current season
+        season_text = f"Season of {season}:\n\n" + '\n\n'.join(season_data['Summary'].tolist())
+
+        # Generate conversation and summary for the season
+        conversation = [
+            {"role": "system", "content": "Summarize John Ash's key thoughts and their connection to relevant world events for the season of " + season + ". Form a central focus and narrative through time rather than just summarizing a list of things he thought about. Mention how his thoughts might relate to world events."},
+            {"role": "user", "content": season_text}
+        ]
+
+        summary = create_summary(conversation)
+
+        print("---\n\n")
+        print(summary)
+
+def create_yearly_summaries(df):
+    # This function will aggregate and summarize the monthly or seasonal summaries for each year,
+    # capturing the most significant themes and learnings for the year.
+    pass
+
+def create_certainty_summaries(df):
+    # This function will calculate the average certainty for different time periods
+    # (e.g., daily, weekly, monthly) and provide summaries of the general level of certainty
+    # for each period.
+    pass
+
+def create_sentiment_summaries(df):
+    # This function will calculate the average sentiment (valence) for different time periods
+    # and provide summaries of the general sentiment (positive or negative) for each period.
+    pass
+
+def create_temporal_focus_summaries(df):
+    # This function will group thoughts by categories such as thought type (Reflect, Ask, Predict, State)
+    # and calculate the average temporal focus (past, present, future) for each category over
+    # a specified time period.
+    pass
+
+def create_trend_analysis(df):
+    # This function will identify recurring themes, topics, or patterns over time and provide
+    # summaries of notable trends observed in the data. It may use word counts.
+    pass
+
+def create_periodic_reflections(df):
+    # This function will summarize key learnings, reflections, and takeaways for specific random time periods
+    pass
+
+def create_predictions_review(df):
+    # This function will summarize predictions made during a specific time period and, if possible,
+    # provide an evaluation of their accuracy based on subsequent outcomes.
+    pass
+
+def create_trackable_summaries(df):
+    # This function will extract and organize trackable data (numeric variables that change over time)
+    # from the text using a consistent format (e.g., "#weight: 175 lbs"). It will calculate summary
+    # statistics for each trackable and generate summaries that describe the changes in trackables
+    # over time, including any notable trends, patterns, or associations with other events.
+    pass
 
 # Load and preprocess the CSV into a DataFrame
 df = load_and_preprocess_csv('prophet_thought_dump_ALL_THOUGHTS_2023.csv')
@@ -313,5 +440,5 @@ df_merged.sort_values(by='Post date', inplace=True)
 df_merged.reset_index(drop=True, inplace=True)
 
 # Generate daily summaries using the preprocessed DataFrame
-# daily_summaries = create_daily_summaries(df_merged)
+#daily_summaries = create_daily_summaries(df_merged)
 weekly_summaries = create_weekly_summaries()
