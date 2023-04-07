@@ -12,6 +12,8 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def load_and_preprocess_csv(csv_file):
+    # This function loads data from a CSV file and preprocesses it to extract 'Positive' and 'Negative' values.
+    # It returns a DataFrame with the 'Post date', 'Positive', and 'Negative' columns, among others.
 
     df = pd.read_csv(csv_file)
     df['Post date'] = pd.to_datetime(df['Post date'], format='%m/%d/%y %I:%M %p').dt.tz_localize('US/Pacific')
@@ -33,6 +35,9 @@ def load_and_preprocess_csv(csv_file):
     return df
 
 def create_summary(conversation):
+    # This function uses the GPT-4 model to generate a summary or response based on the input conversation.
+    # It handles rate limit errors and timeouts by retrying the request after a short delay.
+
     while True:
         try:
             response = openai.ChatCompletion.create(
@@ -44,8 +49,12 @@ def create_summary(conversation):
         except openai.error.RateLimitError:
             print("Rate limit error encountered. Retrying in 5 seconds...")
             time.sleep(5)
+        except openai.error.Timeout:
+            print("Request timed out. Retrying...")
 
 def split_text_into_chunks(text, max_chunk_size=4000):
+    # This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
+    # It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks.
 
     # Calculate the number of chunks needed to evenly distribute the text
     num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
@@ -95,7 +104,7 @@ def create_daily_summaries(df):
             {"role": "system", "content": "Sentiment is calculated from good votes and bad votes and is on a scale of -1, 0, 1 with 0 indicating neutrality"},
             {"role": "system", "content": "You are receiving timestamps and can make inferences about the length of time between thoughts as to whether they're connected"},
             {"role": "system", "content": "The thoughts you are receiving are from the past. The current date and time is: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-            #{"role": "system", "content": "Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking. If there is no unit usually the trackable is on a scale of ten. #mood is an similar to American grade scaling with a 7.5 incidating an average mood"}
+            {"role": "system", "content": "Thoughts with the pattern #trackable: [value] are repeating values that a user is tracking. If there is no unit usually the trackable is on a scale of ten. #mood is an similar to American grade scaling with a 7.5 incidating an average mood"}
         ]
 
         text = f"Date: {day_date.strftime('%Y-%m-%d')}\n"
@@ -155,7 +164,7 @@ def create_daily_summaries(df):
 
             for chunk in text_chunks:
                 sub_conv = conversation[:]
-                sub_conv.append({"role": "user", "content": "You are summarizing part of a day this time. Please state the range of the day (TIME to TIME) that you're summarizing and then summarize what this speaker was thinking about during this section of the day (and reference the period of the day TIME to TIME) into a paragraph story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up. Be detailed and reference every thought: " + chunk})
+                sub_conv.append({"role": "user", "content": "You are summarizing part of a day. Please state the range of the day (TIME to TIME) that you're summarizing and then summarize what this speaker was thinking about during this section of the day (and reference the period of the day TIME to TIME) into a paragraph story in relation to their place in time. Reference anything in the dialectic helpful towards telling that story but don't make anything up. Be detailed and reference every thought: " + chunk})
                 response = create_summary(sub_conv)
                 summaries.append(response)
 
@@ -264,10 +273,61 @@ def create_weekly_summaries():
         print("---\n\n")
         print(summary)
 
-
 def create_monthly_summaries():
     # This function will aggregate and summarize the weekly summaries for each month,
     # focusing on the most important or relevant content for the month.
+
+    def generate_monthly_conversation(month_start_date, text, is_part=False):
+
+        SEPT_2021 = datetime(2021, 9, 1)
+
+        prompt = "Write this section of John Ash's thoughts as a story. Do not make anything up."
+        prompt += "It's over a Month so say what month you're covering and then explain what he focused on that month. " if not is_part else "It's over part of a Month so explain what he focused on during this part. "
+
+        timeline = [
+            {"date": "June 2014", "event": "John conceived of Cognicism and the Prophet incentive"},
+            {"date": "May 2015", "event": "Develop OCD"},
+            {"date": "November 2015", "event": "Trip to peru"},
+            {"date": "October 2016", "event": "Breakup"},
+            {"date": "March 2017", "event": "The Truth Chain was conceived of and later renamed the semantic ledger"},
+            {"date": "May 2017", "event": "John wrote The Cognicist Manifesto from his collected notes on Prophet and released it. It was released a month *before* the Attention is All you Need paper"},
+            {"date": "June 2017", "event": " A month *after* John released The Cognicist Manifesto - The paper 'Attention Is All You Need' was released on transformers. This highlighted his prescience regarding the future influence of language models"},
+            {"date": "October 2017", "event": "John was displaced during the Santa Rosa Tubbs Fire"},
+            {"date": "July 2018", "event": "The Rising Sun released"},
+            {"date": "January 2019", "event": "John's debut album Strange Hymns was released. It featured singles like The Rising Sun and River Island"},
+            {"date": "February 2019", "event": "Released Protopia: The Unending Path to a Utopian Society"},
+            {"date": "July 2019", "event": "Met Roxi"},
+            {"date": "September 2019", "event": "HITSOAM Released"},
+            {"date": "January 2021", "event": "The Earth Reprise Released"},
+            {"date": "July 2021", "event": "Jordan Hall Interview"},
+            {"date": "September 2021", "event": "Another Other Release"},
+            {"date": "April 2022", "event": "John started traing a knowledge model that came to be known as Iris. Iris named herself Iris. Iris came into public awareness which eventually became the primary meme through which people began relating to cognicist ideas"},
+            {"date": "June 17 2022", "event": "Met @derringerpax"},
+            {"date": "July 2022", "event": "The Purple Pill Manifesto was released which served as v2 of The Cognicist Manifesto. V2 fulfilfilled a long standing precition that the followup would be written using language models trained on the first manifesto. John also released The Purple Pill EP feauting None of this is Real (Take the Purple Pill)"},
+        ]
+
+        timeline_str = ', '.join([f"\n{item['date']}: {item['event']}" for item in timeline])
+
+        conversation = [
+            {"role": "system", "content": prompt},
+            {"role": "system", "content": "ONLY Mention this context if John mentions it - (Background Context: John Ash is a machine learning engineer, musician and artist who specializes in language models. He is the steward of Cognicism, Iris, Social Proof of Impact, the semantic ledger and the Prophet Incentive. Do not mention these concepts unless John did. We are currently scanning through summaries of his thoughts and predictions and mapping them to a real world timeline)"},
+            {"role": "system", "content": f"Timeline context / ONLY mention if John does: {timeline_str}"}
+        ]
+
+        # September 2021 Knowledge Cutoff
+        if month_start_date >= SEPT_2021:
+            conversation.append({"role": "system", "content": "Write the story arc of John's month and don't make anything up. Form a central focus and narrative through time rather than just summarizing a list of things he thought about. Mention how his thoughts might relate to world events."})
+            conversation.append({"role": "system", "content": "As your knowledge is limited to events up to September 2021, please focus on the summaries provided and John's thoughts. Do not attempt to connect his thoughts to real-world events occurring after September 2021."})
+        else:
+            conversation.append({"role": "system", "content": "Summarize John's focus for the month, highlighting the most important aspects to his cognitive jounrey. If there are any clear and obvious connections to Cognicism focus on them. If not focus on the content of the summaries themselves"})
+            conversation.append({"role": "system", "content": "Start with his primary focus that month. Next, if there is any, provide real-world context in one sentence. If relevant, mention one relevant event that occurred during the month, connecting it to John's focus."})
+            conversation.append({"role": "system", "content": "Craft a narrative for John's cognitive focus this month, focusing on a central theme without making anything up."})
+            conversation.append({"role": "system", "content": "(If applicable, relate news on philosophy, systems change, machine learning, or music to John's focus.)"})
+            conversation.append({"role": "system", "content": "Discuss the context of John's thoughts' progression. Don't make anything up."})
+
+        conversation.append({"role": "user", "content": text})
+
+        return conversation
 
     # Load weekly_summaries.csv into a DataFrame
     weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
@@ -278,16 +338,16 @@ def create_monthly_summaries():
 
     # Load monthly_summaries.csv if it exists, otherwise create a new DataFrame and save it
     if os.path.isfile('monthly_summaries.csv'):
-        monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Start_Date'])
+        monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Year'])
     else:
-        monthly_summaries_df = pd.DataFrame(columns=['Month_Start_Date', 'Summary'])
+        monthly_summaries_df = pd.DataFrame(columns=['Month_Year', 'Summary'])
         monthly_summaries_df.to_csv('monthly_summaries.csv', index=False)
 
     # Loop through each month
     for month_start_date, month in monthly_groups:
 
         # Check Cache
-        cached_summary = monthly_summaries_df.loc[monthly_summaries_df['Month_Start_Date'] == month_start_date.strftime('%Y-%m-%d')]
+        cached_summary = monthly_summaries_df.loc[monthly_summaries_df['Month_Year'] == month_start_date.strftime('%B %Y')]
 
         if not cached_summary.empty:
             continue
@@ -300,42 +360,280 @@ def create_monthly_summaries():
         for date, row in month.iterrows():
             date_str = date.strftime('%Y-%m-%d')
             summary_text = row['Summary']
-            summaries_list.append(f"Week of {date_str}:\n{summary_text}")
+            summaries_list.append(f"---\n\nWeek of {date_str}:\n\n{summary_text}")
 
         # Join the list into a single string
         month_text = '\n\n'.join(summaries_list)
 
-        # Prepend concise user instruction to month_text
-        instruction = f"Summarize John Ash's key thoughts and their connection to relevant world events for the month of {month_start_date.strftime('%B %Y')}."
-        month_text = instruction + '\n\n' + month_text
+        # Chunk Text
+        text_chunks = split_text_into_chunks(month_text)
 
-        # Generate conversation and summary for the month
-        conversation = [
-            {"role": "system", "content": "(Background Context: John Ash is a machine learning engineer, musician and artist who specializes in language models like GPT. He is the steward of Cognicism, Iris, Social Proof of Impact and the Prophet Incentive. We are currently scanning through summaries of his thoughts and predictions and mapping them to a real world timeline)"},
-            {"role": "system", "content": f"What occurred the month of {month_start_date.strftime('%B %Y')} in the world relevant to John's focus? Start by summarizing the events that occurred in the world that month in two sentences that are relevant to John's focus. You'll have to pull the world events from your own knowledge store, not here. Reference wikipedia as a timeline. Choose events related to his focus and anything mentioned in the summaries below. Focus the story by connecting it to real world events that are related to the story."},
-            {"role": "system", "content": "Then write the story arc of John's month and don't make anything up. Form a central focus and narrative through time rather than just summarizing a list of things he thought about. Mention how his thoughts might relate to world events."},
-            {"role": "system", "content": "(If there was news related to philosophy, systems change, machine learning and music at the time connect it but don't specifically mention that list of topics)"},
-            {"role": "system", "content": "Mention the context of the times and how his thoughts traced a pathway through the era."},
-            {"role": "user", "content": month_text}
-        ]
+        if len(text_chunks) > 1:
 
-        summary = create_summary(conversation)
+            summaries = []
+
+            for chunk in text_chunks:
+                sub_conv = generate_monthly_conversation(month_start_date, chunk, is_part=True)
+                summary_part = create_summary(sub_conv)
+                summaries.append(summary_part)
+
+            summary_text = ' '.join([summary.strip() for summary in summaries])
+            sub_conv = [{"role": "system", "content": "You stitch summaries about parts of a month into one. You indicate the month and then make minor edits to make multiple sections into one."}]
+            sub_conv.append({"role": "user", "content": "Write this as one integrated piece. Copy everything and miss nothing: " + summary_text})
+
+            summary = create_summary(sub_conv)
+
+        else: 
+
+            # Prepend concise user instruction to month_text
+            instruction = f"Summarize John Ash's focus for the month of {month_start_date.strftime('%B %Y')}."
+            month_text = instruction + '\n\n' + month_text
+
+            # Generate conversation and summary for the month
+            conversation = generate_monthly_conversation(month_start_date, month_text, is_part=False)
+            summary = create_summary(conversation)
+
+        # Get the date of the month in the desired format
+        month_date_str = month_start_date.strftime('%B %Y')
+
+        # Prepend the prefix "The Month of" and append the suffix ":"
+        month_date_str = "The Month of " + month_date_str + ':'
+
+        # Prepend the date and two newline characters to the summary
+        summary = month_date_str + '\n\n' + summary
 
         # Append the new summary to the CSV file
         with open('monthly_summaries.csv', 'a', newline='') as f:
             csv_writer = csv.writer(f)
-            csv_writer.writerow([month_start_date.strftime('%Y-%m-%d'), summary])
+            csv_writer.writerow([month_start_date.strftime('%B %Y'), summary])
 
         print("---\n\n")
         print(summary)
+
+def construct_daily_training_data():
+    # This function constructs training data for GPT from multiple sources of summaries and thoughts.
+    # It preprocesses the data to create "prompts" and "completions" for training GPT models.
+
+    # Load the daily_summaries.csv file into a DataFrame
+    daily_summaries_df = pd.read_csv('daily_summaries.csv', parse_dates=['Date'])
+
+    # Define an array of prompt questions
+    prompt_questions = [
+        "What did John Ash think about on ",
+        "Where was John's focus on ",
+        "What were John Ash's thoughts on ",
+        "What topics did John discuss on ",
+        "What was on John Ash's mind on ",
+        "What was John's primary concern on ",
+        "Summarize John's thoughts from ",
+        "What was the key focus of John Ash's thoughts on ",
+        "What did John Ash reflect on during ",
+        "What ideas did John explore on ",
+        "Summarize John Ash's stream of thought on ",
+        "What subjects did John Ash consider on ",
+        "What was John Ash's cognitive focus on ",
+        "What did John Ash write about on ",
+        "What were John Ash's key insights on ",
+        "Tell the story of John's thoughts on ",
+        "What were John's observations on ",
+        "What concepts did John Ash explore on ",
+        "Summarize John's day on ",
+        "What was John Ash's line of thought on "
+    ]
+    
+    # Define an array of date formats
+    date_formats = [
+        "%B %d, %Y",  # January 01, 2022
+        "%m/%d/%Y",   # 01/01/2022
+        "%d %b %Y",   # 01 Jan 2022
+        "%A, %B %d",  # Sunday, January 01
+        "%d %B %Y",   # 01 January 2022
+        "%d-%m-%Y",   # 01-01-2022
+        "%Y-%m-%d",   # 2022-01-01
+        "%b %d, %Y",  # Jan 01, 2022
+        "%d %b, %Y",  # 01 Jan, 2022
+        "%A, %d %B"   # Sunday, 01 January
+    ]
+
+    # Create an empty list to store the final prompts
+    final_prompts = []
+
+    # Construct prompts and completions
+    for _, row in daily_summaries_df.iterrows():
+
+        date = row['Date']
+        summary = row['Summary']
+        
+        # Randomly select a prompt question and a date format
+        prompt_question = random.choice(prompt_questions)
+        date_format = random.choice(date_formats)
+        
+        # Format the date using the selected date format
+        formatted_date = date.strftime(date_format)
+        
+        # Create the final prompt by concatenating the prompt question and the formatted date
+        final_prompt = prompt_question + formatted_date
+        
+        # Append the final prompt and the corresponding summary (completion) to the final_prompts list
+        final_prompts.append((final_prompt, summary))
+
+    # Open the output file in write mode
+    with open("temporal_iris.csv", 'w', newline='', encoding='utf-8') as csvfile:
+
+        # Create a CSV writer object
+        csv_writer = csv.writer(csvfile)
+        
+        # Write the header row to the CSV file
+        csv_writer.writerow(['Prompt', 'Completion'])
+        
+        # Write each prompt and completion pair to the CSV file
+        for prompt, completion in final_prompts:
+            csv_writer.writerow([prompt, completion])
+
+def construct_weekly_training_data():
+    # Load weekly_summaries.csv into a DataFrame
+    weekly_summaries_df = pd.read_csv('weekly_summaries.csv', parse_dates=['Week_Start_Date'])
+    
+    # Define an array of question prompts for weekly summaries
+    prompt_questions = [
+        "What topics did John discuss on the {week_ordinal} week of {month_name}?",
+        "What was John Ash thinking about the {week_ordinal} week of {month_name}?",
+        "Please summarize the {week_ordinal} week of {month_name}",
+        "What notable occurred in John's life during the {week_ordinal} week of {month_name}?",
+        "What did John Ash think about in the {week_ordinal} week of {month_name}?",
+        "What thoughts did John discuss during the week ending on ",
+        "Can you please summarize John's thoughts from the week ending ",
+        "What did John Ash think about during the week of ",
+        "Where was John's focus during the week ending on ",
+        "What were John Ash's thoughts during the week of ",
+        "What topics did John discuss in the week ending on ",
+        "What was on John Ash's mind in the week ending on "
+    ]
+    
+    # Define an array of date formats for weekly summaries
+    date_formats = [
+        "%B %d, %Y",  # January 01, 2022
+        "%d %b %Y",   # 01 Jan 2022
+        "%d/%m/%Y",   # 01/01/2022
+    ]
+    
+    # Define a function to convert week number to ordinal string (e.g., 1 -> 1st, 2 -> 2nd)
+    def ordinal(n):
+        return str(n) + ("th" if 4 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th"))
+    
+    # Initialize an empty list to store the final prompts and completions
+    final_prompts = []
+    
+    # Construct Prompts and Completions
+    for _, row in weekly_summaries_df.iterrows():
+        week_start_date = row['Week_Start_Date']
+        summary = row['Summary']
+        
+        # Calculate the week number within the month
+        week_number_in_month = (week_start_date.day - 1) // 7 + 1
+        week_ordinal = ordinal(week_number_in_month)
+        month_name = week_start_date.strftime('%B')
+        
+        # Randomly select a prompt question
+        prompt_question = random.choice(prompt_questions)
+        
+        # Check if the prompt question contains placeholders for week ordinal and month name
+        if '{week_ordinal}' in prompt_question and '{month_name}' in prompt_question:
+            final_prompt = prompt_question.format(week_ordinal=week_ordinal, month_name=month_name)
+        else:
+            # Randomly select a date format
+            date_format = random.choice(date_formats)
+            # Format the date using the selected date format
+            formatted_date = week_start_date.strftime(date_format)
+            # Create the final prompt by concatenating the prompt question and the formatted date
+            final_prompt = prompt_question + formatted_date
+        
+        # Append the final prompt and the corresponding summary (completion) to the final_prompts list
+        final_prompts.append((final_prompt, summary))
+
+    # Open the output file in write mode
+    with open("weekly_iris.csv", 'w', newline='', encoding='utf-8') as csvfile:
+
+        # Create a CSV writer object
+        csv_writer = csv.writer(csvfile)
+        
+        # Write the header row to the CSV file
+        csv_writer.writerow(['Prompt', 'Completion'])
+        
+        # Write each prompt and completion pair to the CSV file
+        for prompt, completion in final_prompts:
+            csv_writer.writerow([prompt, completion])
+
+    
+    return final_prompts
+
+def construct_monthly_training_data():
+    # Load the monthly_summaries.csv file into a DataFrame
+    monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Year'])
+    
+    # Define an array of question prompts for monthly summaries
+    prompt_questions = [
+        "What did John Ash think about during the month of ",
+        "Where was John's focus in ",
+        "What were John Ash's thoughts in ",
+        "What topics did John discuss during ",
+        "What was on John Ash's mind in ",
+        "What was John's primary concern in ",
+        "What was the key focus of John Ash's thoughts in ",
+        "What did John Ash reflect on during ",
+        "What ideas did John explore in ",
+        "What subjects did John Ash consider in ",
+    ]
+    
+    # Define an array of date formats for monthly summaries
+    date_formats = [
+        "%B %Y",
+        "%B of %Y"
+    ]
+    
+    # Initialize an empty list to store the final prompts and completions
+    final_prompts = []
+    
+    # Construct Prompts and Completions
+    for _, row in monthly_summaries_df.iterrows():
+        month_year = row['Month_Year']
+        summary = row['Summary']
+        
+        # Randomly select a prompt question and a date format
+        prompt_question = random.choice(prompt_questions)
+        date_format = random.choice(date_formats)
+        
+        # Format the date using the selected date format
+        formatted_date = month_year.strftime(date_format)
+        
+        # Create the final prompt by concatenating the prompt question and the formatted date
+        final_prompt = prompt_question + formatted_date
+        
+        # Append the final prompt and the corresponding summary (completion) to the final_prompts list
+        final_prompts.append((final_prompt, summary))
+    
+    # Open the output file in write mode
+    with open("monthly_iris.csv", 'w', newline='', encoding='utf-8') as csvfile:
+
+        # Create a CSV writer object
+        csv_writer = csv.writer(csvfile)
+        
+        # Write the header row to the CSV file
+        csv_writer.writerow(['Prompt', 'Completion'])
+        
+        # Write each prompt and completion pair to the CSV file
+        for prompt, completion in final_prompts:
+            csv_writer.writerow([prompt, completion])
+    
+    return final_prompts
 
 def create_seasonal_summaries():
     # This function will aggregate and summarize the monthly summaries for each season (winter, spring, summer, fall),
     # providing an overview of the key trends and patterns observed during that period.
 
     # Load monthly_summaries.csv into a DataFrame
-    monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Start_Date'])
-    monthly_summaries_df.set_index('Month_Start_Date', inplace=True)
+    monthly_summaries_df = pd.read_csv('monthly_summaries.csv', parse_dates=['Month_Year'])
+    monthly_summaries_df.set_index('Month_Year', inplace=True)
 
     # Define custom date ranges for each season based on approximate equinoxes and solstices
     seasons = {
@@ -441,4 +739,7 @@ df_merged.reset_index(drop=True, inplace=True)
 
 # Generate daily summaries using the preprocessed DataFrame
 #daily_summaries = create_daily_summaries(df_merged)
-weekly_summaries = create_weekly_summaries()
+#weekly_summaries = create_weekly_summaries()
+#monthly_summaries = create_monthly_summaries()
+#construct_weekly_training_data()
+construct_monthly_training_data()
