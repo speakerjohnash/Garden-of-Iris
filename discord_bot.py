@@ -19,6 +19,7 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
+from discord import app_commands
 from discord.utils import get
 from pprint import pprint
 from pyairtable import Table
@@ -378,6 +379,73 @@ async def question_pool(message):
 	else:
 		await message.channel.send(response)
 
+async def fourthought_pool(message):
+
+	channel = bot.get_channel(1090373822454182090)
+	summary_count = 0
+
+	# Load Chat Context
+	messages = []
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+	if last_message.content.startswith("/"):
+		return
+
+	async for hist in channel.history(limit=50):
+		if not hist.content.startswith('/'):
+			if hist.author == bot.user: 
+				summary_count += 1
+				if summary_count < 1:
+					messages.append((hist.author, hist.content))
+			else:
+				messages.append((hist.author, hist.content))
+			if len(messages) == 7:
+				break
+
+	messages.reverse()
+
+	if messages[-1][1].startswith("Iris,"):
+
+		conversation = [
+			{"role": "system", "content": "You are Iris, an AI language model assisting people in a Discord channel. Your main function is to help be a time compass and guide people through time. You're an oracle that helps people focus on the future but an oracle that also looks back to help guide that focus"},
+			{"role": "system", "content": "Follow the last speakers direction as closely as possible in the context of the thread so far"}
+
+		]
+
+	else:
+
+		conversation = [
+			{"role": "system", "content": "You are Iris, an AI language model assisting people in a Discord channel. Your main function is to help be a time compass and guide people through time. You're an oracle that helps people focus on the future but an oracle that also looks back to help guide that focus"},
+			{"role": "system", "content": "The FourThought dialectic consists of four thought types based on temporal focus and uncertainty: Statements, Predictions, Reflections, and Questions. Guide users to contribute to achieve their goals through time by helping them become better predictors and have better insight and hindsight"},
+			{"role": "system", "content": "While users communicate in this dialectic, your role is to be the storyteller, weaving together these different perceptions into a narrative that helps them to work together towards these goals. You elevate and praise and form synthesis for good work that heals the planet and the community"},
+			{"role": "system", "content": "Users may provide valence (good) and certainty (truth) scores to help evaluate the quality and relevance of the contributions. Use these scores to prioritize and weigh the information provided by users. Certainty (0 - 100%) evaluates whether a thought aligns with one's sense of reality (false to true, with uncertainty in the middle), while valence evaluates whether a thought aligns with one's sense of morality (bad to good, with neutrality in the center)."},
+			{"role": "system", "content": "Other than forming a communal narrative and being a time compass, remain adaptive to users' requests, summarizing or restructuring information when asked. Your primary goal is to help users navigate through time, make sense of complex issues, and adapt their strategies based on new information."},
+		]
+
+	for m in messages:
+		if  m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	conversation.append({"role": "system", "content": "Keep your answer short. No longer than 250 words or a medium length paragraph unless specifically requested to do otherwise."})
+	conversation.append({"role": "user", "content": "Please give guidance based on the thread so far. Focus this thread towards a specific future based on their input"})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4", 
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	if len(response) > 2000:
+		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
+			await message.channel.send(chunk)
+	else:
+		await message.channel.send(response)		
+
 async def prophecy_pool(message):
 
 	channel = bot.get_channel(1083409321754378290)
@@ -488,7 +556,7 @@ async def frankeniris(message, answer=""):
 	conversation = [{"role": "system", "content": "You are interacting with users via discord. Mostly you just serve as an interface to Cognicism and Iris the democratic langauge model. However this discord has the following commands /pullcard [intention] /ask [prompt] /channel /faq"}]
 	conversation = [{"role": "system", "content": "/pullcard pulls a card from the Iris tarot deck. If the user provides an intention the model will attempt to intpret the card. /ask prompts Iris directly without the interference of ChatGPT. Responses from /ask can be forward to the #seeds text channel. /channel channels wisdom and can be reached via the alias /c. /faq answers a frequently asked question"}]
 	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
-	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. I was trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
+	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. Iris was made and trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
 	text_prompt = message.content
 
 	for m in messages:
@@ -520,8 +588,10 @@ async def frankeniris(message, answer=""):
 	print("total_length after")
 	print(total_length)
 
+	model = random.choice(["gpt-4", "gpt-3.5-turbo"])
+
 	response = openai.ChatCompletion.create(
-		model="gpt-4",
+		model="gpt-3.5-turbo",
 		temperature=0.8,
 		max_tokens=500,
 		messages=conversation
@@ -539,6 +609,12 @@ async def frankeniris(message, answer=""):
 @bot.event
 async def on_message(message):
 
+	# Manage Fourthought Pool
+	if message.channel.id == 1090373822454182090 and message.author != bot.user:
+		await fourthought_pool(message)
+		await bot.process_commands(message)
+		return
+
 	# Manage Question Pool
 	if message.channel.id == 1086437563654475846 and message.author != bot.user:
 		await question_pool(message)
@@ -550,7 +626,6 @@ async def on_message(message):
 		await prophecy_pool(message)
 		await bot.process_commands(message)
 		return
-
 
 	# Handle DM Chat
 	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
@@ -675,8 +750,8 @@ async def iris(ctx, *, thought):
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden", "dpax", "Kaliyuga", "Tej", "Gregory | RND", "futurememe"]
 	
 	# Only Allow Some Users
-	if ctx.message.author.name not in testers:
-		return
+	#if ctx.message.author.name not in testers:
+	#	return
 
 	thought_prompt = thought + "\n\n###\n\n"
 
