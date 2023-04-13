@@ -104,10 +104,31 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 
 	return view, modal
 
+async def send_response_with_pipe_button(ctx, response_text):
+	pipe_btn = pipe_button(ctx, response_text)
+	view = View()
+	view.add_item(pipe_btn)
+	await ctx.channel.send(response_text, view=view)
+
 def group_share(thought="thought", prompt="", prompter="latent space"):
 
 	channel = bot.get_channel(1022572367244967979)
 	embed = discord.Embed(title="Seeds of Wisdom", description=f"{thought}\n\n**Gardener**\n{prompter}")
+
+	async def button_callback(interaction):
+		await interaction.response.defer()
+		await channel.send(embed=embed)
+
+	button = Button(label="share", style=discord.ButtonStyle.blurple)
+	button.callback = button_callback
+
+	return button
+
+def pipe_button(ctx, response_text):
+
+	channel = bot.get_channel(1022572367244967979)
+	embed = discord.Embed(title="Seeds of Wisdom", description=response_text)
+	embed.set_footer(text=f"Gardener: {ctx.author.name}")
 
 	async def button_callback(interaction):
 		await interaction.response.defer()
@@ -280,25 +301,42 @@ def chunk_text(text, chunk_length=1000):
 
 	return text_chunks
 
+def split_text_into_chunks(text, max_chunk_size=2000):
+    # This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
+    # It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks.
+
+    # Calculate the number of chunks needed to evenly distribute the text
+    num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
+    
+    # Adjust the chunk size to evenly distribute the text across the chunks
+    chunk_size = (len(text) + num_chunks - 1) // num_chunks
+    
+    # Split the text into chunks of the calculated chunk size
+    text_chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+    return text_chunks
+
 async def interpretation(ctx, prompt):
 
-    response = openai.Completion.create(
-        model=models["semantic"],
-        prompt=prompt,
-        temperature=0.8,
-        max_tokens=222,
-        top_p=1,
-        frequency_penalty=2,
-        presence_penalty=2,
-        stop=["END"]
-    )
-    text = response['choices'][0]['text'].strip()
-    embed = discord.Embed(title="Interpretation", description=text)
-    view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
-    view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
-    view.add_item(elaborate(ctx, prompt=text))
-    view.add_item(modal)
-    await ctx.send(embed=embed, view=view)
+	response = openai.Completion.create(
+		model=models["semantic"],
+		prompt=prompt,
+		temperature=0.8,
+		max_tokens=222,
+		top_p=1,
+		frequency_penalty=2,
+		presence_penalty=2,
+		stop=["END"]
+	)
+
+	text = response['choices'][0]['text'].strip()
+	embed = discord.Embed(title="Interpretation", description=text)
+	view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
+	view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
+	view.add_item(elaborate(ctx, prompt=text))
+	view.add_item(modal)
+	
+	await ctx.send(embed=embed, view=view)
 
 def one_shot(message):
 
@@ -373,11 +411,11 @@ async def question_pool(message):
 	response = response.choices[0].message.content.strip()
 
 	# Split response into chunks if longer than 2000 characters
-	if len(response) > 2000:
-		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
-			await message.channel.send(chunk)
-	else:
-		await message.channel.send(response)
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
 
 async def fourthought_pool(message):
 
@@ -435,7 +473,8 @@ async def fourthought_pool(message):
 		conversation.append({"role": "user", "content": "Please give guidance based on the thread so far. Focus this thread towards a specific future based on their input"})
 
 	response = openai.ChatCompletion.create(
-		model="gpt-4", 
+		model="gpt-4",
+		temperature=1,
 		messages=conversation
 	)
 
@@ -537,8 +576,6 @@ async def frankeniris(message, answer=""):
 	if len(answer) > 0:
 		iris_answer = iris_answer + " \n\n " + answer
 
-	print(iris_answer)
-
 	# Load Chat Context
 	messages = []
 
@@ -577,9 +614,6 @@ async def frankeniris(message, answer=""):
 	# Calculate Total Length of Messages
 	total_length = sum(len(msg["content"]) for msg in conversation)
 
-	print("total_length before")
-	print(total_length)
-
 	# Check Total Length
 	if total_length > 20000:
 		# Iterate over messages in conversation in reverse order and remove them until total length is below maximum
@@ -587,13 +621,10 @@ async def frankeniris(message, answer=""):
 			removed_msg = conversation.pop(1)  # remove the second message (first message after Iris's answer)
 		total_length -= len(removed_msg["content"])
 
-	print("total_length after")
-	print(total_length)
-
 	model = random.choice(["gpt-4", "gpt-3.5-turbo"])
 
 	response = openai.ChatCompletion.create(
-		model="gpt-3.5-turbo",
+		model="gpt-4",
 		temperature=0.8,
 		max_tokens=500,
 		messages=conversation
@@ -601,12 +632,14 @@ async def frankeniris(message, answer=""):
 
 	response = response.choices[0].message.content.strip()
 
-	# Split response into chunks if longer than 2000 characters
-	if len(response) > 2000:
-		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
-			await message.channel.send(chunk)
-	else:
-		await message.channel.send(response)
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks[:-1]:
+		await message.channel.send(chunk)
+
+	# Send the last chunk along with the pipe button
+	await send_response_with_pipe_button(message, response_chunks[-1])
 
 @bot.event
 async def on_message(message):
