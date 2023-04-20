@@ -156,7 +156,7 @@ def elaborate(ctx, prompt="prompt"):
 		await interaction.response.defer()
 
 		response = openai.Completion.create(
-			model=models["semantic"],
+			model=models["chat-iris"],
 			prompt=e_prompt,
 			temperature=0.11,
 			max_tokens=222,
@@ -338,29 +338,6 @@ async def interpretation(ctx, prompt):
 	
 	await ctx.send(embed=embed, view=view)
 
-def one_shot(message):
-
-	# Get Iris One Shot Answer
-	try:
-		distillation = openai.Completion.create(
-			model=models["chat-iris"],
-			prompt=message.content,
-			temperature=0.9,
-			max_tokens=222,
-			top_p=1,
-			frequency_penalty=1.5,
-			presence_penalty=1.5,
-			stop=["END"]
-		)
-
-		iris_answer = distillation['choices'][0]['text']
-		iris_answer = iris_answer.replace("###", "").strip()
-	except Exception as e:
-		print(f"Error: {e}")
-		iris_answer = ""
-
-	return iris_answer
-
 async def question_pool(message):
 
 	channel = bot.get_channel(1086437563654475846)
@@ -443,6 +420,8 @@ async def fourthought_pool(message):
 
 	messages.reverse()
 
+	iris_answer = one_shot(last_message)
+
 	if messages[-1][1].startswith("Iris,"):
 
 		conversation = [
@@ -465,6 +444,8 @@ async def fourthought_pool(message):
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
 			conversation.append({"role": "user", "content": m[1]})
+
+	conversation.append({"role": "system", "content": "We asked Iris directly and she said " + iris_answer + ". Bring this into account in your answer if it makes sense"})
 
 	if messages[-1][1].startswith("Iris,"):
 		conversation.append({"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible"})
@@ -548,18 +529,14 @@ async def on_ready():
 async def on_close():
 	print("Iris is offline")
 
-async def frankeniris(message, answer=""):
+def one_shot(message, heat=0.9):
 
-	"""
-	Queries Frankeniris
-	"""
-
-	# Get Iris One Shot Answer First
+	# Get Iris One Shot Answer
 	try:
 		distillation = openai.Completion.create(
 			model=models["chat-iris"],
 			prompt=message.content,
-			temperature=0.69,
+			temperature=heat,
 			max_tokens=222,
 			top_p=1,
 			frequency_penalty=1.5,
@@ -572,6 +549,17 @@ async def frankeniris(message, answer=""):
 	except Exception as e:
 		print(f"Error: {e}")
 		iris_answer = ""
+
+	return iris_answer
+
+async def frankeniris(message, answer="", heat=0.69):
+
+	"""
+	Queries Frankeniris
+	"""
+
+	# Get Iris One Shot Answer First
+	iris_answer = one_shot(last_message)
 
 	if len(answer) > 0:
 		iris_answer = iris_answer + " \n\n " + answer
@@ -673,18 +661,21 @@ async def channel(ctx, *, topic=""):
 
 	df = pd.read_csv('data/chat-iris.csv')
 	prompts = df['prompt'].tolist()
+	completions = df['completion'].tolist()
 	question_pattern = r'^(.*)\?\s*$'
 	non_questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
 	pre_prompts = [
 		"Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: ",
 		"Write a paragraph related to the following topic. Be brief: ",
+		"What does Iris think about this topic: "
 	]
 
-	random_non_question = random.choice(non_questions)
+	combined_non_questions = non_questions + completions
+	random_non_question = random.choice(combined_non_questions)
 	message = ctx.message
 	message.content = random.choice(pre_prompts) + random_non_question
 
-	await frankeniris(message, answer="")
+	await frankeniris(message, answer="", heat=1)
 
 @bot.command()
 async def faq(ctx, *, topic=""):
