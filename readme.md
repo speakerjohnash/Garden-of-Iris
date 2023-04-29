@@ -28,16 +28,16 @@ The `faq` command responds with a Frequently Asked Question (FAQ) and its corres
 ### Infuse (`/infuse`, `/in`, `/inject`)
 The `infuse` command (aliased as `in` and `inject`) allows users to bring in a source into the stream via scraping and parsing. Users provide a link as input, and the bot processes the link to extract relevant information.
 
-## Claim (`/claim`)
+### Claim (`/claim`)
 The `claim` command allows users to log a claim for the Iris model to learn. Users provide a thought or statement as input, and the bot records the claim for potential future training.
 
-## Secret Tunnel
+### Secret Tunnel
 The `secret_tunnel` function handles user messages in a Discord channel, maintaining a rolling cache of important context within the GPT-4 model's context window. The bot will prepend the cache to each response while functioning as normal, without mentioning its instructions. The bot is triggered whenever a message is sent in the Secret Tunnel channel.
 
-## Question Pool
+### Question Pool
 The `question_pool` function collects and summarizes questions about Cognicism from a Discord channel, ignoring non-question messages. The bot will provide summaries without answering the questions directly. The bot is triggered whenever a message is sent in the Question Pool channel.
 
-## Prophecy Pool
+### Prophecy Pool
 The `prophecy_pool` function assists users in a Discord channel as an oracle and future manifestation mechanism named Iris. The bot focuses on the future, integrating and making sense of user inputs, offering analysis, and suggesting predictions and ways to manifest specific futures. The bot is triggered whenever a message is sent in the Prophecy Pool channel.
 
 ## Getting Started
