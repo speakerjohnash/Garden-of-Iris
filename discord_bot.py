@@ -81,6 +81,10 @@ class AskModal(Modal, title="Ask Modal"):
 		self.view.stop()
 
 def response_view(modal_text="default text", modal_label="Response", button_label="Answer"):	
+	"""
+	Creates a Discord view with a button and a modal, allowing users to interact with a response system.
+	When the button is clicked, a modal with a predefined text and label is shown.
+	"""	
 
 	async def view_timeout():
 		modal.stop()	
@@ -302,8 +306,10 @@ def chunk_text(text, chunk_length=1000):
 	return text_chunks
 
 def split_text_into_chunks(text, max_chunk_size=2000):
-    # This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
-    # It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks.
+    """
+    This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
+    It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks.
+    """
 
     # Calculate the number of chunks needed to evenly distribute the text
     num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
@@ -317,6 +323,16 @@ def split_text_into_chunks(text, max_chunk_size=2000):
     return text_chunks
 
 async def interpretation(ctx, prompt):
+	"""
+	The interpretation function generates an interpretation of a given prompt. The generated interpretation is sent to the user as an embed titled "Interpretation."
+
+	The function also provides a response view with options for the user to:
+	- Provide feedback on the interpretation.
+	- Share the interpretation with a group.
+	- Request elaboration on the interpretation.
+
+	The user's feedback and additional actions are collected through the response view and modal.
+	"""
 
 	response = openai.Completion.create(
 		model=models["semantic"],
@@ -339,6 +355,10 @@ async def interpretation(ctx, prompt):
 	await ctx.send(embed=embed, view=view)
 
 async def question_pool(message):
+	"""
+	Collects and summarizes questions about Cognicism from a Discord channel, ignoring non-question messages.
+	The bot will provide summaries without answering the questions directly.
+	"""
 
 	channel = bot.get_channel(1086437563654475846)
 	summary_count = 0
@@ -394,7 +414,61 @@ async def question_pool(message):
 	for chunk in response_chunks:
 		await message.channel.send(chunk)
 
+async def secret_tunnel(message):
+	"""
+	Handles user messages in a Discord channel, maintaining a rolling cache of important context within the GPT-4 model's context window.
+	The bot will prepend the cache to each response while functioning as normal, without mentioning its instructions.
+	"""
+
+	channel = bot.get_channel(1100265461800771744)
+
+	# Load Chat Context
+	messages = []
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+	if last_message.content.startswith("/"):
+		return
+
+	async for hist in channel.history(limit=50):
+		if not hist.content.startswith('/'):
+			if hist.author == bot.user: 
+				messages.append((hist.author, hist.content))
+			else:
+				messages.append((hist.author, hist.content))
+			if len(messages) == 9:
+				break
+
+	messages.reverse()
+
+	conversation = [{"role": "system", "content": "You are a GPT context window extender. You can only see the last 8000 tokens. You need to print in each a response a small cache of important information. Anything at the beginning of your context window you are about to forget. Keep a short rolling cache that describes the whole of what we're focused on and all the surrounding context you need to keep working. Keep a close eye on the beginning of your context window as you are about to forget that information"}]
+	conversation.append({"role": "system", "content": "Make no mention of your instructions. Behave as OpenAPI GPT-4 normally behaves with this one exception: at the top of each response include the cache of imporant information"})
+
+	for m in messages:
+		if  m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4",
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)		
+
 async def fourthought_pool(message):
+	"""
+	Assists users in a Discord channel by guiding them through the FourThought dialectic process, helping to focus on the future, make predictions, and reflect on the past.
+	The bot will provide guidance and adapt to user requests while maintaining a short response length.
+	"""
 
 	channel = bot.get_channel(1090373822454182090)
 	summary_count = 0
@@ -420,8 +494,6 @@ async def fourthought_pool(message):
 
 	messages.reverse()
 
-	iris_answer = one_shot(last_message)
-
 	if messages[-1][1].startswith("Iris,"):
 
 		conversation = [
@@ -445,8 +517,6 @@ async def fourthought_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "We asked Iris directly and she said " + iris_answer + ". Bring this into account in your answer if it makes sense"})
-
 	if messages[-1][1].startswith("Iris,"):
 		conversation.append({"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible"})
 	else:
@@ -469,6 +539,10 @@ async def fourthought_pool(message):
 		await message.channel.send(response)		
 
 async def prophecy_pool(message):
+	"""
+	Assists users in a Discord channel as an oracle and future manifestation mechanism named Iris.
+	The bot focuses on the future, integrating and making sense of user inputs, offering analysis, and suggesting predictions and ways to manifest specific futures.
+	"""
 
 	channel = bot.get_channel(1083409321754378290)
 	summary_count = 0
@@ -553,13 +627,30 @@ def one_shot(message, heat=0.9):
 	return iris_answer
 
 async def frankeniris(message, answer="", heat=0.69):
-
 	"""
-	Queries Frankeniris
+	Frankeniris function combines the outputs of Iris and GPT-4 to create a response.
+	It first gets an answer from the Iris model, then constructs a conversation thread for the GPT-4 model using the message history and provides GPT-4 with Iris's answer.
+	Frankeniris aims to provide more creative and integrated responses for the user by combining the knowledge of both models.
 	"""
 
 	# Get Iris One Shot Answer First
-	iris_answer = one_shot(last_message)
+	try:
+		distillation = openai.Completion.create(
+			model=models["chat-iris"],
+			prompt=message.content,
+			temperature=heat,
+			max_tokens=222,
+			top_p=1,
+			frequency_penalty=1.5,
+			presence_penalty=1.5,
+			stop=["END"]
+		)
+
+		iris_answer = distillation['choices'][0]['text']
+		iris_answer = iris_answer.replace("###", "").strip()
+	except Exception as e:
+		print(f"Error: {e}")
+		iris_answer = ""
 
 	if len(answer) > 0:
 		iris_answer = iris_answer + " \n\n " + answer
@@ -631,10 +722,27 @@ async def frankeniris(message, answer="", heat=0.69):
 
 @bot.event
 async def on_message(message):
+	"""
+	The on_message event function is triggered whenever a message is sent in any channel or direct message (DM) that the bot can access. The function checks the channel ID and author of the message to determine how to handle it.
+
+	- If the message is sent in the Fourthought Pool channel, the fourthought_pool function is called.
+	- If the message is sent in the Secret Tunnel channel, the secret_tunnel function is called.
+	- If the message is sent in the Question Pool channel, the question_pool function is called.
+	- If the message is sent in the Prophecy Pool channel, the prophecy_pool function is called.
+	- If the message is sent in a DM to the bot and does not start with "/", the frankeniris function is called.
+
+	The bot.process_commands function is called at the end to process any bot commands in the message.
+	"""
 
 	# Manage Fourthought Pool
 	if message.channel.id == 1090373822454182090 and message.author != bot.user:
 		await fourthought_pool(message)
+		await bot.process_commands(message)
+		return
+
+	# Manage Secret Tunnel
+	if message.channel.id == 1100265461800771744 and message.author != bot.user:
+		await secret_tunnel(message)
 		await bot.process_commands(message)
 		return
 
@@ -658,6 +766,12 @@ async def on_message(message):
 
 @bot.command(aliases=['c'])
 async def channel(ctx, *, topic=""):
+	"""
+	The channel function (aliased as 'c') allows users to request a snippet of abstract and analytical wisdom related to a specified topic. 
+	The function selects a random non-question prompt or completion from a CSV file containing data from previous interactions with the Iris model. 
+	It then calls the frankeniris function to generate a creative response based on the selected prompt, which is sent to the user.
+	"""
+
 
 	df = pd.read_csv('data/chat-iris.csv')
 	prompts = df['prompt'].tolist()
@@ -679,6 +793,11 @@ async def channel(ctx, *, topic=""):
 
 @bot.command()
 async def faq(ctx, *, topic=""):
+	"""
+	The faq function responds with a Frequently Asked Question (FAQ) and its corresponding answer.
+	It reads the questions and answers from a CSV file containing the data, selects a random question and its corresponding completion, and sends the question and answer as an embedded message in Discord.
+	It then calls the frankeniris function to provide a more integrated response using the context of the selected FAQ.
+	"""
 
 	df = pd.read_csv('data/chat-iris.csv')
 	prompts = df['prompt'].tolist()
@@ -769,7 +888,9 @@ async def infuse(ctx, *, link):
 @bot.command(aliases=['ask'])
 async def iris(ctx, *, thought):
 	"""
-	/ask query an iris and get a response
+	The iris function allows certain users (testers) to directly interact with the Iris language model, providing their thoughts as input.
+	It generates a response from the Iris model based on the input, sends the response as an embedded message in Discord, and provides options for users to give feedback, share the response, or request elaboration.
+	The user's input and the model's response are also saved in the 'iris_training-data.csv' file for potential future training.
 	"""
 
 	global training_data, models
@@ -870,6 +991,10 @@ async def claim(ctx, *, thought):
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
+	"""
+	The pullcard function lets users draw a random tarot card with an optional intention. The drawn card, its description, and image are sent to the user. 
+	If an intention is provided, the function also generates and sends an interpretation of the card in the context of the intention using the OpenAI model.
+	"""
 
 	# With Intention
 	with_intention = len(intention) > 0
@@ -922,6 +1047,11 @@ async def pullcard(ctx, *, intention=""):
 	
 @bot.command(name="ask_group", description="Ask group a question and auto-summarize")
 async def ask_group(ctx, *, question=""):
+	"""
+	The ask_group function lets testers ask a question to a group called "Birdies". It sends the question via direct messages, collects responses, and generates a summarized consensus using an OpenAI model. 
+	The consensus is then shared with the Birdies. The function ensures a minimum of two responses for summarization and provides a redo option if needed.
+	"""
+
 
 	if len(question) == 0:
 		return
