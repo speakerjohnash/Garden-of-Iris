@@ -144,6 +144,11 @@ def pipe_button(ctx, response_text):
 	return button
 
 def elaborate(ctx, prompt="prompt"):
+	"""
+	The elaborate function creates a button labeled "elaborate" that, when clicked, generates a detailed elaboration of a given prompt using the OpenAI model. The generated elaboration is sent to the user as an embed titled "Elaboration (beta)."
+	The function first attempts to generate the elaboration using the "chat-iris" model variant. If no response is generated, it retries using the "text-davinci-002" model variant.
+	The button is disabled after being clicked to prevent multiple elaborations for the same prompt.
+	"""
 
 	global models
 
@@ -199,6 +204,10 @@ def elaborate(ctx, prompt="prompt"):
 	return button
 
 def redo_view(ctx, prompt, question):
+	"""
+	The redo_view function creates a "Redo" button in the Discord interface. When the button is clicked, the function generates a new consensus response for a given question using the OpenAI model. 
+	The generated consensus is sent to the user as an embed titled "Consensus."
+	"""
 
 	async def button_callback(interaction):
 
@@ -354,38 +363,44 @@ async def interpretation(ctx, prompt):
 	
 	await ctx.send(embed=embed, view=view)
 
+async def get_conversation_history(channel_id, limit, message_count, summary_count_limit):
+	"""
+	Fetches the conversation history from a specified Discord channel.
+	The function retrieves a list of messages from the channel, ignoring slash commands and messages starting with '/'.
+	"""
+
+	channel = bot.get_channel(channel_id)
+	messages = []
+	summary_count = 0
+
+	async for hist in channel.history(limit=limit):
+		if not hist.content.startswith('/'):
+			if hist.author == bot.user:
+				summary_count += 1
+				if summary_count < summary_count_limit:
+					messages.append((hist.author, hist.content))
+			else:
+				messages.append((hist.author, hist.content))
+			if len(messages) == message_count:
+				break
+
+	return messages
+
 async def question_pool(message):
 	"""
 	Collects and summarizes questions about Cognicism from a Discord channel, ignoring non-question messages.
 	The bot will provide summaries without answering the questions directly.
 	"""
-
-	channel = bot.get_channel(1086437563654475846)
-	summary_count = 0
-
-	# Load Chat Context
-	messages = []
+	
+	channel_id = 1086437563654475846
+	channel = bot.get_channel(channel_id)
 
 	# Ignore Slash Commands
 	last_message = [message async for message in channel.history(limit=1)][0]
 	if last_message.content.startswith("/"):
 		return
 
-	#iris_answer = one_shot(last_message)
-
-	# print(iris_answer)
-
-	async for hist in channel.history(limit=50):
-		if not hist.content.startswith('/'):
-			if hist.author == bot.user: 
-				summary_count += 1
-				if summary_count < 1:
-					messages.append((hist.author, hist.content))
-			else:
-				messages.append((hist.author, hist.content))
-			if len(messages) == 15:
-				break
-
+	messages = await get_conversation_history(channel_id, 50, 15, 1)
 	messages.reverse()
 
 	conversation = [{"role": "system", "content": "You are a question summarizer Iris. You are summarizing a thread of questions about Cognicism and related concepts. You ignore everything except questions. People will ask you various questions about cognicism and you job is to summarize what people want to know"}]
@@ -420,25 +435,16 @@ async def secret_tunnel(message):
 	The bot will prepend the cache to each response while functioning as normal, without mentioning its instructions.
 	"""
 
-	channel = bot.get_channel(1100265461800771744)
-
-	# Load Chat Context
-	messages = []
+	channel_id = 1100265461800771744
+	channel = bot.get_channel(channel_id)
 
 	# Ignore Slash Commands
 	last_message = [message async for message in channel.history(limit=1)][0]
+
 	if last_message.content.startswith("/"):
 		return
 
-	async for hist in channel.history(limit=50):
-		if not hist.content.startswith('/'):
-			if hist.author == bot.user: 
-				messages.append((hist.author, hist.content))
-			else:
-				messages.append((hist.author, hist.content))
-			if len(messages) == 9:
-				break
-
+	messages = await get_conversation_history(channel_id, 50, 9, 1)
 	messages.reverse()
 
 	conversation = [{"role": "system", "content": "You are a GPT context window extender. You can only see the last 8000 tokens. You need to print in each a response a small cache of important information. Anything at the beginning of your context window you are about to forget. Keep a short rolling cache that describes the whole of what we're focused on and all the surrounding context you need to keep working. Keep a close eye on the beginning of your context window as you are about to forget that information"}]
@@ -470,28 +476,16 @@ async def fourthought_pool(message):
 	The bot will provide guidance and adapt to user requests while maintaining a short response length.
 	"""
 
-	channel = bot.get_channel(1090373822454182090)
-	summary_count = 0
-
-	# Load Chat Context
-	messages = []
+	channel_id = 1090373822454182090
+	channel = bot.get_channel(channel_id)
 
 	# Ignore Slash Commands
 	last_message = [message async for message in channel.history(limit=1)][0]
+
 	if last_message.content.startswith("/"):
 		return
 
-	async for hist in channel.history(limit=50):
-		if not hist.content.startswith('/'):
-			if hist.author == bot.user: 
-				summary_count += 1
-				if summary_count < 1:
-					messages.append((hist.author, hist.content))
-			else:
-				messages.append((hist.author, hist.content))
-			if len(messages) == 9:
-				break
-
+	messages = await get_conversation_history(channel_id, 50, 9, 1)
 	messages.reverse()
 
 	if messages[-1][1].startswith("Iris,"):
@@ -532,11 +526,11 @@ async def fourthought_pool(message):
 	response = response.choices[0].message.content.strip()
 
 	# Split response into chunks if longer than 2000 characters
-	if len(response) > 2000:
-		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
-			await message.channel.send(chunk)
-	else:
-		await message.channel.send(response)		
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)		
 
 async def prophecy_pool(message):
 	"""
@@ -544,28 +538,16 @@ async def prophecy_pool(message):
 	The bot focuses on the future, integrating and making sense of user inputs, offering analysis, and suggesting predictions and ways to manifest specific futures.
 	"""
 
-	channel = bot.get_channel(1083409321754378290)
-	summary_count = 0
-
-	# Load Chat Context
-	messages = []
+	channel_id = 1083409321754378290
+	channel = bot.get_channel(channel_id)
 
 	# Ignore Slash Commands
 	last_message = [message async for message in channel.history(limit=1)][0]
+
 	if last_message.content.startswith("/"):
 		return
 
-	async for hist in channel.history(limit=50):
-		if not hist.content.startswith('/'):
-			if hist.author == bot.user: 
-				summary_count += 1
-				if summary_count < 1:
-					messages.append((hist.author, hist.content))
-			else:
-				messages.append((hist.author, hist.content))
-			if len(messages) == 11:
-				break
-
+	messages = await get_conversation_history(channel_id, 50, 11, 1)
 	messages.reverse()
 
 	conversation = [{"role": "system", "content": "You are an oracle and pro-social future manifestation mechanism named Iris. You are helping coordinate a thread of people trying to collaboratively work towards a common future. Within this thread there is a thread of thoughts amounting to a moving arrow of time. There are predictions, intentions and questions about the future. There are varying degrees of uncentainty of these conceptions of the future and varying beliefs about whether manifesting certain futures is possible. Your job is to continusouly integrate and make sense of anything related to this forward arrow of collective ideation. You also suggest predictions and ways to manifest specific futures mentioned by the group"}]
@@ -588,11 +570,11 @@ async def prophecy_pool(message):
 	response = response.choices[0].message.content.strip()
 
 	# Split response into chunks if longer than 2000 characters
-	if len(response) > 2000:
-		for chunk in [response[i:i+2000] for i in range(0, len(response), 2000)]:
-			await message.channel.send(chunk)
-	else:
-		await message.channel.send(response)
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)		
 
 @bot.event
 async def on_ready():
@@ -670,9 +652,8 @@ async def frankeniris(message, answer="", heat=0.69):
 	messages.reverse()
 
 	# Construct Chat Thread for API
-	conversation = [{"role": "system", "content": "You are are a wise oracle and integrated wisdom bot named Iris. You help integrate knowledge and wisdom about the future. You read many sources and weigh them"}]
+	conversation = [{"role": "system", "content": "You are are named Iris. You help integrate knowledge and wisdom about the future and help people interact with information about cognicism. You help people learn about cognicism."}]
 	conversation = [{"role": "system", "content": "You are interacting with users via discord. Mostly you just serve as an interface to Cognicism and Iris the democratic langauge model. However this discord has the following commands /pullcard [intention] /ask [prompt] /channel /faq"}]
-	conversation = [{"role": "system", "content": "/pullcard pulls a card from the Iris tarot deck. If the user provides an intention the model will attempt to intpret the card. /ask prompts Iris directly without the interference of ChatGPT. Responses from /ask can be forward to the #seeds text channel. /channel channels wisdom and can be reached via the alias /c. /faq answers a frequently asked question"}]
 	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
 	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. Iris was made and trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
 	text_prompt = message.content
@@ -854,11 +835,13 @@ async def infuse(ctx, *, link):
 		driver.quit()
 
 		# chunk text
-		text_chunks = chunk_text(text)
+		text_chunks = split_text_into_chunks(text)
 
 		# Send each text chunk to OpenAI for processing with progress bar
 		conversation = [{"role": "system", "content": "You are a parser and summarizer that takes in noisy text scraped from the internet or pdfs and summarizes it into a paragraph"}]
 		conversation.append({"role": "user", "content": "The text you are receiving is scraped from the internet using beautiful soup and PyPDF2. That means it may be quite noisy and contain non-standard capitalization. Please summarize the content of this text into a cleanly written paragraph"})
+
+		await ctx.send(str(len(text_chunks)) + " chunks to parse")
 
 		for i, text_chunk in tqdm(enumerate(text_chunks), total=len(text_chunks), unit='chunk'):
 
@@ -871,7 +854,7 @@ async def infuse(ctx, *, link):
 			truncated_convo += conversation[-3:]
 
 			response = openai.ChatCompletion.create(
-				model="gpt-4",
+				model="gpt-3.5-turbo",
 				temperature=0.75,
 				messages=truncated_convo
 			)
@@ -880,10 +863,12 @@ async def infuse(ctx, *, link):
 			for choice in response.choices:
 				assistant_message = choice.message.content
 				conversation.append({"role": "assistant", "content": assistant_message})
-				infusion += [(c.strip(), text_chunk) for c in assistant_message.split("\n") if c.strip()]
+				summary = [(c.strip(), text_chunk) for c in assistant_message.split("\n") if c.strip()]
+				infusion += summary
+				await ctx.send(summary[0][0] + "\n\n")
 
-		for i in infusion:
-			await ctx.send(i[0] + "\n\n")
+		# for i in infusion:
+		#	await ctx.send(i[0] + "\n\n")
 
 @bot.command(aliases=['ask'])
 async def iris(ctx, *, thought):
