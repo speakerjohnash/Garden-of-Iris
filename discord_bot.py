@@ -291,43 +291,36 @@ def pool_prompt(question, joined_answers):
 
 	return prompt
 
-def chunk_text(text, chunk_length=1000):
-
-	# Clean the Text
-	text = text.replace('\n', ' ')
-
-	# Split the text into individual sentences
-	sentences = text.split('. ')
-
-	# Capitalize the first letter and make the remaining letters lowercase in each sentence
-	formatted_sentences = []
-	for sentence in sentences:
-		formatted_sentence = sentence.capitalize()
-		formatted_sentence = formatted_sentence[0] + formatted_sentence[1:].lower()
-		formatted_sentences.append(formatted_sentence)
-
-	# Join the sentences back into a single string
-	text = '. '.join(formatted_sentences)
-
-	# Split the text into chunks of maximum length
-	text_chunks = [text[i:i+chunk_length] for i in range(0, len(text), chunk_length)]
-
-	return text_chunks
-
 def split_text_into_chunks(text, max_chunk_size=2000):
     """
     This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
-    It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks.
+    It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks and doesn't break mid-sentence.
     """
 
     # Calculate the number of chunks needed to evenly distribute the text
     num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
-    
+
     # Adjust the chunk size to evenly distribute the text across the chunks
     chunk_size = (len(text) + num_chunks - 1) // num_chunks
-    
-    # Split the text into chunks of the calculated chunk size
-    text_chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+    # Initialize variables
+    text_chunks = []
+    start_index = 0
+
+    while start_index < len(text):
+        end_index = start_index + chunk_size
+
+        # Find the nearest sentence boundary before the end_index
+        if end_index < len(text):
+            boundary_index = text.rfind(".", start_index, end_index) + 1
+            if boundary_index > start_index:  # If a boundary is found, update the end_index
+                end_index = boundary_index
+
+        # Add the chunk to the list of chunks
+        text_chunks.append(text[start_index:end_index])
+
+        # Update the start_index for the next iteration
+        start_index = end_index
 
     return text_chunks
 
