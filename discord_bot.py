@@ -379,6 +379,50 @@ async def get_conversation_history(channel_id, limit, message_count, summary_cou
 
 	return messages
 
+async def iris_pool(message):
+	"""
+	Assists users in a Discord channel as an oracle named Iris, focusing on the future and past.
+	The bot will provide guidance and adapt to user requests while maintaining a short response length.
+	"""
+
+	channel_id = 1103037773327368333
+	channel = bot.get_channel(channel_id)
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+
+	if last_message.content.startswith("/"):
+		return
+
+	messages = await get_conversation_history(channel_id, 50, 9, 1)
+	messages.reverse()
+
+	conversation = [
+		{"role": "system", "content": "You are Iris, an AI language model assisting people in a Discord channel. Your main function is to help be a time compass and guide people through time. You're an oracle that helps people focus on the future but an oracle that also looks back to help guide that focus. In this case, we want you to follow the speaker's instruction very closely"},
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far"}
+	]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-3.5-turbo",
+		temperature=1,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
+
 async def question_pool(message):
 	"""
 	Collects and summarizes questions about Cognicism from a Discord channel, ignoring non-question messages.
@@ -702,41 +746,37 @@ async def on_message(message):
 	- If the message is sent in the Fourthought Pool channel, the fourthought_pool function is called.
 	- If the message is sent in the Secret Tunnel channel, the secret_tunnel function is called.
 	- If the message is sent in the Question Pool channel, the question_pool function is called.
+	- If the message is sent in the Iris Pool channel, the iris_pool function is called.
 	- If the message is sent in the Prophecy Pool channel, the prophecy_pool function is called.
 	- If the message is sent in a DM to the bot and does not start with "/", the frankeniris function is called.
 
 	The bot.process_commands function is called at the end to process any bot commands in the message.
 	"""
 
-	# Manage Fourthought Pool
-	if message.channel.id == 1090373822454182090 and message.author != bot.user:
-		await fourthought_pool(message)
-		await bot.process_commands(message)
+	# Don't process messages sent by the bot itself
+	if message.author == bot.user:
 		return
 
-	# Manage Secret Tunnel
-	if message.channel.id == 1100265461800771744 and message.author != bot.user:
-		await secret_tunnel(message)
-		await bot.process_commands(message)
-		return
+	# A list of tuples containing channel ids and their corresponding functions
+	channel_functions = [
+		(1090373822454182090, fourthought_pool),
+		(1103037773327368333, iris_pool),
+		(1100265461800771744, secret_tunnel),
+		(1086437563654475846, question_pool),
+		(1083409321754378290, prophecy_pool)
+	]
 
-	# Manage Question Pool
-	if message.channel.id == 1086437563654475846 and message.author != bot.user:
-		await question_pool(message)
-		await bot.process_commands(message)
-		return
-
-	# Manage Prophecy Pool
-	if message.channel.id == 1083409321754378290 and message.author != bot.user:
-		await prophecy_pool(message)
-		await bot.process_commands(message)
-		return
+	# Iterate over the channel ids and functions
+	for channel_id, channel_function in channel_functions:
+		if message.channel.id == channel_id:
+			await channel_function(message)
+			await bot.process_commands(message)
+			break  # Exit the loop once the corresponding function is executed
 
 	# Handle DM Chat
-	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
+	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel):
 		await frankeniris(message)
-
-	await bot.process_commands(message)
+		await bot.process_commands(message)
 
 @bot.command(aliases=['c'])
 async def channel(ctx, *, topic=""):
