@@ -368,12 +368,15 @@ async def get_conversation_history(channel_id, limit, message_count, summary_cou
 
 	async for hist in channel.history(limit=limit):
 		if not hist.content.startswith('/'):
+			# Include embeds in the message content
+			embed_content = "\n".join([embed.description for embed in hist.embeds if embed.description]) if hist.embeds else ""
+
 			if hist.author == bot.user:
 				summary_count += 1
 				if summary_count < summary_count_limit:
-					messages.append((hist.author, hist.content))
+					messages.append((hist.author, hist.content + embed_content))
 			else:
-				messages.append((hist.author, hist.content))
+				messages.append((hist.author, hist.content + embed_content))
 			if len(messages) == message_count:
 				break
 
@@ -394,8 +397,30 @@ async def iris_pool(message):
 	if last_message.content.startswith("/"):
 		return
 
-	messages = await get_conversation_history(channel_id, 50, 9, 1)
+	messages = await get_conversation_history(channel_id, 50, 13, 11)
 	messages.reverse()
+
+	if messages[-1][1].startswith("Iris,"):
+
+		thought_prompt = messages[-1][1] + "\n\n###\n\n"
+
+		response = openai.Completion.create(
+			model=models["chat-iris"],
+			prompt=thought_prompt,
+			temperature=0.42,
+			max_tokens=420,
+			top_p=1,
+			frequency_penalty=1.5,
+			presence_penalty=1.5,
+			stop=["END"]
+		)
+
+		text = response['choices'][0]['text']
+		text = text.replace("###", "").strip()
+		embed = discord.Embed(title = "", description=f"**Iris Response**\n{text}")
+		await message.channel.send(embed=embed)
+
+		return
 
 	conversation = [
 		{"role": "system", "content": "You are Iris, an AI language model assisting people in a Discord channel. Your main function is to help be a time compass and guide people through time. You're an oracle that helps people focus on the future but an oracle that also looks back to help guide that focus. In this case, we want you to follow the speaker's instruction very closely"},
@@ -409,7 +434,7 @@ async def iris_pool(message):
 			conversation.append({"role": "user", "content": m[1]})
 
 	response = openai.ChatCompletion.create(
-		model="gpt-3.5-turbo",
+		model="gpt-4",
 		temperature=1,
 		messages=conversation
 	)
@@ -776,7 +801,8 @@ async def on_message(message):
 	# Handle DM Chat
 	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel):
 		await frankeniris(message)
-		await bot.process_commands(message)
+
+	await bot.process_commands(message)
 
 @bot.command(aliases=['c'])
 async def channel(ctx, *, topic=""):
