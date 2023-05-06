@@ -63,8 +63,6 @@ models = {
 	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
 }
 
-people = []
-
 class AskModal(Modal, title="Ask Modal"):
 
 	answer = TextInput(label="Answer", max_length=400, style=discord.TextStyle.long)
@@ -266,7 +264,8 @@ def members(debug=False):
 					members.append(member)
 
 	unique_members = [*set(members)]
-	people = unique_members
+	
+	return unique_members
 
 def make_prompt(question, joined_answers):
 
@@ -1100,7 +1099,7 @@ async def ask_group(ctx, *, question=""):
 	if len(question) == 0:
 		return
 
-	global people
+	people = members(debug=False)
 	testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
 	users = []
 
