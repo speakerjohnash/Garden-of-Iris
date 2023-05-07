@@ -109,6 +109,7 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 async def send_response_with_pipe_button(ctx, response_text):
 	pipe_btn = pipe_button(ctx, response_text)
 	view = View()
+	view.timeout = 2700.0
 	view.add_item(pipe_btn)
 	await ctx.channel.send(response_text, view=view)
 
@@ -240,11 +241,11 @@ def load_training_data():
 	global training_data
 
 	try:
-		training_data = pd.read_csv('iris_training-data.csv')
+		training_data = pd.read_csv('chat-iris.csv')
 	except:
-		with open('iris_training-data.csv', 'w', encoding='utf-8') as f:
+		with open('chat-iris.csv', 'w', encoding='utf-8') as f:
 			training_data = pd.DataFrame(columns=['prompt', 'completion', 'speaker'])
-			training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
+			training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
 
 def members(debug=False):
 
@@ -675,6 +676,14 @@ async def frankeniris(message, answer="", heat=0.69):
 	It first gets an answer from the Iris model, then constructs a conversation thread for the GPT-4 model using the message history and provides GPT-4 with Iris's answer.
 	Frankeniris aims to provide more creative and integrated responses for the user by combining the knowledge of both models.
 	"""
+
+	global training_data
+
+	matching_prompt = training_data[training_data['prompt'].str.lower().str.strip() == message.content.lower().strip()]
+
+	if not matching_prompt.empty:
+		print("match found")
+		answer = matching_prompt.sample(1)['completion'].iloc[0]
 
 	# Get Iris One Shot Answer First
 	try:
