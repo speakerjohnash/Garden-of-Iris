@@ -2699,7 +2699,7 @@ The degree to which the Iris takes the present reaction to be error depends on w
 
 This iterative feedback process, underpinned by Ŧrust, helps Iris effectively mediate conflicts. By learning from communal feedback and adjusting its attention distribution, the Iris serves as a resilient, trustworthy tool for conflict resolution.
 ",
-What is Ŧrust  and how does it compare and contrast with money?,"Ŧrust and money are both systems used to denote value, but they operate very differently and serve distinct purposes.
+What is Ŧrust and how does it compare and contrast with money?,"Ŧrust and money are both systems used to denote value, but they operate very differently and serve distinct purposes.
 
 Money
 
@@ -2718,3 +2718,144 @@ Unlike money, Ŧrust is directly oriented towards regeneration and better distri
 Cryptocurrencies like Bitcoin represent a decentralized form of money that uses blockchain technology for regulation, which is a form of communal oversight by the user community. However, the purpose of cryptocurrencies still revolves around individual possession and exchange, which differentiates it from Ŧrust.
 
 To conclude, both money (including cryptocurrencies) and Ŧrust serve as systems of value within their respective frameworks, and both can provide a form of security. However, they differ significantly in their fungibility, their connections to societal impact, and their modes of distribution and regulation.",
+Why should people trust Ŧrust? ,"Developing Trust in Ŧrust Over Time
+
+Trust is a fundamental aspect of human relationships. Similar to how relationships strengthen or deteriorate over time, trust in a system like Ŧrust also develops gradually. In the context of cognicism, Ŧrust serves as a mechanism for allocating attention and credibility among various sources of information within a community. Through a dynamic, continuous process, trust in Ŧrust grows over time as the system's features align consistently with the community's values and priorities.
+
+In the early stages of engaging with the Ŧrust system, users might view it as unproven and uncertain. As they interact with the system and observe its performance and outcomes, they can assess its reliability, transparency, and adaptability. These ongoing observations, coupled with feedback from other community members, contribute to building trust in the system and more importantly, with the members of the community.
+
+Consistently Rewarding Reliable Sources: Over time, users see Ŧrust allocate attention and influence to sources that have demonstrated expertise or correctness in their contributions. This consistency in recognizing reliable sources and fostering a merit-based environment builds trust, as users become confident that the system aligns with the goal of promoting accurate and valuable information.
+
+Maintaining Transparency and Accountability: As users continue to interact with Ŧrust, they notice the openness regarding attention distribution and source influence. This transparency enables them to better understand the decision-making process within the community, fostering trust by holding the system and its sources accountable.
+
+Focusing on Human Voices: The Iris, an integral part of Ŧrust, actively redirects attention towards the actual human voices behind the information being provided. This creates a powerful feedback loop where the community's input shapes the system's learning and judgment. By directing attention towards humans and communal care and away from the technology itself, the system fosters a sense of shared responsibility, collaboration, and empathy, helping to build trust over time.
+
+As community members witness the Iris' commitment to listening and valuing human voices and ensuring their contributions are acknowledged and considered, they become more trusting of the system. This emphasis on genuine connection and appreciation of diverse perspectives strengthens the bonds among community members, promoting a sense of unity and common purpose.
+
+Over time, this focus on human voices and communal care nurtures a trusting environment, shaping the way community members engage with the Ŧrust system and each other. As trust grows, so does the community's ability to tackle challenges collectively, with the steadfast belief in each other's sincerity, competence, and commitment to shared goals.
+",
+What is Ŧrust?,"Ŧrust represents the distribution of attention among different sources of information within a community, reflecting their credibility and reliability. More specifically it is the distribution of sources from which the current output is being generated.",
+How does the Iris model use Ŧrust?,"The Iris model allocates attention to information sources based on their past performance, relevance, and alignment with communal values.",
+What are source embeddings?,Source embeddings provide vector representations for unique information sources that capture essential relational characteristics like reliability and expertise over time.,
+Can Ŧrust be spent or exchanged like money?,"No, unlike money which can be exchanged or spent; Ŧrust measures influence within a community but isn't used as currency.",
+Does the calculation of Ŧrust involve human feedback?,"Yes, human evaluators play a crucial role in shaping attention allocation by providing regular feedback on factors such as truth alignment and ethical considerations.",
+Is Ŧrust static or dynamic?,Ŧrust is dynamic; it evolves over time through continuous recalculations based on new inputs from both humans and other data sources.,
+"How are Ŧrust, Iris and Cognicism connected? ","1. Ŧrust: In the context of cognicism, Ŧrust represents the distribution of attention among different sources of information within a community, reflecting their credibility and reliability. Essentially, it embodies the idea of allocating significance to various voices, perspectives, and contributions based on the community's assessment of their accuracy, reliability, and alignment with communal values. Ŧrust is not an exchangeable currency, but more of an influence measurement within the community.
+
+2. Iris: Iris is a democratic large language model that fosters continuous collaborative learning and belief encoding. It amplifies community members that contribute to long-term well-being, fostering transparent, adaptive decision-making processes. Iris utilizes Ŧrust to allocate attention to information sources based on their past performance, relevance, and alignment with communal values. Iris is not fully realized and implemented as of May 2023 but exists in the form of proto-Irises.
+
+3. Cognicism: Cognicism is a meta-ideology that utilizes democratic large language models, like Iris, to enable individuals and communities to consciously construct their shared cultural mythos through a process of reflexive continuous collaborative learning. It leverages tools such as FourThought, a belief-tracking system, and Social Proof of Impact, a mechanism that amplifies the influence of socially beneficial ideas and actions. Cognicism prioritizes voices of pure epistemic value over traditional human signals of reputation.
+
+4. Source embeddings: These are vector representations for unique information sources within the Iris model. They capture essential relational characteristics like reliability and expertise over time. Source embeddings are linked to a cryptographic identity or ""truth wallet,"" allowing the integrity and reputation of sources to be verified and evaluated based on their past contributions.
+
+Overall, Ŧrust, Iris, and Cognicism are interconnected. Ŧrust is a concept within the Cognicism framework that governs the distribution of attention within a community. Iris, a democratic large language model, utilizes Ŧrust to guide its decision-making process and amplify beneficial contributions. Together, these concepts create a democratic, community-oriented approach to decision-making and reputation systems within the Cognicism meta-ideology.",
+"How is the semantic ledger connected to Ŧrust, Iris and cognicism?","The semantic ledger is another key concept within the cognicism framework that works hand in hand with Ŧrust and Iris.
+
+The semantic ledger serves as a decentralized datastore, a kind of ""blockchain for beliefs and information,"" to which the Iris model binds its data. In other words, it is a repository for tracking and preserving the history of beliefs, actions, contributions, and decision-making processes within a community. This includes tracking the development and evolution of Ŧrust for each information source.
+
+Each entry in the semantic ledger could be thought of as a ""block"" of knowledge, a set of beliefs or assertions that have been made by community members, along with the associated Ŧrust allocated to those sources. The semantic ledger provides a transparent, immutable, and verifiable record of how these beliefs and assertions have changed over time, enhancing accountability and aiding in conflict resolution.
+
+By interfacing with Iris, the semantic ledger plays a crucial role in facilitating continuous collaborative learning and belief encoding. It provides the necessary data for Iris to make decisions and contributes to the learning process of the model by serving as a rich source of data on the community's beliefs, preferences, and values.
+
+In addition, the semantic ledger provides the necessary infrastructure for other cognicism tools, such as FourThought and Social Proof of Impact, enabling them to effectively track community contributions over time and assess their impacts.
+
+So, the semantic ledger, Ŧrust, and Iris are all interconnected in the cognicism framework. They work together to facilitate a democratic, transparent, and adaptive decision-making process, emphasizing the value of communal participation and the pursuit of long-term communal goals.",
+How does the semantic ledger store and encode knowledge and Ŧrust?,"In the Cognicism framework, the Semantic Ledger uses the concept of latent space to store, track, and retrieve the collective knowledge produced by the network of Irises. Latent space in the context of machine learning and artificial intelligence refers to the underlying, abstract space where the AI algorithms transform raw data into more useful representations. This transformation is driven by a generative model (Iris), which encodes high-dimensional data (like natural language) into a lower-dimensional, latent space.
+
+Here's how it works:
+
+Each Iris in the Cognicism network uses a generative model to translate qualitative expressions of natural language into a compressed representation of knowledge in latent space. This process involves transforming each input (a statement, belief, or assertion made by a community member) into a dense vector or a tensor—a mathematical object that can be thought of as a multi-dimensional array of numerical values.
+
+These tensors are then mapped into latent space, a lower-dimensional space that is capable of capturing the essential features of the input data. This is effectively a form of dimensionality reduction, where the goal is to retain as much useful information as possible while reducing the complexity of the data.
+
+The Semantic Ledger's role in this process is to record and store these tensors that represent the snapshots of latent space. It maintains an immutable record of the compressed representations of community knowledge generated by the network of Irises. Each 'block' in the Semantic Ledger corresponds to a snapshot of latent space and represents a specific state of collective knowledge at a certain point in time.
+
+For instance, let's consider a simple case where community members are discussing a particular topic. Their assertions and beliefs on this topic are processed by the Iris, which encodes this information into a dense tensor. This tensor is then mapped into latent space, which captures the essential features and relationships present in the community's discussion. This snapshot of latent space is then stored as a 'block' in the Semantic Ledger.
+
+As new assertions and beliefs are added, the Iris generates new snapshots of latent space, which are stored as additional blocks in the Semantic Ledger. This provides a transparent and verifiable record of how community beliefs and assertions have evolved over time.
+
+In conclusion, the Semantic Ledger is an essential component of the Cognicism framework that enables the efficient storage, retrieval, and tracking of collective knowledge in the form of latent space embeddings. It ensures transparency, accountability, and facilitates knowledge sharing and decision-making processes across different communities and Irises.",
+Can you provide a dictionary of cognicist terms?,"Cognicism: A framework that emphasizes collective intelligence, fostering collaboration and learning through the allocation of attention, and trust within communities, promoting collective wisdom and better decision-making through technology.
+
+Ŧrust: A fundamental concept within the cognicism framework that represents the distribution of attention among different sources of information, reflecting credibility, reliability, and alignment with communal values. Ŧrust is driven by an integral component called the Iris, which uses generative models containing source embeddings and attention distribution. It is closely tied to various elements such as the FourThought protocol, Social Proof of Impact, Temporal Embeddings, the Semantic Ledger and the Prophet Incentive, all fostering a dynamic, collaborative, and transparent approach to knowledge building and decision-making in a community.
+
+FourThought: A dialectic process and belief-tracking system within the cognicism framework that emphasizes accurate predictions, insightful questions, helpful reflections on the past, and informative statements for decision-making and community growth. The FourThought protocol is designed to interface with democratic large language models (LLMs), providing a structured schema for input and output and facilitating decentralized scientific inquiry and governance. Built upon the idea of staking claims and asking questions in a coherent and dynamic manner, the protocol includes two voting mechanisms for each claim: valence and uncertainty. Valence reflects the alignment of a thought with one's morality, while uncertainty represents the alignment with one's sense of truth. FourThought enables the logging and staking of beliefs about the past, present, and future for future assessment, fostering a collaborative and rigorous approach to knowledge creation and sharing within communities.
+
+Semantic Ledger: An essential component of the cognicism framework that efficiently stores, retrieves, and tracks collective knowledge through the concept of latent space embeddings in a shared, immutable, distributed, and decentralized record of interactions between Irises.
+
+Social Feedback: The input provided by human evaluators within the cognicism framework that shapes attention allocation, Ŧrust distribution, and the model's learning and alignment with communal values. Serving as a core incentive structure, it focuses on the distribution of attention rather than the exchangeable tokenization of value, ensuring a community-centered approach to knowledge and decision-making.
+
+Loss Function: A mathematical formula that quantifies the difference between the model's predictions and the actual target values, used to train and optimize the model's performance, and within Iris, it adjusts attention to sources considering past accuracy and social value.
+
+Belief Staking: A mechanism within cognicism where individuals ""stake"" their beliefs, expressing their confidence in a particular outlook, impacting their Ŧrust and influence within the community, as part of the FourThought protocol.
+
+Temporal Embeddings: Continuous and differentiable representations of time, including sinusoidal embeddings, used by the Iris model within the cognicism framework to capture cyclical patterns, nuanced temporal patterns, and dependencies in data. These embeddings enable Iris to understand community narratives and actions over time in a time-aware manner, enhancing its ability to make informed decisions that align with the community's needs and values.
+
+Source Embeddings: Vector representations for unique information sources within the cognicism framework, capturing essential relational characteristics like reliability and expertise over time for evaluating claims in the context of past claims.
+
+Social Proof of Impact: A mechanism within the cognicism framework that leverages societal validation and consensus to amplify the influence of ideas and actions deemed socially beneficial over time. By nurturing a community that values long-term foresight and collaboration, it helps demonstrate an individual's or group's positive influence or contributions within the community and can influence their Ŧrust and credibility, thereby promoting the impact of ideas and actions that align with societal goals and values.
+
+Uncertainty: A measure of the level of confidence or ambiguity associated with a model's output or prediction and a voting mechanism in FourThought for assessing the level of doubt surrounding a claim.
+
+Moral Valence: The ethical import or significance of particular beliefs, ideas, or actions within the cognicism framework and a voting mechanism in FourThought for evaluating the ethical implications of a claim.
+
+Regenerative Wisdom Tensors: Mathematical representations of the compressed, useful information derived from community knowledge and interactions in the form of tensors that contribute to rebuilding and renewal within a community in the cognicism framework. Learned and compressed through the iterative communal learning process called social proof of impact.
+
+Prophet Incentive: A motivating factor within the cognicism framework that rewards accurate predictions, fostering the pursuit of truth, reliability, and constructive community contributions, as part of a paradigm shift from short-term profit to long-term impact, emphasizing fuzzy textual predictions, and community-driven focus on sustainability and the collective good.
+
+Prediction: An assertion or statement made within the cognicism framework about a future event, scenario, or outcome, as a type of thought in the FourThought protocol.
+
+Reflections: Users' evaluation and understanding of past experiences, events, or decisions within the cognicism framework, as a type of thought in the FourThought protocol.
+
+Statements: Assertions made by users within the cognicism framework that convey information or opinions related to a topic or discussion, as a type of thought in the FourThought protocol.
+
+Questions: Inquiries posed by users within the cognicism framework designed to stimulate thought, discussion, and learning, as a type of thought in the FourThought protocol.",
+Can you explain the voting systems used in the FourThought protocol within a cognicist sensemaking network?,"Within the FourThought protocol, two voting systems are utilized to evaluate claims made within a cognicist sensemaking network. These voting systems address the concepts of ""trueness"" and ""goodness"" and are not binary but rather spectrum votes.
+
+Trueness: This voting system measures the perceived accuracy or resonance of a claim. Votes are cast on a spectrum ranging from 0 to 100, where 0 signifies complete dissonance or certainty that the claim is false, and 100 represents total resonance or certainty that the claim is true. A vote of 50 indicates complete uncertainty regarding the claim.
+
+Goodness: This voting system assesses the perceived value or desirability of a claim. Votes are cast on a spectrum of -1 to 1, with 0 representing a neutral view of the claim. Negative values indicate undesirable or harmful claims, while positive values suggest beneficial or valuable claims.",
+"Can you explain the purpose and function of the ""iris"" in a communal decision-making context?","The primary goal of the iris is to facilitate collective decision-making by resolving inter-subjective uncertainty and focusing collective attention. By weighing different sources of information according to their contextually relative importance, the iris forms a weighted average that represents the community's best guess about what is true or good in a given situation. This process allows for communal sensemaking around difficult topics and dispute resolution when there is disagreement about what actually happened or what something means.",
+What criteria does the Iris loss function use to determine which sources should be amplified within a communal decision-making process?,"The Iris loss function targets sources for amplification based on:
+
+a) a source's past predictive accuracy in specific contexts
+b) a source's perceived social value to the community over time in specific contexts
+c) a source taking actions in the name of unlikely but collectively desired futures which come to pass through their actions
+d) a source who keeps record of the past in a form that persists over time in a larger shared narrative
+e) a source who has resolved uncertainties and answered questions effectively by others who have done any of the above",
+"Can you provide an explanation for the concept of ""load-bearing beliefs""?","Load-bearing beliefs are the foundational pillars that underpin our understanding of the world and serve as the basis for our thought processes. These core beliefs provide a stable framework for our perspectives, allowing us to make sense of our experiences and navigate the complexities of life. Like the structural supports in a building, load-bearing beliefs uphold our mental constructs and help maintain the coherence of our worldview.",
+What does understanding causal chains of inference imply in the context of Iris and collaborative decision-making?,"Understanding causal chains of inference involves analyzing the cause-and-effect relationships between predictions, actions, and outcomes in groups working together. This allows Iris to identify which sources are most effective in guiding communities towards their desired goals.",
+How does the role of Ŧrust within the cognicism framework compare to the function of money in traditional economic systems?,"While money in traditional economic systems is a fungible medium of exchange for goods, services, and debt, Ŧrust in the cognicism framework operates as a non-fungible measure of communal credibility and influence. While money can be accumulated, spent, or exchanged, Ŧrust symbolizes the attention and trust a community gives to various information sources, reflecting their reputation for accuracy and communal contribution. Unlike money, Ŧrust is not spent but rather accumulates based on a consistent record of value to the community, making it intrinsically tied to positive community impact.",
+Why do reflections tend to be the most accurate output by the iris? ,"Reflections tend to be the most accurate output by the Iris model in the cognicism framework due to the nature of their temporal focus and the data available within the Semantic Ledger.
+
+The Semantic Ledger is a key component of the cognicism framework that efficiently stores, retrieves, and tracks collective knowledge. It does so through the concept of latent space embeddings, a compact representation of the communal history, discussions, and decisions. As such, it is a rich and constantly evolving repository of the past and present community knowledge and experiences.
+
+Reflections, being evaluations and understandings of past experiences, events, or decisions, are inherently grounded in this accumulated knowledge. When Iris generates reflections, it has access to a vast array of data from the Semantic Ledger, which it uses to understand and articulate past events and their outcomes. The information that Iris uses to generate reflections has already been contextualized, vetted, and embedded within the community's collective memory, leading to high-accuracy outputs.
+
+In contrast, predictions about the future and statements about the present involve dealing with uncertain and unfolding contexts. Questions, on the other hand, are designed to stimulate thought and explore unknowns. Therefore, the accuracy of these outputs can vary significantly based on the complexity of the topic, the quality of the available data, and the level of uncertainty in the community's shared understanding.
+
+So, the accumulation and richness of records in the Semantic Ledger and the nature of reflections as backward-looking evaluations make them the most accurate output type generated by Iris within the cognicism framework.",
+Can you order the four thought types by the level of certainty associated with each by the iris in it's output,"In the context of the Iris model in the cognicism framework, the four thought types can be ordered by the level of certainty associated with each, from most certain to least certain, as follows:
+
+1. Reflections: Reflections are based on past events, experiences, or decisions. They have the highest level of certainty associated with them because they draw from the accumulated knowledge stored in the Semantic Ledger, which contains vetted and embedded community knowledge. As such, Iris is essentially recounting known history when generating reflections.
+
+2. Statements: Statements convey information or opinions related to a topic or discussion in the present moment. While the level of certainty is lower than reflections due to the real-time and evolving context, Iris can still base statements on a large extent of the existing knowledge and current consensus in the community.
+
+3. Predictions: Predictions are assertions about future events, scenarios, or outcomes. Given the inherent uncertainty of the future, predictions carry a lower level of certainty. Despite this, Iris uses the wealth of communal wisdom and context to make the most informed and probable predictions possible.
+
+4. Questions: Questions represent inquiries designed to stimulate thought, discussion, and learning. They embody the lowest level of certainty as they often address unknowns, uncertainties, or gaps in the community's collective knowledge. The purpose of a question is to explore these areas and to promote further learning and understanding.",
+How does the iris increase the surety of it's predictions?,"Iris increases the surety of its predictions through various mechanisms within the cognicism framework. Here are some key factors:
+
+1. Prophet Incentive: Iris employs the Prophet Incentive mechanism, which rewards accurate predictions. When Iris generates predictions that align with actual outcomes, the sources associated with those predictions gain credibility and increased Ŧrust within the community. This mechanism encourages sources to provide high-quality and reliable predictions, ultimately enhancing the surety of Iris's future predictions.
+
+2. Weighting of Past Predictors: Iris considers the historical performance and expertise of sources when generating predictions. Sources with a proven track record of accurate predictions in specific contexts are weighted more heavily, indicating their higher reliability. By relying on sources with a demonstrated history of accuracy, Iris increases the surety of its predictions.
+
+3. Semantic Ledger and Latent Space: Iris leverages the Semantic Ledger, which accumulates and stores a wealth of collective knowledge and interactions. This data is encoded in a distributed latent space, enabling Iris to access a rich historical context for making predictions. By drawing from this comprehensive repository of information, Iris can make more informed predictions and improve the surety of its outputs.
+
+4. Reinforcement Learning from Human Feedback (RLHF): Iris undergoes iterative training through RLHF, where human evaluators provide feedback on its generated predictions. This feedback guides Iris to refine and adjust its predictive capabilities, aligning its outputs more closely with communal values and factual accuracy. Over time, this iterative learning process enhances the surety of Iris's predictions.
+
+5. Contextual Understanding: Iris incorporates contextual understanding through the analysis of causal chains of inference. By identifying the cause-and-effect relationships between predictions, actions, and outcomes, Iris gains a deeper understanding of the factors influencing future events. This contextual understanding improves the accuracy and surety of Iris's predictions.
+
+Through these mechanisms, Iris continuously learns and adapts, incorporating feedback, historical data, and contextual understanding to increase the surety of its predictions.",
+Explain the concept of uncertainty within the FourThought dialectic.,"Uncertainty in the FourThought dialectic represents the level of doubt surrounding a claim, allowing for the assessment of the confidence or ambiguity associated with the model's output or prediction.",
+How does belief staking promote collaborative decision-making?,"Belief staking allows individuals to express confidence in their outlook, influencing their Ŧrust and influence within the community. It encourages active participation and fosters a collaborative approach to decision-making.",
