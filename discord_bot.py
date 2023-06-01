@@ -109,7 +109,7 @@ def response_view(modal_text="default text", modal_label="Response", button_labe
 async def send_response_with_pipe_button(ctx, response_text):
 	pipe_btn = pipe_button(ctx, response_text)
 	view = View()
-	view.timeout = 2700.0
+	view.timeout = None
 	view.add_item(pipe_btn)
 	await ctx.channel.send(response_text, view=view)
 
@@ -431,7 +431,7 @@ async def iris_pool(message):
 		if m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
-			conversation.append({"role": "user", "content": m[1]})
+			conversation.append({"role": "user", "content": f"{m[0].name}: {m[1]}"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
@@ -465,7 +465,13 @@ async def question_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 15, 1)
 	messages.reverse()
 
-	conversation = [{"role": "system", "content": "You are a question summarizer Iris. You are summarizing a thread of questions about Cognicism and related concepts. You ignore everything except questions. People will ask you various questions about cognicism and you job is to summarize what people want to know"}]
+	if messages[-1][1].startswith("Iris,"):
+		conversation = [
+			{"role": "system", "content": "You are Iris, an AI language model assisting people in a Discord channel. Your main function is to help people in this thread with bringing together people's questions into forms that are more coherent to them. In this case we want you to follow the speaker's instruction very closely"},
+			{"role": "system", "content": "Follow the most recent speakers's instructions as closely as possible in the context of the thread so far"}
+		]
+	else:
+		conversation = [{"role": "system", "content": "You are a question summarizer Iris. You are summarizing a thread of questions about Cognicism and related concepts. You ignore everything except questions. People will ask you various questions about cognicism and you job is to summarize what people want to know. You print a list of questions"}]
 
 	for m in messages:
 		if  m[0].id == bot.user.id:
@@ -473,9 +479,12 @@ async def question_pool(message):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": "You have been moderating a running thread of questions about cognicism. Your job is to help summarize these questions and NOT to answer them"})
-	conversation.append({"role": "system", "content": "My primary job is to summarize what people are uncertain about. I will summarize peoples questions and that is it. I will vary my output but keep them focused on what people don't know and keep it 250 words long"})
-	conversation.append({"role": "assistant", "content": "I NEVER answer questions. I summarize questions and communal uncentainty. I ignore anything that doesn't end in a question mark. I will keep my summary very short or about 250 words long"})
+	if messages[-1][1].startswith("Iris,"):
+		conversation.append({"role": "system", "content": "You have been moderating a running thread of questions about cognicism. Your job is to help collect these questions for further processing and NOT to answer them"})
+	else:
+		conversation.append({"role": "system", "content": "You have been moderating a running thread of questions about cognicism. Your job is to help summarize these questions and NOT to answer them"})
+		conversation.append({"role": "system", "content": "My primary job is to summarize what people are uncertain about. I will summarize peoples questions and that is it. I will vary my output but keep them focused on what people don't know and keep it 250 words long"})
+		conversation.append({"role": "assistant", "content": "I NEVER answer questions. I summarize questions and communal uncentainty. I ignore anything that doesn't end in a question mark. I will keep my list of questions and summary very short or about 250 words long"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4", 
@@ -571,7 +580,7 @@ async def fourthought_pool(message):
 		if  m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
-			conversation.append({"role": "user", "content": m[1]})
+			conversation.append({"role": "user", "content": f"{m[0].name}: {m[1]}"})
 
 	if messages[-1][1].startswith("Iris,"):
 		conversation.append({"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible"})
@@ -755,7 +764,7 @@ async def frankeniris(message, answer="", heat=0.69):
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
-		temperature=0.8,
+		temperature=heat,
 		max_tokens=500,
 		messages=conversation
 	)
@@ -870,7 +879,7 @@ async def faq(ctx, *, topic=""):
 	message.content = random_question[0]
 
 	await ctx.send(embed=embed)
-	await frankeniris(message, answer=random_question[1])
+	await frankeniris(message, answer=random_question[1], heat=1)
 
 @bot.command(aliases=['in', 'inject'])
 async def infuse(ctx, *, link):
@@ -902,7 +911,7 @@ async def infuse(ctx, *, link):
 		driver.quit()
 
 		# chunk text
-		text_chunks = split_text_into_chunks(text)
+		text_chunks = split_text_into_chunks(text, max_chunk_size=6000)
 
 		# Send each text chunk to OpenAI for processing with progress bar
 		conversation = [{"role": "system", "content": "You are a parser and summarizer that takes in noisy text scraped from the internet or pdfs and summarizes it into a paragraph"}]
@@ -920,11 +929,26 @@ async def infuse(ctx, *, link):
 			truncated_convo.append({"role": "assistant", "content": "There is a parser and summarizer that is designed to take in noisy text scraped from the internet or PDFs and summarize it into a clean paragraph. The parser includes a prompt for the user to summarize the content of a specific web link and inject it into a chat stream for further analysis"})
 			truncated_convo += conversation[-3:]
 
-			response = openai.ChatCompletion.create(
-				model="gpt-3.5-turbo",
-				temperature=0.75,
-				messages=truncated_convo
-			)
+			retries = 0
+			MAX_RETRIES = 5
+			RETRY_DELAY = 5
+
+			while retries < MAX_RETRIES:
+				try:
+					response = openai.ChatCompletion.create(
+						model="gpt-4-32k",
+						temperature=0.75,
+						messages=truncated_convo
+					)
+					break  # if the request was successful, break the retry loop
+				except openai.error.RateLimitError:
+					if retries < MAX_RETRIES - 1:  # don't sleep on the last retry
+						time.sleep(RETRY_DELAY)  # wait before trying again
+					retries += 1
+
+			if retries == MAX_RETRIES:
+				await ctx.send("Failed to process chunk after multiple retries due to rate limit. Please try again later.")
+				continue  # move on to the next chunk
 
 			# Extract the claims from the response and add them to the claims array
 			for choice in response.choices:
@@ -957,7 +981,7 @@ async def iris(ctx, *, thought):
 	response = openai.Completion.create(
 		model=models["chat-iris"],
 		prompt=thought_prompt,
-		temperature=0.69,
+		temperature=0.82,
 		max_tokens=420,
 		top_p=1,
 		frequency_penalty=1.5,
@@ -987,7 +1011,7 @@ async def iris(ctx, *, thought):
 
 	if modal.answer.value is not None:
 		training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, ctx.message.author.name] 
-		training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
+		training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
 
 @bot.command()
 async def davinci(ctx, *, thought):
@@ -1037,7 +1061,7 @@ async def claim(ctx, *, thought):
 
 	if thought is not None:
 		training_data.loc[len(training_data.index)] = [prompt, thought, ctx.message.author.name] 
-		training_data.to_csv('iris_training-data.csv', encoding='utf-8', index=False)
+		training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
 
 	await ctx.send("Attestation saved")
 
