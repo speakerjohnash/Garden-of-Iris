@@ -936,7 +936,7 @@ async def infuse(ctx, *, link):
 			while retries < MAX_RETRIES:
 				try:
 					response = openai.ChatCompletion.create(
-						model="gpt-4-32k",
+						model="gpt-4",
 						temperature=0.75,
 						messages=truncated_convo
 					)
