@@ -415,7 +415,7 @@ async def iris_pool(message):
 		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far"}
 	]
 
-	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
+	conversation.append({"role": "system", "content": "You are speaking as a relay for proto-Iris. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer and you exist in between for safety purposes but this proto-Iris is your primary and only source of knowledge about cognicism which the users are interested in"})
 
 	for m in messages:
 		if m[0].id == bot.user.id:
