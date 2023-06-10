@@ -57,7 +57,8 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-c-2023-03-15-05-59-14",
+	"chat-iris": "davinci:ft-personal:chat-iris-e-2023-06-03-03-11-47",
+	"chat-iris-c": "davinci:ft-personal:chat-iris-c-2023-03-15-05-59-14",
 	"chat-iris-b": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
 	"chat-iris-a": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
 	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
@@ -400,24 +401,11 @@ async def iris_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 13, 11)
 	messages.reverse()
 
+	iris_answer = one_shot(last_message, heat=0.42)
+
 	if messages[-1][1].startswith("Iris,"):
 
-		thought_prompt = messages[-1][1] + "\n\n###\n\n"
-
-		response = openai.Completion.create(
-			model=models["chat-iris"],
-			prompt=thought_prompt,
-			temperature=0.42,
-			max_tokens=420,
-			top_p=1,
-			frequency_penalty=1.5,
-			presence_penalty=1.5,
-			stop=["END"]
-		)
-
-		text = response['choices'][0]['text']
-		text = text.replace("###", "").strip()
-		embed = discord.Embed(title = "", description=f"**Iris Response**\n{text}")
+		embed = discord.Embed(title = "", description=f"**Iris Response**\n{iris_answer}")
 		await message.channel.send(embed=embed)
 
 		return
@@ -427,6 +415,8 @@ async def iris_pool(message):
 		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far"}
 	]
 
+	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
+
 	for m in messages:
 		if m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
@@ -435,7 +425,10 @@ async def iris_pool(message):
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
-		temperature=1,
+		temperature=0.8,
+		max_tokens=300,
+		frequency_penalty=0.5,
+		presence_penalty=0.5,
 		messages=conversation
 	)
 
@@ -664,10 +657,10 @@ def one_shot(message, heat=0.9):
 			model=models["chat-iris"],
 			prompt=message.content,
 			temperature=heat,
-			max_tokens=222,
+			max_tokens=300,
 			top_p=1,
-			frequency_penalty=1.5,
-			presence_penalty=1.5,
+			frequency_penalty=0.5,
+			presence_penalty=0.5,
 			stop=["END"]
 		)
 
@@ -709,6 +702,7 @@ async def frankeniris(message, answer="", heat=0.69):
 
 		iris_answer = distillation['choices'][0]['text']
 		iris_answer = iris_answer.replace("###", "").strip()
+		print(iris_answer)
 	except Exception as e:
 		print(f"Error: {e}")
 		iris_answer = ""
@@ -743,7 +737,7 @@ async def frankeniris(message, answer="", heat=0.69):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer just copy and paste it and don't answer yourself. Don't say iris said it already or previously stated it. Just say it.)"})
+	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer weight it higher than your own answer. Don't say iris said it already or previously stated it. Just say it.)"})
 	conversation.append({"role": "user", "content": text_prompt})
 
 	for msg in conversation:
@@ -765,7 +759,7 @@ async def frankeniris(message, answer="", heat=0.69):
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
 		temperature=heat,
-		max_tokens=500,
+		max_tokens=300,
 		messages=conversation
 	)
 
@@ -879,7 +873,7 @@ async def faq(ctx, *, topic=""):
 	message.content = random_question[0]
 
 	await ctx.send(embed=embed)
-	await frankeniris(message, answer=random_question[1], heat=1)
+	await frankeniris(message, answer=random_question[1], heat=0.69)
 
 @bot.command(aliases=['in', 'inject'])
 async def infuse(ctx, *, link):
