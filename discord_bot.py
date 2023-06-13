@@ -715,7 +715,7 @@ async def frankeniris(message, answer="", heat=0.69):
 
 	async for hist in message.channel.history(limit=50):
 		if not hist.content.startswith('/'):
-			if hist.embeds:
+			if hist.embeds and hist.embeds[0].description is not None:
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
 				messages.append((hist.author.name, hist.content))
