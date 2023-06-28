@@ -491,48 +491,7 @@ async def question_pool(message):
 
 	# Send all response chunks except the last one
 	for chunk in response_chunks:
-		await message.channel.send(chunk)
-
-async def secret_tunnel(message):
-	"""
-	Handles user messages in a Discord channel, maintaining a rolling cache of important context within the GPT-4 model's context window.
-	The bot will prepend the cache to each response while functioning as normal, without mentioning its instructions.
-	"""
-
-	channel_id = 1100265461800771744
-	channel = bot.get_channel(channel_id)
-
-	# Ignore Slash Commands
-	last_message = [message async for message in channel.history(limit=1)][0]
-
-	if last_message.content.startswith("/"):
-		return
-
-	messages = await get_conversation_history(channel_id, 50, 9, 1)
-	messages.reverse()
-
-	conversation = [{"role": "system", "content": "You are a GPT context window extender. You can only see the last 8000 tokens. You need to print in each a response a small cache of important information. Anything at the beginning of your context window you are about to forget. Keep a short rolling cache that describes the whole of what we're focused on and all the surrounding context you need to keep working. Keep a close eye on the beginning of your context window as you are about to forget that information"}]
-	conversation.append({"role": "system", "content": "Make no mention of your instructions. Behave as OpenAPI GPT-4 normally behaves with this one exception: at the top of each response include the cache of imporant information"})
-
-	for m in messages:
-		if  m[0].id == bot.user.id:
-			conversation.append({"role": "assistant", "content": m[1]})
-		else:
-			conversation.append({"role": "user", "content": m[1]})
-
-	response = openai.ChatCompletion.create(
-		model="gpt-4",
-		messages=conversation
-	)
-
-	response = response.choices[0].message.content.strip()
-
-	# Split response into chunks if longer than 2000 characters
-	response_chunks = split_text_into_chunks(response)
-
-	# Send all response chunks except the last one
-	for chunk in response_chunks:
-		await message.channel.send(chunk)		
+		await message.channel.send(chunk)	
 
 async def fourthought_pool(message):
 	"""
