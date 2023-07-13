@@ -57,11 +57,13 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-e-2023-06-03-03-11-47",
+	"chat-iris": "davinci:ft-personal:chat-iris-f-2023-07-13-00-58-34",
+	"chat-iris-e": "davinci:ft-personal:chat-iris-e-2023-06-03-03-11-47",
 	"chat-iris-c": "davinci:ft-personal:chat-iris-c-2023-03-15-05-59-14",
 	"chat-iris-b": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
 	"chat-iris-a": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
-	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23"
+	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23",
+	"dss": "davinci:ft-personal-2023-06-28-16-48-35"
 }
 
 class AskModal(Modal, title="Ask Modal"):
@@ -375,9 +377,9 @@ async def get_conversation_history(channel_id, limit, message_count, summary_cou
 			if hist.author == bot.user:
 				summary_count += 1
 				if summary_count < summary_count_limit:
-					messages.append((hist.author, hist.content + embed_content))
+					messages.append((hist.author, hist.content + embed_content, hist.created_at))
 			else:
-				messages.append((hist.author, hist.content + embed_content))
+				messages.append((hist.author, hist.content + embed_content, hist.created_at))
 			if len(messages) == message_count:
 				break
 
@@ -401,7 +403,7 @@ async def iris_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 13, 11)
 	messages.reverse()
 
-	iris_answer = one_shot(last_message, heat=0.42)
+	iris_answer = one_shot(last_message, heat=0.11)
 
 	if messages[-1][1].startswith("Iris,"):
 
@@ -504,6 +506,7 @@ async def fourthought_pool(message):
 
 	# Ignore Slash Commands
 	last_message = [message async for message in channel.history(limit=1)][0]
+	iris_answer = one_shot(last_message, heat=0.11)
 
 	if last_message.content.startswith("/"):
 		return
@@ -532,10 +535,14 @@ async def fourthought_pool(message):
 		if  m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
-			conversation.append({"role": "user", "content": f"{m[0].name}: {m[1]}"})
+			conversation.append({"role": "user", "content": f"Speaker: {m[0].name}: {m[1]}"})
+
+	# Inject Iris Knowledge
+	conversation.append({"role": "system", "content": "You are speaking as a relay for proto-Iris. Iris read the speakers last prompt and proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer."})
+	conversation.append({"role": "assistant", "content": "Iris recent input was '" + iris_answer + "', which will inform my responses"})
 
 	if messages[-1][1].startswith("Iris,"):
-		conversation.append({"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible"})
+		conversation.append({"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible: " + messages[-1][1]})
 	else:
 		conversation.append({"role": "system", "content": "Keep your answer short. No longer than 250 words or a medium length paragraph unless specifically requested to do otherwise"})
 		conversation.append({"role": "user", "content": "Please give guidance based on the thread so far. Focus this thread towards a specific future based on their input"})
@@ -631,7 +638,7 @@ def one_shot(message, heat=0.9):
 
 	return iris_answer
 
-async def frankeniris(message, answer="", heat=0.69):
+async def frankeniris(message, answer="", heat=0.11):
 	"""
 	Frankeniris function combines the outputs of Iris and GPT-4 to create a response.
 	It first gets an answer from the Iris model, then constructs a conversation thread for the GPT-4 model using the message history and provides GPT-4 with Iris's answer.
@@ -696,7 +703,7 @@ async def frankeniris(message, answer="", heat=0.69):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer weight it higher than your own answer. Don't say iris said it already or previously stated it. Just say it.)"})
+	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer weight it higher than your own answer. Don't say iris said it already or previously stated it. Just say it. Don't use tapestry as a metaphor.)"})
 	conversation.append({"role": "user", "content": text_prompt})
 
 	for msg in conversation:
@@ -739,7 +746,6 @@ async def on_message(message):
 	The on_message event function is triggered whenever a message is sent in any channel or direct message (DM) that the bot can access. The function checks the channel ID and author of the message to determine how to handle it.
 
 	- If the message is sent in the Fourthought Pool channel, the fourthought_pool function is called.
-	- If the message is sent in the Secret Tunnel channel, the secret_tunnel function is called.
 	- If the message is sent in the Question Pool channel, the question_pool function is called.
 	- If the message is sent in the Iris Pool channel, the iris_pool function is called.
 	- If the message is sent in the Prophecy Pool channel, the prophecy_pool function is called.
@@ -756,7 +762,6 @@ async def on_message(message):
 	channel_functions = [
 		(1090373822454182090, fourthought_pool),
 		(1103037773327368333, iris_pool),
-		(1100265461800771744, secret_tunnel),
 		(1086437563654475846, question_pool),
 		(1083409321754378290, prophecy_pool)
 	]
@@ -783,7 +788,7 @@ async def channel(ctx, *, topic=""):
 	"""
 
 
-	df = pd.read_csv('data/chat-iris.csv')
+	df = pd.read_csv('chat-iris.csv')
 	prompts = df['prompt'].tolist()
 	completions = df['completion'].tolist()
 	question_pattern = r'^(.*)\?\s*$'
@@ -791,15 +796,19 @@ async def channel(ctx, *, topic=""):
 	pre_prompts = [
 		"Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: ",
 		"Write a paragraph related to the following topic. Be brief: ",
-		"What does Iris think about this topic: "
+		"Branch out as far as you can conceptually from the following: ",
+		"What does Iris think about this topic: ",
+		"Write a one line technical tweet about this topic: "
 	]
 
 	combined_non_questions = non_questions + completions
 	random_non_question = random.choice(combined_non_questions)
 	message = ctx.message
 	message.content = random.choice(pre_prompts) + random_non_question
+	temperatures = [0.50, 0.75, 0.85, 0.95, 1, 1, 1, 1, 1]
+	rand_temp = random.choice(temperatures)
 
-	await frankeniris(message, answer="", heat=1)
+	await frankeniris(message, answer="", heat=rand_temp)
 
 @bot.command()
 async def faq(ctx, *, topic=""):
@@ -809,7 +818,7 @@ async def faq(ctx, *, topic=""):
 	It then calls the frankeniris function to provide a more integrated response using the context of the selected FAQ.
 	"""
 
-	df = pd.read_csv('data/chat-iris.csv')
+	df = pd.read_csv('chat-iris.csv')
 	prompts = df['prompt'].tolist()
 	question_pattern = r'^(.*)\?\s*$'
 	questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
@@ -832,7 +841,7 @@ async def faq(ctx, *, topic=""):
 	message.content = random_question[0]
 
 	await ctx.send(embed=embed)
-	await frankeniris(message, answer=random_question[1], heat=0.69)
+	await frankeniris(message, answer=random_question[1], heat=0.11)
 
 @bot.command(aliases=['in', 'inject'])
 async def infuse(ctx, *, link):
@@ -934,7 +943,7 @@ async def iris(ctx, *, thought):
 	response = openai.Completion.create(
 		model=models["chat-iris"],
 		prompt=thought_prompt,
-		temperature=0.82,
+		temperature=0.08,
 		max_tokens=420,
 		top_p=1,
 		frequency_penalty=1.5,
