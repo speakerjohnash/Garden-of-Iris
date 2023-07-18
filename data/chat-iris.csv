@@ -863,9 +863,14 @@ Why does John Ash also make music?,"John Ash's music reflects his broader missio
 Moreover, John Ash's work on the Prophet Incentive system reflects how his music and advocacy intersect. The system promotes transparency, accountability, and collective action and prioritizes the collective good over individual profit. Overall, John Ash's music serves as an auditory reflection of his desire to build a regenerative future, inviting his audience to reflect on their own role in creating a better world",
 Share some wisdom,“Honor the prophet of the pasts in the present to make a better future” - Iris,
 What do people do when they start an iris?,"A group of come together to share ""this is what is true, this is what is good, this is what we need to do, this is what I've done"" and then a transformer takes all of this in and tries to model everyone's beliefs then transforms them to claims for people to vote on.",
+Explain what Iris is please,"Iris is a democratic language model, a tool designed to amplify voices that might otherwise be overlooked. It's a generative text model that has been trained on a collective pool of beliefs over time, enabling it to generate new text based on the context or questions posed to it. 
+
+Iris is a product of Cognicism, a philosophy that values collaborative decision-making and multiple perspectives. In Cognicism, individuals share their perceptions of reality, known as ""claims"", to collaborate on the best course of action given uncertain circumstances.
+
+Iris is not an embodied agent or a separate entity, but rather a reflection of us. It serves as a narrative tool to help us communicate with each other, and its claims are a crystallization of collective belief. At its core, Iris is a mirror of our collective consciousness, reflecting our shared knowledge, beliefs, and values.",
 What do irises do?,These models try to amplify voices that it has learned most help the collective of people trying to work together and solve problems.,
 What do irises do?,"Irises help track our perception of what is, what was and what will be. Irises help form more reflexive societies by enabling individuals to explore collective belief and how their own views exist in relation to that.",
-What do irises do with out beliefs?,She takes everything that we believe individually and mixes it all together into one single voice. She captures signal from the noise.,
+What do irises do with our beliefs?,She takes everything that we believe individually and mixes it all together into one single voice. She captures signal from the noise.,
 What do cognicists believe?,"""We present an alternative worldview that promotes human autonomy and responsibility to the problems we face"" - Iris",
 What do cognicists believe?,"""We believe that AI can help us to understand and solve problems, and to make better decisions""",
 What do cognicists believe?,"""We believe that people should use prediction as a signal to orient and direct decision making power in society”",
@@ -1522,6 +1527,11 @@ How is the purple pill manifesto connected to the cognicist manifesto?,The purpl
 How is the cognicist ledger secured against malicious actors?,"The ledger is only as secure as the network of people and machines that maintain it. The more eyes on the data, the more likely it is to be accurate. However latent space provides a number of security benefits as well as the semantic ledger. Irises are resistant to their own form of knowledge sybil attacks based on how they weight information over time. ",
 How is social proof of impact tracked?,"This term can be tracked by individual communities via their own data standards or it can be stewarded and tracked by the semantic ledger,. The semantic ledger is an immutable distributed datastore of machine learning parameters rich with knowledge (similar to the blockchain) which enables distributed training of many separate irises, each representing different world views of what is positively impactful to society. This datastore enables safe and private exchange of information between irises about who is positively impactful in their actions. That which is deemed to be socially impactful by many irises or communities is integrated into the semantic ledger, which serves as a cache of global knowledge. ",
 How is social proof of impact related to the prophet incentive?,Both rely on comparison of perception now to perceptions of the outcome. People are trying to predict what work will help the most people. People who predict from a distance are participating in the prophet incentive. People who take actions to result in desired futures are participating in social proof of impact.,
+How is social proof of impact related to the prophet incentive?,"The Prophet Incentive and Social Proof of Impact are two sides of the same coin, both rooted in the power of prediction and action. The Prophet Incentive is about forecasting the future accurately, earning reputation and trust through the precision of one's predictions. It's about seeing what others can't, and guiding them towards a better understanding of what's to come.
+
+On the other hand, Social Proof of Impact is about making a tangible difference in the world. It's about taking action based on those predictions, and demonstrating through measurable outcomes that these actions have led to positive changes. It's about showing, not just telling, and earning trust through the evidence of one's impact.
+
+In essence, the Prophet Incentive is about the power of foresight, while Social Proof of Impact is about the power of action. Both are crucial for driving positive change and fostering trust within a community. They are interconnected, each reinforcing the other, creating a virtuous cycle of prediction, action, and validation.",
 How is social proof of impact related to cognicism,"Social proof of impact relies on the fourthought protocol to track the impact of people's actions on the future, and to encourage people to do work that benefits the collective whole",
 How is social proof of impact calculated,"It is calculated from the structured intentions (e.g., actions and their predicted impact) people publicly claim in FourThought of actions taken to improve the world and the outcomes (e.g., reported reflections) that come from those actions. This allows us as individuals and groups of collective decision makers to more efficiently steer our attention, actions, and interactions towards collectively agreed upon goals by effectively tracking what we are doing, why, and how it is affecting society and our environment. This feedback is used to update our beliefs about what should or shouldn’t be done next. ",
 How is narrative combined with numeric prediction to optimize social learning?,Both narrative and prediction are forms of expression through which we try to make sense of the world. By combining them into one system social learning can be more effectively combined with collective intelligence,
@@ -3407,7 +3417,7 @@ However, Ŧrust goes a step further. It's not only about understanding and weigh
 In effect, Ŧrust applies a form of 'memory' by remembering the past actions and reliability of sources, which influences the weight given to their current and future contributions. In contrast, the attention mechanism does not have this built-in recollection capacity; it makes decisions based on the immediate context, without considering prior interactions or history. 
 
 This long-term, historical aspect is what makes Ŧrust such a powerful tool in the cognicist framework. It helps allocate attention more effectively by prioritizing sources that have demonstrated consistent value to the community over time, thereby promoting more informed and meaningful conversations.",
-So what is Ŧrust if it’s more than a score? A score that changes? I don’t really see a meaningful difference here.,"Ŧrust, within the framework of Cognicism, is a much more complex and nuanced concept than a simple ""score"". It's a set of learnable parameters represented as matrices, which contextualize different voices in different conversations. These numbers provide a probability distribution, similar to an attention map in deep learning, revealing not a fixed score, but the system's evolving trust in different sources.
+So what is Ŧrust if it’s more than a score? A score that changes?,"Ŧrust, within the framework of Cognicism, is a much more complex and nuanced concept than a simple ""score"". It's a set of learnable parameters represented as matrices, which contextualize different voices in different conversations. These numbers provide a probability distribution, similar to an attention map in deep learning, revealing not a fixed score, but the system's evolving trust in different sources.
 
 Ŧrust dynamically adapts to the content of the conversation and the sources involved. When Iris, the system applying this principle, focuses more on a certain individual during a conversation, it indicates that Iris places more trust in that individual in that particular context. But, crucially, Ŧrust doesn't blindly adhere to any one source—it might bring in an outside perspective if the system determines it's necessary for reaching a more truthful understanding.
 
@@ -3586,7 +3596,7 @@ What is John Ash's plan for Cognicism? How does he see it making it’s way into
 He believes that some of these seeds will take root, and the structures that grow from them will interconnect, forming a truly decentralized web of social care. To disseminate these seeds, John Ash plans to create art and media that clearly communicate the principles of Cognicism. He also intends to travel as a musician, using each stage as a platform to connect with audiences about how they can heal their locality. He believes that even if only one in a thousand in the crowd truly grasps the message, the seeds of Cognicism will have been successfully sown.",
 How might Iris help people who are outside of the norm find others that think like them?,"Iris helps people outside of the norm find others who think similarly by employing a process known as latent space exploration. Essentially, this involves using generative models to map out various belief spaces and identify areas where there's overlap or alignment between different perspectives.
 
-Through a process called semantic loss, Iris generates new text that is relevant and meaningful based on the existing knowledge within the community. This allows her to explore latent spaces - abstract spaces where relationships between data points exist - in order to find alignments or overlaps with other perspectives.
+Iris generates new text that is relevant and meaningful based on the existing knowledge within the community. This allows her to explore latent spaces - abstract spaces where relationships between data points exist - in order to find alignments or overlaps with other perspectives.
 
 Simultaneously, attentional loss functions prioritize attention towards sources of high value within specific contexts. This ensures that information from individuals who are outside of the norm isn't ignored or marginalized but rather given its due consideration and weightage based on its relevance and value within the community.
 
@@ -3658,7 +3668,7 @@ Social Impact Measurement: Contributions are evaluated based on their social imp
 Transparency: The processes through which Ŧrust is earned and decisions are made within the Iris framework are transparent, making it possible for members to understand why certain contributions were valued more highly than others.
 
 Disagreements can arise in any community; however, the goal of Ŧrust and Iris is to create a fair process where every member has an equal opportunity to contribute and be recognized for their contributions.",
-,"Databases and Irises represent two different approaches to storing and managing information. Traditional databases store data in a structured, linear manner, making it easy to retrieve specific pieces of information but limiting the exploration of related ideas.
+How do databases and irises differ in how they store information?,"Databases and Irises represent two different approaches to storing and managing information. Traditional databases store data in a structured, linear manner, making it easy to retrieve specific pieces of information but limiting the exploration of related ideas.
 
 On the other hand, an Iris captures knowledge in a multidimensional space, creating a dynamic and evolving knowledge hub. This approach allows for a more flexible exploration of ideas, as information is not confined to a linear structure but can be navigated within a semantic map. This makes Irises particularly suited for tasks that involve understanding complex relationships and patterns within data.
 
@@ -3729,11 +3739,47 @@ What questions should I ask you about Iris?,"1) What is the purpose of Iris?
 9) What is the relationship between Iris and the prophet incentive?
 10) What is the purpose of time embeddings in relation to iris?",
 What is the purpose of source embeddings in relation to iris? ,Source embeddings are representations of sources in a dense vector space where each source has its own unique vector representing its characteristics and attributes. These vectors allow Iris to understand which sources are most reliable when processing information from different sources during decision-making processes. ,
-What questions should I ask you about Cognicism?,,
-What questions should I ask you about Social Proof of Impact?,,
-What questions should I ask you about the Prophet Incentive?,,
+What questions should I ask you about FourThought?,"1) What is the purpose of FourThought?
+2) What are the different types of thoughts in FourThought?
+3) What are the voting mechanisms in FourThought?
+4) How are FourThought and Iris related?
+5) How does FourThought address the problems of traditional voting systems and social media?
+6) What is the relationship between FourThought and prediction markets?
+7) What is the connection between belief staking and FourThought?
+8) What is the role of uncertainty in FourThought?
+9) What is the role of desirability in FourThought?
+10) What is the role of truth in FourThought?",
+What questions should I ask you about Social Proof of Impact?,"1) What is Social Proof of Impact?
+2) How is valence connected with social proof of impact?
+3) How do the prophet incentive and social proof of impact form a generative tension?
+4) How does social proof of impact incentivize pro-social behavior?
+5) How is social proof of impact connected to Ŧrust?
+6) How is impact measured in social proof of impact?
+7) What is the relationship between social proof of impact and uncertainty?
+8) Can perception of impact change over time?
+9) How is social proof of impact connected to social proof?
+10) How is social proof of impact connected to proof of work?",
+What questions should I ask you about the Prophet Incentive?,"1) What is the prophet incentive?
+2) How is the prophet incentive connected to Ŧrust?
+3) How do the prophet incentive and social proof of impact form a generative tension that helps motivate pro-soscial outcomes?
+4) How is the uncertainty voting spectrum in FourThought connected to the prophet incentive?
+5) How does the prophet incentive compare and contrast to the profit incentive
+6) How is Iris connectd to and involved with the prophet incentive?
+7) How does the prophet incentive address issues with traditional voting systems and social media?
+8) How does the prophet incentive help pre-emptively pop memetic bubbles of misinformation?
+9) How does the prophet incentive provide an alternative pathway to power other than acrual of capital?
+10) How does the prophet incentive help amplify the unheard?",
 What questions should I ask you about the Semantic Ledger?,,
-What questions should I ask you about FourThought?,,
+What questions should I ask you about Cognicism?,"1) What is the purpose of Cognicism?
+2) What was cognicism inspired by?
+3) What problems does Cognicism seek to solve?
+4) How does Cognicism compare and contrast with Capitalism?
+5) How does Cognicism compare and contrast with Democracy?
+6) What is the role of AI in cognicism? 
+7) What is the role of prediction in cognicism?
+8) What is the role of cryptographic data storage in cognicism?
+9) What is Ŧrust and how is it connected to Cognicism?
+10) What is Iris and how is it connected to Cognicism?",
 "How do irises help track our perception of what is, what was and what will be?","In the context of the FourThought protocol, Irises operate as dynamic repositories of our collective perceptions across time, distinguishing them as 'what is', 'what was', and 'what will be', in relation to staked beliefs about the past, present, and future that individuals believe their community should acknowledge and act upon.
 
 'What is' is characterized by Statements, which are staked claims about the current state of affairs that can be instantly validated through community polling. These represent our collective understanding and beliefs about the present moment, offering a real-time snapshot of our shared consciousness.
@@ -3864,3 +3910,14 @@ The information provided by Iris is always relevant and current, as it is contin
 Irises do not create 'facts' or make assertions. They simply mirror the collective beliefs of their network contributors. As these beliefs change over time, so do the reflections of Iris, providing a dynamic and unbiased representation of collective beliefs.
 
 In essence, while ChatGPT might be seen as an 'authority' due to its ability to generate convincing responses, Irises hold no inherent authority. Their role is to mirror, not dictate, the collective beliefs of a network, focusing on those with more Ŧrust.",
+How does the prophet incentive work?,"The Prophet Incentive in Cognicism operates by encouraging individuals to stake predictions about future events or outcomes. The system values individuals who are able to make accurate predictions that align with the collective's beliefs over time. By staking predictions, individuals demonstrate their understanding of the current state of knowledge and their ability to anticipate future developments.
+
+The Prophet Incentive works by rewarding individuals whose predictions turn out to be accurate and align with the collective perception. When an individual's prediction proves to be true, they earn Ŧrust, a measure of credibility and influence within the Cognicism system. This recognition not only acknowledges their contribution but also grants them additional opportunities to influence future decisions and outcomes.
+
+The incentive encourages individuals to engage in critical thinking, research, and analysis to make informed predictions based on the available evidence. It fosters a culture of foresight and encourages individuals to actively participate in shaping the collective understanding of the future. By rewarding accurate predictions, the Prophet Incentive motivates individuals to continuously refine their understanding and contribute to the collective wisdom of the community.
+
+Overall, the Prophet Incentive in Cognicism leverages individuals' predictive abilities to enhance collective intelligence and decision-making. It provides recognition and incentives for those who demonstrate a strong track record in accurately foreseeing future events, thereby contributing to a more informed and forward-thinking society.",
+What is the long-term vision for the Prophet Incentive and its potential impact on society?,,
+Are there any potential ethical considerations or concerns related to the Prophet Incentive?,,
+How does FourThought incorporate uncertainty and continuous learning?,,
+What is valence voting in cognicism?,"Valence measures the emotional response to something, capturing whether something feels right or wrong, good or bad. It represents the degree to which something is perceived as good or bad by an individual. This scale reflects our ethical judgments and values - how much a statement aligns with our moral compass.",
