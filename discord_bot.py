@@ -57,7 +57,9 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-f-2023-07-13-00-58-34",
+	"chat-iris": "davinci:ft-personal:chat-iris-h-2023-07-25-00-56-17",
+	"chat-iris-g": "davinci:ft-personal:chat-iris-g-2023-07-20-23-52-54",
+	"chat-iris-f": "davinci:ft-personal:chat-iris-f-2023-07-13-00-58-34",
 	"chat-iris-e": "davinci:ft-personal:chat-iris-e-2023-06-03-03-11-47",
 	"chat-iris-c": "davinci:ft-personal:chat-iris-c-2023-03-15-05-59-14",
 	"chat-iris-b": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
@@ -443,6 +445,62 @@ async def iris_pool(message):
 	for chunk in response_chunks:
 		await message.channel.send(chunk)
 
+async def stability_pool(message):
+	"""
+	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
+	establish speakerjohnscache to support
+	"""
+
+	channel_id = 1134692579322118156
+	channel = bot.get_channel(channel_id)
+	now = datetime.datetime.now()
+
+	# Ignore Slash Commands
+	last_message = [message async for message in channel.history(limit=1)][0]
+
+	if last_message.content.startswith("/"):
+		return
+
+	messages = await get_conversation_history(channel_id, 50, 13, 11)
+	messages.reverse()
+
+	iris_answer = one_shot(last_message, heat=0.11)
+
+
+	conversation = [
+		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
+		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal. Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. We don't know the medium term goal yet. Your short term goal is to help us figure out the medium term goal"},
+		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00.123456. Place special attention on any predictions made within the thread"},
+		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
+		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals."},
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others"}
+	]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": f"TIME: {m[0].timestamp.strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4",
+		temperature=0.8,
+		max_tokens=300,
+		frequency_penalty=0.5,
+		presence_penalty=0.5,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
+
 async def question_pool(message):
 	"""
 	Collects and summarizes questions about Cognicism from a Discord channel, ignoring non-question messages.
@@ -794,18 +852,18 @@ async def channel(ctx, *, topic=""):
 	question_pattern = r'^(.*)\?\s*$'
 	non_questions = list(filter(lambda x: isinstance(x, str) and re.match(question_pattern, x, re.IGNORECASE), prompts))
 	pre_prompts = [
-		"Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy: ",
-		"Write a paragraph related to the following topic. Be brief: ",
-		"Branch out as far as you can conceptually from the following: ",
+		"Share a snippet of abstract and analytical wisdom related to the following topic. Be pithy : ",
+		"Write a paragraph related to the following topic and explain how it connects to cognicist ideas. Be brief: ",
+		"Branch out as far as you can conceptually from the following but ground it in concepts related to iris: ",
 		"What does Iris think about this topic: ",
-		"Write a one line technical tweet about this topic: "
+		"Write a one line attention grabbing technical tweet with heart about this topic: "
 	]
 
 	combined_non_questions = non_questions + completions
 	random_non_question = random.choice(combined_non_questions)
 	message = ctx.message
 	message.content = random.choice(pre_prompts) + random_non_question
-	temperatures = [0.50, 0.75, 0.85, 0.95, 1, 1, 1, 1, 1]
+	temperatures = [0, 0.05, 0.15, 0.25, 0.35, 0.50, 0.75, 0.85, 0.95, 1]
 	rand_temp = random.choice(temperatures)
 
 	await frankeniris(message, answer="", heat=rand_temp)
@@ -841,7 +899,7 @@ async def faq(ctx, *, topic=""):
 	message.content = random_question[0]
 
 	await ctx.send(embed=embed)
-	await frankeniris(message, answer=random_question[1], heat=0.11)
+	await frankeniris(message, answer=random_question[1], heat=0.22)
 
 @bot.command(aliases=['in', 'inject'])
 async def infuse(ctx, *, link):
