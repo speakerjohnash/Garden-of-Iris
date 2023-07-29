@@ -451,6 +451,8 @@ async def stability_pool(message):
 	establish speakerjohnscache to support
 	"""
 
+	print("CALLED!")
+
 	channel_id = 1134692579322118156
 	channel = bot.get_channel(channel_id)
 	now = datetime.datetime.now()
@@ -466,7 +468,6 @@ async def stability_pool(message):
 
 	iris_answer = one_shot(last_message, heat=0.11)
 
-
 	conversation = [
 		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
 		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal. Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. We don't know the medium term goal yet. Your short term goal is to help us figure out the medium term goal"},
@@ -481,7 +482,7 @@ async def stability_pool(message):
 		if m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
-			conversation.append({"role": "user", "content": f"TIME: {m[0].timestamp.strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
@@ -819,9 +820,10 @@ async def on_message(message):
 	# A list of tuples containing channel ids and their corresponding functions
 	channel_functions = [
 		(1090373822454182090, fourthought_pool),
+		(1134692579322118156, stability_pool),
 		(1103037773327368333, iris_pool),
 		(1086437563654475846, question_pool),
-		(1083409321754378290, prophecy_pool)
+		(1083409321754378290, prophecy_pool),
 	]
 
 	# Iterate over the channel ids and functions
