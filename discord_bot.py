@@ -457,9 +457,13 @@ async def stability_pool(message):
 	channel = bot.get_channel(channel_id)
 	now = datetime.datetime.now()
 
-	# Ignore Slash Commands
+	# Get Most Recent Comment
 	last_message = [message async for message in channel.history(limit=1)][0]
+	function_details = stability_functions(last_message)
 
+	return
+
+	# Ignore Slash Commands
 	if last_message.content.startswith("/"):
 		return
 
@@ -513,16 +517,16 @@ def stability_functions(message):
 	Sends message to GPT-4 to determine which functions to call in the stability-pool
 	"""
 
-	functions=[
+	functions = [
 		{
-			"name": "default_response", 
-			"description": "Handle a general text input and generate a response.",
+			"name": "check_goals", 
+			"description": "Check the CSV of the goals we have logged and return a summary",
 			"parameters": {
 				"type": "object",
 				"properties": {
 					"text": {
 						"type": "string",
-						"description": "The full text input from the user."
+						"description": "Print the users input unchanged"
 					}
 				},
 				"required": ["text"]
@@ -547,13 +551,56 @@ def stability_functions(message):
 						"type": "number",
 						"minimum": 0,
 						"maximum": 1,
+						"default": 0.5,
 						"description": "The priority of the goal, represented as a number between 0 and 1."
 					}
 				},
 				"required": ["goal", "type", "priority"]
 			}
-		}
+		},
+		{
+		"name": "stake_thought",
+		"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality)",
+		"parameters": {
+			"type": "object",
+			"properties": {
+				"thought": {
+					"type": "string",
+					"description": "The text of the thought",
+				},
+				"type": {
+					"type": "string",
+					"enum": ["prediction", "reflection", "statement", "question"],
+					"description": "The type of the thought. Whether it is a claim focused on the past (reflection), present (statement), future (prediction), or is seeking an answer (question)",
+				},
+				"verity": {
+					"type": "integer",
+					"minimum": 0,
+					"maximum": 1,
+					"default": 0.5,
+					"description": "A continuous range repersenting confidence, truth, certainty, falseness, alignment with reality. A value between 0 and 1 with 0 representing full confidence of falseness, 0.5 representing full uncertainty and 1 representing full certainty or confidence of trueness. May come in a range of 0% to 100%"
+				},
+				"valence": {
+					"type": "integer",
+					"minimum": -1,
+					"maximum": 1,
+					"default": 0,
+					"description": "A continuous range representing goodness, morality, ethics and alignment with one's sense of what is right and wrong. A value between -1 and 1 with -1 representing full misalignment with ones sense of goodness or morality, 0 representing full neutrality and 1 representing full full alignment with one's sense of ethics. May come in a range of -100 to 100"
+				}
+			},
+			"required": ["thought", "type", "verity", "valence"]
+		},
+	},
 	]
+
+	openai_response = openai.ChatCompletion.create(
+		model = 'gpt-4',
+		messages = [{'role': 'user', 'content': message.content}],
+		functions = functions,
+		function_call = 'auto'
+	)
+
+	print(openai_response)
 
 async def question_pool(message):
 	"""
