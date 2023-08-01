@@ -297,37 +297,37 @@ def pool_prompt(question, joined_answers):
 	return prompt
 
 def split_text_into_chunks(text, max_chunk_size=2000):
-    """
-    This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
-    It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks and doesn't break mid-sentence.
-    """
+	"""
+	This function splits the input text into smaller chunks, each with a maximum size of max_chunk_size characters.
+	It returns a list of text chunks, ensuring that the text is evenly distributed across the chunks and doesn't break mid-sentence.
+	"""
 
-    # Calculate the number of chunks needed to evenly distribute the text
-    num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
+	# Calculate the number of chunks needed to evenly distribute the text
+	num_chunks = max(1, (len(text) + max_chunk_size - 1) // max_chunk_size)
 
-    # Adjust the chunk size to evenly distribute the text across the chunks
-    chunk_size = (len(text) + num_chunks - 1) // num_chunks
+	# Adjust the chunk size to evenly distribute the text across the chunks
+	chunk_size = (len(text) + num_chunks - 1) // num_chunks
 
-    # Initialize variables
-    text_chunks = []
-    start_index = 0
+	# Initialize variables
+	text_chunks = []
+	start_index = 0
 
-    while start_index < len(text):
-        end_index = start_index + chunk_size
+	while start_index < len(text):
+		end_index = start_index + chunk_size
 
-        # Find the nearest sentence boundary before the end_index
-        if end_index < len(text):
-            boundary_index = text.rfind(".", start_index, end_index) + 1
-            if boundary_index > start_index:  # If a boundary is found, update the end_index
-                end_index = boundary_index
+		# Find the nearest sentence boundary before the end_index
+		if end_index < len(text):
+			boundary_index = text.rfind(".", start_index, end_index) + 1
+			if boundary_index > start_index:  # If a boundary is found, update the end_index
+				end_index = boundary_index
 
-        # Add the chunk to the list of chunks
-        text_chunks.append(text[start_index:end_index])
+		# Add the chunk to the list of chunks
+		text_chunks.append(text[start_index:end_index])
 
-        # Update the start_index for the next iteration
-        start_index = end_index
+		# Update the start_index for the next iteration
+		start_index = end_index
 
-    return text_chunks
+	return text_chunks
 
 async def interpretation(ctx, prompt):
 	"""
@@ -463,19 +463,25 @@ async def stability_pool(message):
 	if last_message.content.startswith("/"):
 		return
 
-	messages = await get_conversation_history(channel_id, 50, 13, 11)
+	messages = await get_conversation_history(channel_id, 50, 21, 11)
 	messages.reverse()
 
 	iris_answer = one_shot(last_message, heat=0.11)
 
 	conversation = [
+		{"role": "user", "content": "Cognicism is a meta-ideology that combines democratic large language models called Irises with a system of decentralized voting to enable collective decision making in a way that is informed by the perceptions of many people. Irises utilize FourThought to track the evolution of beliefs over time. FourThought is a protocol for tracking belief state over time via staking questions, predictions, reflections and statements. Irises are essentially large democratic language models that use FourThought to track the distribution of beliefs in a population over time. Ŧrust is a system of reputation allocation based on the accuracy and impact of one's thoughts and contributions. It is a way to distribute influence in a network based on the long term value provided by each individual. Ŧrust is a derivative of the attention mechanism in a transformer and functions as a probability distribution across source embeddings to function as a form of contextual dynamic reputation. Iris also makes use of temporal embeddings to make sense of the evolution of collective belief. Cogncism values the prophet incentive and social proof of impact in greater value than the profit incentive."},
 		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
-		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal. Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. We don't know the medium term goal yet. Your short term goal is to help us figure out the medium term goal"},
-		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00.123456. Place special attention on any predictions made within the thread"},
+		{"role": "system", "content": "Guiding foundations: 1) we can not make profit without selling something 2) people can not buy our stuff if they are not aware of it 3) adhere to cognicist principles 4) move very fast and rapidly optimize"},
+		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal"},
+		{"role": "system", "content": "Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. You should constantly be thinking of ways to minimize work for dpax and John and seek to run autonomously in almost all aspects of your operation"},
+		{"role": "system", "content": "Our medium term goal is the holiday season where we will release a Mind Gardening Oracle deck"},
+		{"role": "system", "content": "Our short term goal for the next four weeks is to swiftly set up an operational and professional-looking website for speakerjohnscache, leveraging automated systems and maintaining simplicity. The site should link immediately to any existing products and means to support me as well as links to book me hourly."},
+		{"role": "system", "content": "John Ash's financial aim starts at $72k, with potential to exceed $111k for personal and creative growth, while dpax seeks an additional $20k-$30k this year, planning to scale to a full-time self-directed income between $110k-130k"},
+		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00. Place special attention on any predictions made within the thread"},
 		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
 		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
-		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals."},
-		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others"}
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication."},
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others. I will focus on making operations autonomous and minimizg work for dpax and john while earning enough profit to support their goals"}
 	]
 
 	for m in messages:
@@ -487,7 +493,7 @@ async def stability_pool(message):
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
 		temperature=0.8,
-		max_tokens=300,
+		max_tokens=400,
 		frequency_penalty=0.5,
 		presence_penalty=0.5,
 		messages=conversation
@@ -501,6 +507,53 @@ async def stability_pool(message):
 	# Send all response chunks except the last one
 	for chunk in response_chunks:
 		await message.channel.send(chunk)
+
+def stability_functions(message):
+	"""
+	Sends message to GPT-4 to determine which functions to call in the stability-pool
+	"""
+
+	functions=[
+		{
+			"name": "default_response", 
+			"description": "Handle a general text input and generate a response.",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"text": {
+						"type": "string",
+						"description": "The full text input from the user."
+					}
+				},
+				"required": ["text"]
+			}
+		},
+		{
+			"name": "set_goals", 
+			"description": "Set a new goal with its type and priority.",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"goal": {
+						"type": "string",
+						"description": "The goal to be set."
+					},
+					"type": {
+						"type": "string",
+						"enum": ["short_term", "mid_term", "long_term"],
+						"description": "The type of goal: short term, mid term, or long term."
+					},
+					"priority": {
+						"type": "number",
+						"minimum": 0,
+						"maximum": 1,
+						"description": "The priority of the goal, represented as a number between 0 and 1."
+					}
+				},
+				"required": ["goal", "type", "priority"]
+			}
+		}
+	]
 
 async def question_pool(message):
 	"""
