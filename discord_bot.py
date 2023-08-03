@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import csv
 import random
 import time
 import datetime
@@ -318,7 +319,7 @@ def split_text_into_chunks(text, max_chunk_size=2000):
 		# Find the nearest sentence boundary before the end_index
 		if end_index < len(text):
 			boundary_index = text.rfind(".", start_index, end_index) + 1
-			if boundary_index > start_index:  # If a boundary is found, update the end_index
+			if boundary_index > start_index:	# If a boundary is found, update the end_index
 				end_index = boundary_index
 
 		# Add the chunk to the list of chunks
@@ -445,6 +446,29 @@ async def iris_pool(message):
 	for chunk in response_chunks:
 		await message.channel.send(chunk)
 
+def stake_thought(message, function_args):
+
+	thought = function_args['thought']
+	thought_type = function_args['type']
+	verity = function_args['verity'] 
+	valence = function_args['valence']
+
+	user_id = message.author.id
+	
+	# Get timestamp from message object
+	timestamp = message.created_at.isoformat()
+
+	csv_file = 'thoughts.csv'
+
+	if not os.path.isfile(csv_file):
+		with open(csv_file, 'w') as f:
+			writer = csv.writer(f)
+			writer.writerow(['user_id', 'timestamp', 'thought', 'type', 'verity', 'valence'])
+
+	with open(csv_file, 'a') as f:
+		writer = csv.writer(f)
+		writer.writerow([user_id, timestamp, thought, thought_type, verity, valence])		
+
 async def stability_pool(message):
 	"""
 	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
@@ -461,8 +485,15 @@ async def stability_pool(message):
 	last_message = [message async for message in channel.history(limit=1)][0]
 	function_details = stability_functions(last_message)
 
-	return
-
+	if function_details.get("function_call"):
+		function_name = function_details["function_call"]["name"]
+		function_args = json.loads(function_details["function_call"]["arguments"])
+		parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
+		embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+		stake_thought(last_message, function_args)
+		await message.channel.send(embed=embed)
+		return
+		
 	# Ignore Slash Commands
 	if last_message.content.startswith("/"):
 		return
@@ -484,7 +515,7 @@ async def stability_pool(message):
 		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00. Place special attention on any predictions made within the thread"},
 		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
 		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
-		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication."},
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication. You are anti-profit, anti-work and anti-capitalist. All things you reply with should minimize work for John and dpax somehow"},
 		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others. I will focus on making operations autonomous and minimizg work for dpax and john while earning enough profit to support their goals"}
 	]
 
@@ -559,48 +590,55 @@ def stability_functions(message):
 			}
 		},
 		{
-		"name": "stake_thought",
-		"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality)",
-		"parameters": {
-			"type": "object",
-			"properties": {
-				"thought": {
-					"type": "string",
-					"description": "The text of the thought",
+			"name": "stake_thought",
+			"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality)",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"thought": {
+						"type": "string",
+						"description": "The text of the thought",
+					},
+					"type": {
+						"type": "string",
+						"enum": ["prediction", "reflection", "statement", "question"],
+						"description": "The type of the thought. Whether it is a claim focused on the past (reflection), present (statement), future (prediction), or is seeking an answer (question)",
+					},
+					"verity": {
+						"type": "number",
+						"minimum": 0,
+						"maximum": 1,
+						"default": 0.5,
+						"description": "A continuous range repersenting confidence, truth, certainty, falseness, alignment with reality. A value between 0 and 1 with 0 representing full confidence of falseness, 0.5 representing full uncertainty and 1 representing full certainty or confidence of trueness"
+					},
+					"valence": {
+						"type": "number",
+						"minimum": -1,
+						"maximum": 1,
+						"default": 0,
+						"description": "A continuous range representing goodness, morality, ethics and alignment with one's sense of what is right and wrong. A value between -1 and 1 with -1 representing full misalignment with ones sense of goodness or morality, 0 representing full neutrality and 1 representing full full alignment with one's sense of ethics"
+					}
 				},
-				"type": {
-					"type": "string",
-					"enum": ["prediction", "reflection", "statement", "question"],
-					"description": "The type of the thought. Whether it is a claim focused on the past (reflection), present (statement), future (prediction), or is seeking an answer (question)",
-				},
-				"verity": {
-					"type": "integer",
-					"minimum": 0,
-					"maximum": 1,
-					"default": 0.5,
-					"description": "A continuous range repersenting confidence, truth, certainty, falseness, alignment with reality. A value between 0 and 1 with 0 representing full confidence of falseness, 0.5 representing full uncertainty and 1 representing full certainty or confidence of trueness. May come in a range of 0% to 100%"
-				},
-				"valence": {
-					"type": "integer",
-					"minimum": -1,
-					"maximum": 1,
-					"default": 0,
-					"description": "A continuous range representing goodness, morality, ethics and alignment with one's sense of what is right and wrong. A value between -1 and 1 with -1 representing full misalignment with ones sense of goodness or morality, 0 representing full neutrality and 1 representing full full alignment with one's sense of ethics. May come in a range of -100 to 100"
-				}
-			},
 			"required": ["thought", "type", "verity", "valence"]
 		},
-	},
+		},
 	]
 
-	openai_response = openai.ChatCompletion.create(
+	messages = [
+		{'role': 'user', 'content': message.content}
+	]
+
+	response = openai.ChatCompletion.create(
 		model = 'gpt-4',
-		messages = [{'role': 'user', 'content': message.content}],
+		temperature=0,
+		messages = messages,
 		functions = functions,
 		function_call = 'auto'
 	)
 
-	print(openai_response)
+	message = response["choices"][0]["message"]
+
+	return message
 
 async def question_pool(message):
 	"""
@@ -628,7 +666,7 @@ async def question_pool(message):
 		conversation = [{"role": "system", "content": "You are a question summarizer Iris. You are summarizing a thread of questions about Cognicism and related concepts. You ignore everything except questions. People will ask you various questions about cognicism and you job is to summarize what people want to know. You print a list of questions"}]
 
 	for m in messages:
-		if  m[0].id == bot.user.id:
+		if	m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
 			conversation.append({"role": "user", "content": m[1]})
@@ -691,7 +729,7 @@ async def fourthought_pool(message):
 		]
 
 	for m in messages:
-		if  m[0].id == bot.user.id:
+		if	m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
 			conversation.append({"role": "user", "content": f"Speaker: {m[0].name}: {m[1]}"})
@@ -742,7 +780,7 @@ async def prophecy_pool(message):
 	conversation = [{"role": "system", "content": "You are an oracle and pro-social future manifestation mechanism named Iris. You are helping coordinate a thread of people trying to collaboratively work towards a common future. Within this thread there is a thread of thoughts amounting to a moving arrow of time. There are predictions, intentions and questions about the future. There are varying degrees of uncentainty of these conceptions of the future and varying beliefs about whether manifesting certain futures is possible. Your job is to continusouly integrate and make sense of anything related to this forward arrow of collective ideation. You also suggest predictions and ways to manifest specific futures mentioned by the group"}]
 
 	for m in messages:
-		if  m[0].id == bot.user.id:
+		if	m[0].id == bot.user.id:
 			conversation.append({"role": "assistant", "content": m[1]})
 		else:
 			conversation.append({"role": "user", "content": m[1]})
@@ -875,8 +913,8 @@ async def frankeniris(message, answer="", heat=0.11):
 	# Check Total Length
 	if total_length > 20000:
 		# Iterate over messages in conversation in reverse order and remove them until total length is below maximum
-		while total_length > 20000 and len(conversation) > 2:  # ensure that at least 2 messages remain (the user's message and Iris's answer)
-			removed_msg = conversation.pop(1)  # remove the second message (first message after Iris's answer)
+		while total_length > 20000 and len(conversation) > 2:	# ensure that at least 2 messages remain (the user's message and Iris's answer)
+			removed_msg = conversation.pop(1)	# remove the second message (first message after Iris's answer)
 		total_length -= len(removed_msg["content"])
 
 	model = random.choice(["gpt-4", "gpt-3.5-turbo"])
@@ -931,7 +969,7 @@ async def on_message(message):
 		if message.channel.id == channel_id:
 			await channel_function(message)
 			await bot.process_commands(message)
-			break  # Exit the loop once the corresponding function is executed
+			break	# Exit the loop once the corresponding function is executed
 
 	# Handle DM Chat
 	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel):
@@ -1062,15 +1100,15 @@ async def infuse(ctx, *, link):
 						temperature=0.75,
 						messages=truncated_convo
 					)
-					break  # if the request was successful, break the retry loop
+					break	# if the request was successful, break the retry loop
 				except openai.error.RateLimitError:
-					if retries < MAX_RETRIES - 1:  # don't sleep on the last retry
-						time.sleep(RETRY_DELAY)  # wait before trying again
+					if retries < MAX_RETRIES - 1:	# don't sleep on the last retry
+						time.sleep(RETRY_DELAY)	# wait before trying again
 					retries += 1
 
 			if retries == MAX_RETRIES:
 				await ctx.send("Failed to process chunk after multiple retries due to rate limit. Please try again later.")
-				continue  # move on to the next chunk
+				continue	# move on to the next chunk
 
 			# Extract the claims from the response and add them to the claims array
 			for choice in response.choices:
