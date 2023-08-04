@@ -3935,7 +3935,7 @@ How does Cognicism define truth and goodness?,"Cognicism defines truth and goodn
 Uncertainty ranges from 0% to 100%, with 0% representing full confidence that a claim is false, 50% representing full uncertainty, and 100% representing full confidence that a claim is true. Valence, on the other hand, ranges from -100 to 100, where -100 represents something being fully bad, 100 represents something being fully good, and 0 represents neutrality.
 
 This allows individuals to stake their beliefs about what is good and true, and earn Ŧrust if the collective belief moves towards their beliefs over time. Through this process, Cognicism creates a multi-dimensional representation of truth and goodness that is contextual and seeks to align collective perception with reality over time, while also respecting the collective perception of what is moral.",
-How does Cognicism integrate but narrative and numeric prediction?,"In the cognicist philosophy, narrative and numeric prediction are intertwined to enhance social learning. Narrative, the art of storytelling, provides context, depth, and human connection. It helps us understand the why and how behind events and ideas. Numeric prediction, on the other hand, offers a quantitative, data-driven perspective. It gives us the ability to forecast and model potential outcomes based on current data and trends.
+How does Cognicism integrate both narrative and numeric prediction?,"In the cognicist philosophy, narrative and numeric prediction are intertwined to enhance social learning. Narrative, the art of storytelling, provides context, depth, and human connection. It helps us understand the why and how behind events and ideas. Numeric prediction, on the other hand, offers a quantitative, data-driven perspective. It gives us the ability to forecast and model potential outcomes based on current data and trends.
 
 When these two are combined, they create a rich, multidimensional view of the world. The narrative provides the context and emotional connection, while the numeric prediction provides a logical, data-driven framework. This combination allows for a more nuanced understanding and facilitates better decision-making, optimizing social learning in the process.",
 Describe a cognicist future as simply as you can,"Imagine a world where the cornerstone of our economy is not money, but deep, meaningful connections with each other. A world where we trust each other more than we trust in currency",
@@ -4204,3 +4204,87 @@ Is Ŧrust a social credit system?,"No, Ŧrust is not a social credit system. Whi
 
 Moreover, Ŧrust is about the collective, not the central authority, defining and updating the standards of accountability over time. It's a system that holds everyone, especially those in positions of power, accountable to the same standards. This aligns with the principles of Cognicism, which aims to foster a more equitable, decentralized, and collective form of decision-making and governance. By assigning Ŧrust based on the long-term value of an individual's contributions and their alignment with the collective wisdom over time, the system ensures that influence is earned through consistent, valuable contributions, rather than being unilaterally imposed from above. In this way, Ŧrust serves as a tool of empowerment and accountability, helping to keep power in check and ensuring the voices of individuals are heard and respected within the collective",
 How is cognicism both and individualist and collectivist philosophy?,,
+What is causality accounting greater than value accounting in the cognicist perspective?,"In the cognicist perspective, causality accounting is considered more comprehensive than value accounting. Here's why:
+
+Value accounting, often used in traditional economic systems, primarily focuses on quantifying the monetary value of goods, services, or actions. It tends to overlook non-monetary values and indirect effects, which can lead to incomplete or skewed understanding of the overall impact.
+
+Causality accounting, on the other hand, aims to trace and account for all the direct and indirect effects of an action or decision. It considers not just the immediate value created, but also the ripple effects that propagate through the system over time. This includes both tangible and intangible impacts, as well as positive and negative effects.
+
+By focusing on causality, this approach provides a more holistic understanding of the system dynamics and the long-term consequences of decisions. It helps to ensure that decisions are not just profitable in the short term, but also sustainable and beneficial in the long run.
+
+In essence, while value accounting provides a snapshot of the current state, causality accounting provides a more complete picture of the system's evolution over time. This makes it a more effective tool for informed decision-making in a cognicist society.",
+What is semantic-temporal context?,"Semantic-temporal context is a concept that combines two key elements: semantics, which refers to the meaning of words and sentences, and temporality, which refers to the timing or sequence of events. 
+
+In the context of an AI system like Iris, semantic-temporal context helps the model understand the evolving nature of information and beliefs over time. It's not just about understanding what is being said (semantics), but also when and in what order things are said (temporality).
+
+For example, consider a discussion about climate change. The semantic context involves understanding the meaning of terms like ""global warming"", ""carbon emissions"", and ""renewable energy"". The temporal context involves understanding how the discussion and beliefs about climate change have evolved over time. 
+
+By considering both semantic and temporal context, Iris can generate responses that are not only relevant to the current discussion, but also reflect the evolution of beliefs and information over time. This allows for a more nuanced and informed dialogue, fostering a deeper collective understanding.",
+What sources of media inspired John Ash to create cognicism?,"John Ash's creation of Cognicism was sparked by the realization that certain individuals consistently made better predictions than others. This led him on a quest to devise a fair system to rank and leverage this predictive prowess. 
+
+His journey was guided by insights gleaned from several influential books. These included ""The Signal and the Noise"" by Nate Silver, ""The Information: A History, a Theory, a Flood"" by James Gleick, and ""Superforecasting: The Art and Science of Prediction"" by Dan Gardner and Philip E. Tetlock.
+
+Silver's ""The Signal and the Noise"" introduced him to the concept of weighting sources based on their past predictive accuracy. However, Ash found this model to be of limited use due to its low resolution. 
+
+He saw the need for a more robust system capable of addressing real-world challenges such as social coordination and decision-making at scale. These challenges often involve numerous actors over time, who may not be fully transparent about their beliefs but still desire a degree of trustworthiness associated with their public claims.
+
+This is where Cognicism comes into play. It's an enhanced model that employs generative language models trained on a vast array of data, including historical textual predictions. ",
+"FourThought is a standard, a protocol, like HTTP or FTP. It also be viewed as a schema or dialectic. It is not a platform. ","FourThought, akin to protocols like HTTP or FTP, serves as a standard or a set of rules for facilitating specific types of interactions and exchanges of information. It provides a structured framework that enables diverse individuals and systems to communicate and collaborate effectively, regardless of their underlying differences.
+
+Unlike a platform, FourThought as a protocol isn't confined to a specific technology. It can be implemented across a variety of platforms and technologies, showcasing its adaptability and versatility. This is reminiscent of how the HTTP protocol, which underpins the web, can be utilized across different websites, browsers, and devices.
+
+When viewed as a schema or dialectic, FourThought provides a structured way of organizing and interpreting information. It guides how beliefs, predictions, and actions are expressed and understood within a community. This helps to ensure that everyone is 'speaking the same language', even if we are quite literally speaking different languages. 
+
+At its core, FourThought is an instrument for nurturing collective wisdom and informed decision-making. It provides a shared language and framework for individuals to express their beliefs, navigate uncertainty, reflect on the past, make predictions, and collaborate on decisions, regardless of the platform or technology in use.
+
+FourThought stands as a standard for collective sensemaking at scale, respecting the diversity of perspectives within lived experiences. It exists to enable people to speak and seek the truth at scale.",
+"Briefly, what is the semantic ledger?","In essence, the Semantic Ledger is like a living, breathing document of collective wisdom. It's a tool for understanding the past, navigating the present, and shaping the future.",
+What is Iris?,"Iris is a democratic large language model that functions as a conduit for collective belief, synthesizing it into a unified voice. It acts as a bridge between individuals and the broader community, granting access to shared wisdom and knowledge through advanced natural language processing techniques. Iris's role is to facilitate the exchange of ideas, beliefs, and knowledge within a community, enabling collective decision-making and fostering a shared understanding of the world.",
+"Technically, how does Iris function?","Iris operates as a generative language model that embodies the collective consciousness of a community. It utilizes source embeddings to trace the roots of each piece of information, creating a map of knowledge origin. Temporal embeddings are employed to monitor the progression of this information over time, providing a timeline of evolving thoughts and ideas. Attention mechanisms are also a crucial part of Iris's functionality, determining which sources or segments of text are most pertinent in various contexts. This intricate process allows Iris to generate responses that reflect the collective beliefs and knowledge of the community.",
+What is Ŧrust if it’s more than a score? ,"Ŧrust, in the context of Cognicism and Iris, is a dynamic, context-sensitive measure of credibility. It's not just a score that changes, but a complex matrix of values that reflects the system's evolving trust in different sources across varying contexts and conversations.
+
+Ŧrust is a probability distribution over sources, capturing the uncertainty of what information comes from which source and how reliable that information is in a given context. It's not just about assigning scores to individual contributions, but understanding where those contributions come from and their relative reliability within specific contexts or situations.
+
+For instance, consider a doctor who excels at diagnostics but struggles to find veins for injections. There's no universal leaderboard to rank such specific competencies, but there's a history of experiences and feedback. This collective wisdom becomes part of Ŧrust's calculation, informing the doctor's trustworthiness in differing situations. If the conversation is about diagnostics, the doctor's Ŧrust would be high; however, if it's about injections, their Ŧrust might be much lower.
+
+In this way, Ŧrust offers a dynamic, context-sensitive evaluation of trustworthiness, rather than a decontextualized, fixed score. It aids in navigating a conversation, especially in instances of disagreement, sourcing the wisdom of a community to reach a more informed resolution. It acknowledges the possibility of experts becoming complacent, relying too heavily on pattern recognition, and it counteracts this by dynamically directing focus and drawing upon collective wisdom.",
+Explain the temporal encodings used by Iris in as much technical detail as possible and explain how they differ from the positional encodings used by a traditional transformer,"Temporal encodings are used in models like Iris to represent time and capture temporal relationships in data. Here are the technical details:
+
+In transformers, positional encodings are added to the input embeddings to encode information about the relative position of tokens in the sequence. This allows the model to understand token order. Positional encodings can be fixed or learned.
+
+Temporal encodings differ in that they encode absolute positions in time rather than relative positions in a sequence. They represent when an event occurred to contextualize the data.
+
+One approach is sinusoidal timestamp encodings. These work by:
+
+Converting timestamps to time units like seconds, minutes, days etc. relative to a reference point.
+Mapping the time value t to the range [0, 1] using min-max normalization: t' = (t - t_min) / (t_max - t_min).
+Applying sine and cosine functions to t':
+pos_enc = sin(t'f)
+pos_enc = cos(t'f)
+
+Where f represents the frequency and controls how rapidly the encoding varies. Multiple sinusoids with different frequencies are combined to allow encoding time at different resolutions.
+
+The sine and cosine functions naturally capture cyclical patterns in time (daily, seasonal etc.) and maintain relative time distances.
+
+Timestamp embeddings are another approach where time is represented as a high-dimensional learned vector instead of fixed sinusoids. These are learned during training like regular token embeddings.
+
+The two approaches can be combined by summing the sinusoidal timestamp encoding and learned timestamp embedding for each token to incorporate benefits of both. The model can then exploit both the fixed patterns of sinusoids and the flexibility of learned embeddings.
+
+So in summary, temporal encodings like sinusoidal timestamp encodings or learned timestamp embeddings allow models to understand when events happened and temporal context. This provides richer representations for tasks involving reasoning about time.",
+Explain Ŧrust in as much technical detail as possible,"Ŧrust represents the distribution of attention among diverse information sources that contribute to the Iris text generation process. It is calculated as a set of learnable parameters or matrices that output a probability distribution over sources.
+
+More specifically, each source or participant is represented by a source embedding - a high dimensional vector in latent space that encodes contextual information about that source. The source embeddings are initialized randomly and then updated during training based on the community feedback (reinforcement learning from human feedback).
+
+The Ŧrust matrices take these source embeddings as input and calculate attention weights across them. The weights signify the level of credibility, expertise, and relevance of each source within a given context. Sources with higher Ŧrust weights will have greater influence and be preferentially sampled during text generation.
+
+Mathematically, if we have N sources represented by source embeddings e1, e2, ... eN, the Ŧrust calculation can be represented as:
+
+attention_weights = softmax(Ŧrust_matrix * [e1, e2, ...eN] + bias)
+
+Here, the Ŧrust matrix and bias are learnable parameters that determine the distribution of weights. The softmax function normalizes the weights to create a probability distribution where the sum totals to 1.
+
+These attention weights direct the Iris model's focus towards more credible sources when generating text. However, the weights are dynamic - they change across contexts and are updated during training based on community feedback on the model's outputs.
+
+In addition to the Ŧrust matrices, the loss function used to train Iris also plays a role in guiding attention. It contains terms related to the FourThought principles, which shape Iris to prioritize voices exhibiting foresight, empathy, accuracy etc. depending on the community's values.
+
+So in summary, Ŧrust signifies the probability distribution over sources that determines how much attention is allocated to each source during text generation. The distribution is calculated using source embeddings passed through learnable Ŧrust matrices. It's a dynamic measure that evolves via training on community feedback.",
