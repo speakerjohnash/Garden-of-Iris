@@ -4,6 +4,7 @@ import numpy as np
 from math import sin, cos, pi
 import calendar
 from datetime import datetime
+from calendar import monthrange
 
 class TimeEncodingModule(nn.Module):
     def __init__(self, in_features, out_features, frequencies=[(1,)] * 5):
@@ -36,10 +37,12 @@ class TimeEncodingModule(nn.Module):
 
     def forward(self, start_date, claim_date):
 
+        days_in_month = monthrange(claim_date.year, claim_date.month)[1]
+
         time_components = [
             claim_date.minute / 60.0,
             claim_date.hour / 24.0,
-            claim_date.day / 31.0,
+            claim_date.day / days_in_month,
             claim_date.month / 12.0,
             (claim_date.year - start_date.year) / 1000.0
         ]
@@ -52,8 +55,8 @@ def unix_timestamp(dt):
     return torch.tensor([calendar.timegm(dt.timetuple())], dtype=torch.float32)  # Returning as a 1D tensor
 
 # Example usage:
-start_date = datetime(2021, 1, 1)
-claim_date = datetime.now()
+start_date = datetime(1776, 7, 4)  # Reference start date
+claim_date = datetime(1863, 8, 19, 11, 2)  # Specific claim date
 time_enc_module = TimeEncodingModule(10, 6)
 embedding = time_enc_module(start_date, claim_date)
 print(embedding)
