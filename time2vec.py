@@ -1,9 +1,10 @@
 # time2vec.py
 
 import torch
-from torch import nn 
+from torch import nn
 import numpy as np
 import math
+from datetime import datetime
 
 class Time2VecEncoder(nn.Module):
 
@@ -11,8 +12,9 @@ class Time2VecEncoder(nn.Module):
         super().__init__()
         self.model = SineActivation(in_features, out_features)
 
-    def encode(self, tau):
-        return self.forward(tau)
+    def encode(self, claim_time, start_time=datetime(1970, 1, 1)):
+        tau = (claim_time - start_time).total_seconds()
+        return self.forward(torch.tensor([[tau]]))
 
     def forward(self, x):
         return self.model(x)
@@ -44,9 +46,9 @@ class SineActivation(nn.Module):
 if __name__ == "__main__":
 
     # Usage example
-    encoder = Time2VecEncoder(10, 6)
-  
-    tau = torch.rand(32, 10)  
-    out = encoder.encode(tau)  # Using the encode method
+    encoder = Time2VecEncoder(1, 6)
+
+    claim_time = datetime.now()
+    out = encoder.encode(claim_time)  # Using the encode method with datetime object
     
     print(out.shape)

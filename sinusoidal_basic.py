@@ -1,16 +1,15 @@
-# sinusoidal_basic.py
-
+import torch
 from datetime import datetime
 from math import sin, cos, pi
 
 class SinusoidalBasicEncoder:
 
     def encode(self, start_date, claim_date):
-            
+        
         # Extracting the year difference
         year_difference = claim_date.year - start_date.year
 
-        # Extracting date components    
+        # Extracting date components
         minute = claim_date.minute
         hour = claim_date.hour 
         day = claim_date.day
@@ -32,17 +31,16 @@ class SinusoidalBasicEncoder:
             year_enc,
         ]
         
-        return stacked_enc
+        return torch.tensor(stacked_enc)  # Convert to PyTorch tensor
 
 if __name__ == '__main__':
 
     encoder = SinusoidalBasicEncoder()
-
     start_date = datetime(1776, 7, 4)
     claim_date = datetime(1863, 8, 19, 11, 2)
-
     encoded = encoder.encode(start_date, claim_date)
 
     print("Stacked encoding:")
+
     for encoding in encoded:
-            print(encoding)
+        print(encoding.tolist())
