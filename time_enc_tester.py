@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.optim import Adam
 
 import yfinance as yf
+from datetime import datetime
 
 # Timestamp encoders
 from time2vec import Time2VecEncoder
@@ -20,6 +21,7 @@ t2v_encoder = Time2VecEncoder(in_features=1, out_features=6)
 basic_encoder = basic.SinusoidalBasicEncoder()
 freq_encoder = freq.SinusoidalFrequenciesEncoder()
 iris_encoder = iris.IrisTimeEncoder(in_features=10, out_features=6)
+time_encoders = [t2v_encoder, basic_encoder, freq_encoder, iris_encoder]
 
 # Load Apple stock data
 df = yf.download('AAPL', start='2017-01-01', end='2018-01-01')
@@ -83,14 +85,41 @@ X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris]
 X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris]
 
 # Train simple MLP 
-model = nn.Sequential(nn.Linear(X.shape[1]+6, 128), nn.ReLU(), nn.Linear(128, 1))
-optimizer = Adam(model.parameters(), lr=0.001)
-loss_fn = nn.MSELoss()
+start_date = datetime(2020, 1, 1)
+end_date = datetime(2020, 1, 2) 
 
-for X_train_encoded, X_test_encoded in zip(X_trains, X_tests):
+encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'IrisTime']
 
-    X_train_combined = np.hstack([X_train, X_train_encoded.detach().numpy()])
-    X_test_combined = np.hstack([X_test, X_test_encoded.detach().numpy()])
+for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
+  
+    print(f"Results for {encoders[i]}:")
+
+    encoder = time_encoders[i]
+    encoding = encoder.encode(start_date, end_date)
+    size = encoding.shape[1]
+
+    print(f"Encoding shape: {encoding.shape}")
+    print(f"Encoding size: {size}")
+    print(f"X_train shape: {X_train.shape}")
+
+    model = nn.Sequential(
+        nn.Linear(X.shape[1] + size, 128), 
+        nn.ReLU(),
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.Linear(64, 1)
+    )
+
+    print(f"Model input size: {X.shape[1] + size}")
+
+    optimizer = Adam(model.parameters(), lr=0.001)
+    loss_fn = nn.MSELoss()
+
+    X_train_flat = X_train_encoded.view(X_train_encoded.size(0), -1)
+    X_train_combined = np.hstack([X_train, X_train_flat.detach().numpy()])
+
+    X_test_flat = X_test_encoded.view(X_test_encoded.size(0), -1)  
+    X_test_combined = np.hstack([X_test, X_test_flat.detach().numpy()])
 
     # Convert to tensors
     X_train_tensor = torch.tensor(X_train_combined, dtype=torch.float32)
