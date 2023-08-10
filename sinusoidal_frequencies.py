@@ -3,6 +3,9 @@ import numpy as np
 from datetime import datetime
 import calendar
 
+def unix_timestamp(dt):
+    return calendar.timegm(dt.timetuple())
+
 def encode_time(start_date, claim_date, frequencies=[(1,)] * 5):
 
 	# Extract time components
@@ -13,6 +16,10 @@ def encode_time(start_date, claim_date, frequencies=[(1,)] * 5):
 		claim_date.month / 12.0,
 		(claim_date.year - start_date.year) / 1000.0
 	]
+
+	# Unix timestamp (linear component)
+	unix_time_component = unix_timestamp(claim_date)
+	print(unix_time_component)
 
 	# Encoding arrays
 	enc = []
@@ -40,7 +47,7 @@ def print_encoding_with_dimensions(name, encoding):
 	print(f"\n{name}:")
 	print(f"Dimensions: {encoding_array.shape}")
 	print()
-	
+
 	for idx, component in enumerate(encoding_array):
 		print(f"{sub_labels[idx]}:")
 		print(component)
