@@ -11,6 +11,9 @@ class Time2VecEncoder(nn.Module):
         super().__init__()
         self.model = SineActivation(in_features, out_features)
 
+    def encode(self, tau):
+        return self.forward(tau)
+
     def forward(self, x):
         return self.model(x)
         
@@ -44,6 +47,6 @@ if __name__ == "__main__":
     encoder = Time2VecEncoder(10, 6)
   
     tau = torch.rand(32, 10)  
-    out = encoder(tau)
-  
+    out = encoder.encode(tau)  # Using the encode method
+    
     print(out.shape)
