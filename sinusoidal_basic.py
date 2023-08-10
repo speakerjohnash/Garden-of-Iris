@@ -2,10 +2,18 @@ import torch
 from datetime import datetime
 from math import sin, cos, pi
 
+import pandas as pd
+import numpy as np
+
 class SinusoidalBasicEncoder:
 
     def encode(self, start_date, claim_date):
-        
+
+        if isinstance(start_date, np.datetime64):
+            start_date = pd.Timestamp(start_date).to_pydatetime()
+        if isinstance(claim_date, np.datetime64):
+            claim_date = pd.Timestamp(claim_date).to_pydatetime()
+
         # Extracting the year difference
         year_difference = claim_date.year - start_date.year
 

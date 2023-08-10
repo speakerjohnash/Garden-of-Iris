@@ -5,6 +5,9 @@ import calendar
 from datetime import datetime
 from calendar import monthrange
 
+import numpy as np
+import pandas as pd
+
 class IrisTimeEncoder(nn.Module):
 
     def __init__(self, in_features, out_features, frequencies=[(1,)]*5):
@@ -30,7 +33,13 @@ class IrisTimeEncoder(nn.Module):
                 
         return torch.cat([combined_enc, linear_enc], 1)
 
-    def forward(self, start_date, claim_date):  
+    def encode(self, start_date, claim_date):
+
+        if isinstance(start_date, np.datetime64):
+            start_date = pd.Timestamp(start_date).to_pydatetime()
+        if isinstance(claim_date, np.datetime64):
+            claim_date = pd.Timestamp(claim_date).to_pydatetime()
+
         days_in_month = monthrange(claim_date.year, claim_date.month)[1]
 
         time_components = [
