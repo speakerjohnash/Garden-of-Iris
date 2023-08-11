@@ -16,36 +16,43 @@ import sinusoidal_basic as basic
 import sinusoidal_frequencies as freq
 import mixed_time_enc as iris
 
+# Null Encoder 
+class NullEncoder:
+    def encode(self, start_date, date):
+        return torch.tensor([])
+
 # Initialize encoders with appropriate parameters
 t2v_encoder = Time2VecEncoder(in_features=1, out_features=6)
 basic_encoder = basic.SinusoidalBasicEncoder()
 freq_encoder = freq.SinusoidalFrequenciesEncoder()
 iris_encoder = iris.IrisTimeEncoder(in_features=10, out_features=6)
-time_encoders = [t2v_encoder, basic_encoder, freq_encoder, iris_encoder]
+null_encoder = NullEncoder()
+time_encoders = [t2v_encoder, basic_encoder, freq_encoder, iris_encoder, null_encoder]
 
 # Load Apple stock data
-df = yf.download('PGC', start='2017-01-01', end='2023-01-01')
+df = yf.download('MSFT', start='2010-01-01', end='2023-01-01')
 df.reset_index(inplace=True)
 
 # Preprocess 
 df['Date'] = pd.to_datetime(df['Date'])
 df = df[['Date', 'Close']]
 
-# Create sliding windows
-window_size = 30
+# Create sliding windows with a 30-day future target
+window_size = 90
+gap = 180  # The gap between the context window and the target
 X, y = [], []
 
-for i in range(window_size, len(df)):
+for i in range(window_size, len(df) - gap):
     X.append(df.loc[i-window_size:i-1, 'Close'].values)
-    y.append(df.loc[i, 'Close'])
+    y.append(df.loc[i+gap, 'Close'])
 
 X, y = np.array(X), np.array(y)
 
 # Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, shuffle=False)
 
 # Indices to extract dates
-train_idxs, test_idxs = train_test_split(range(window_size, len(df)), test_size=0.2, shuffle=False)
+train_idxs, test_idxs = train_test_split(range(window_size, len(df) - gap), test_size=0.4, shuffle=False)
 
 # Encode timestamps
 start_date = df.loc[window_size-1, 'Date']
@@ -80,12 +87,19 @@ X_test_iris = [iris_encoder.encode(start_date, date) for date in X_test_dates]
 X_train_iris = torch.stack(X_train_iris)
 X_test_iris = torch.stack(X_test_iris)
 
+# Null Encoding
+X_train_null = [null_encoder.encode(start_date, date) for date in X_train_dates]
+X_test_null = [null_encoder.encode(start_date, date) for date in X_test_dates]
+
+X_train_null = torch.stack(X_train_null) 
+X_test_null = torch.stack(X_test_null)
+
 # Concatenate timestamp embeddings with input data
-X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris] 
-X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris]
+X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris, X_train_null] 
+X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris, X_test_null]
 
 # Train simple MLP 
-encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'MixedTime']
+encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'MixedTime', 'Null']
 
 for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
   
@@ -145,7 +159,7 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
     
     # Train 
     model.train()
-    for epoch in range(1000): # Training for 100 epochs
+    for epoch in range(10): # Training for 100 epochs
         optimizer.zero_grad()
         predictions = model(X_train_tensor)
         loss = loss_fn(predictions, y_train_tensor)
@@ -160,7 +174,7 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, preds)
 
-    # print('Test MSE:', mse)
+    print('Test MSE:', mse)
     # print('Test MAE:', mae)
     # print('Test RMSE:', rmse)
     print('Test R-squared:', r2)
