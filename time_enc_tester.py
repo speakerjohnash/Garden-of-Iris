@@ -94,16 +94,46 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
   
     print(f"Results for {encoders[i]}:")
 
-    encoder = time_encoders[i]
-    encoding = encoder.encode(start_date, end_date)
-    size = encoding.shape[1]
+    size = X_train_encoded.shape[-1]
 
-    print(f"Encoding shape: {encoding.shape}")
+    print(f"Encoding shape: {X_train_encoded.shape}")
     print(f"Encoding size: {size}")
     print(f"X_train shape: {X_train.shape}")
 
+    # Flatten the encoded data along all dimensions except the first (batch)
+    X_train_flat = X_train_encoded.flatten(start_dim=1)
+    X_test_flat = X_test_encoded.flatten(start_dim=1)
+
+    print(f"X_train_flat shape: {X_train_flat.shape}")
+    print(f"X_test_flat shape: {X_test_flat.shape}")
+
+    # Convert to numpy arrays
+    X_train_flat = X_train_flat.detach().numpy()
+    X_test_flat = X_test_flat.detach().numpy()
+
+    print(f"X_train_flat dtype: {X_train_flat.dtype}")
+    print(f"X_test_flat dtype: {X_test_flat.dtype}")
+
+    # Concatenate encoded data with original data
+    X_train_combined = np.hstack([X_train, X_train_flat])
+    X_test_combined = np.hstack([X_test, X_test_flat])
+
+    print(f"X_train_combined shape: {X_train_combined.shape}")
+    print(f"X_test_combined shape: {X_test_combined.shape}")
+
+    # Convert to tensors
+    X_train_tensor = torch.tensor(X_train_combined, dtype=torch.float32)
+    X_test_tensor = torch.tensor(X_test_combined, dtype=torch.float32)
+    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
+    y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
+
+    print(f"X_train_tensor shape: {X_train_tensor.shape}")
+    print(f"X_test_tensor shape: {X_test_tensor.shape}")
+    print(f"y_train_tensor shape: {y_train_tensor.shape}")
+    print(f"y_test_tensor shape: {y_test_tensor.shape}")
+
     model = nn.Sequential(
-        nn.Linear(X.shape[1] + size, 128), 
+        nn.Linear(X_train_combined.shape[1], 128), 
         nn.ReLU(),
         nn.Linear(128, 64),
         nn.ReLU(),
@@ -115,17 +145,6 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
     optimizer = Adam(model.parameters(), lr=0.001)
     loss_fn = nn.MSELoss()
 
-    X_train_flat = X_train_encoded.view(X_train_encoded.size(0), -1)
-    X_train_combined = np.hstack([X_train, X_train_flat.detach().numpy()])
-
-    X_test_flat = X_test_encoded.view(X_test_encoded.size(0), -1)  
-    X_test_combined = np.hstack([X_test, X_test_flat.detach().numpy()])
-
-    # Convert to tensors
-    X_train_tensor = torch.tensor(X_train_combined, dtype=torch.float32)
-    X_test_tensor = torch.tensor(X_test_combined, dtype=torch.float32)
-    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
-    y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
     
     # Train 
     model.train()
