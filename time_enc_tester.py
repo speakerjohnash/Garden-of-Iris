@@ -85,9 +85,6 @@ X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris]
 X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris]
 
 # Train simple MLP 
-start_date = datetime(2020, 1, 1)
-end_date = datetime(2020, 1, 2) 
-
 encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'IrisTime']
 
 for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
@@ -148,7 +145,7 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
     
     # Train 
     model.train()
-    for epoch in range(100): # Training for 100 epochs
+    for epoch in range(1000): # Training for 100 epochs
         optimizer.zero_grad()
         predictions = model(X_train_tensor)
         loss = loss_fn(predictions, y_train_tensor)
