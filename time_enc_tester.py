@@ -24,7 +24,7 @@ iris_encoder = iris.IrisTimeEncoder(in_features=10, out_features=6)
 time_encoders = [t2v_encoder, basic_encoder, freq_encoder, iris_encoder]
 
 # Load Apple stock data
-df = yf.download('GOOG', start='2017-01-01', end='2023-01-01')
+df = yf.download('PGC', start='2017-01-01', end='2023-01-01')
 df.reset_index(inplace=True)
 
 # Preprocess 
@@ -85,7 +85,7 @@ X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris]
 X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris]
 
 # Train simple MLP 
-encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'IrisTime']
+encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'MixedTime']
 
 for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
   
@@ -162,5 +162,5 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
 
     # print('Test MSE:', mse)
     # print('Test MAE:', mae)
-    print('Test RMSE:', rmse)
-    # print('Test R-squared:', r2)
+    # print('Test RMSE:', rmse)
+    print('Test R-squared:', r2)
