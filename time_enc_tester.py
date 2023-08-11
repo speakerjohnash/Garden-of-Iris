@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score 
 
 import torch
 import torch.nn as nn
@@ -14,7 +14,7 @@ from datetime import datetime
 from time2vec import Time2VecEncoder
 import sinusoidal_basic as basic
 import sinusoidal_frequencies as freq
-import iris_time_enc as iris
+import mixed_time_enc as iris
 
 # Initialize encoders with appropriate parameters
 t2v_encoder = Time2VecEncoder(in_features=1, out_features=6)
@@ -24,7 +24,7 @@ iris_encoder = iris.IrisTimeEncoder(in_features=10, out_features=6)
 time_encoders = [t2v_encoder, basic_encoder, freq_encoder, iris_encoder]
 
 # Load Apple stock data
-df = yf.download('AAPL', start='2017-01-01', end='2018-01-01')
+df = yf.download('GOOG', start='2017-01-01', end='2023-01-01')
 df.reset_index(inplace=True)
 
 # Preprocess 
@@ -155,6 +155,12 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
     # Evaluate
     model.eval()
     preds = model(X_test_tensor).detach().numpy()
-    mse = mean_squared_error(y_test_tensor, preds)
-    
-    print('Test MSE:', mse)
+    mse = mean_squared_error(y_test, preds)
+    mae = mean_absolute_error(y_test, preds)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, preds)
+
+    # print('Test MSE:', mse)
+    # print('Test MAE:', mae)
+    print('Test RMSE:', rmse)
+    # print('Test R-squared:', r2)

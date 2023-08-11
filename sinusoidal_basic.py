@@ -39,7 +39,7 @@ class SinusoidalBasicEncoder:
             year_enc,
         ]
         
-        return torch.tensor(stacked_enc)  # Convert to PyTorch tensor
+        return torch.tensor(stacked_enc)
 
 if __name__ == '__main__':
 

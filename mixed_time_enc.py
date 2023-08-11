@@ -33,7 +33,7 @@ class IrisTimeEncoder(nn.Module):
                 
         return torch.cat([combined_enc, linear_enc], 1)
 
-    def encode(self, start_date, claim_date):
+    def forward(self, start_date, claim_date):
 
         if isinstance(start_date, np.datetime64):
             start_date = pd.Timestamp(start_date).to_pydatetime()
@@ -53,6 +53,9 @@ class IrisTimeEncoder(nn.Module):
         unix_time_component = torch.tensor([calendar.timegm(claim_date.timetuple())], dtype=torch.float32)
 
         return self.encode_time(time_components, unix_time_component)
+
+    def encode(self, start_date, claim_date):
+        return self.forward(start_date, claim_date)
 
 if __name__ == '__main__':
 
