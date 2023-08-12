@@ -9,6 +9,7 @@ from datetime import datetime
 
 # Import your timestamp encoders
 from time2vec import Time2VecEncoder
+from time_transformer import TimeEncodingTransformer
 import sinusoidal_basic as basic
 import sinusoidal_frequencies as freq
 import mixed_time_enc as iris
@@ -35,6 +36,7 @@ df = df[['Date', 'Close']]
 
 # Option to use ordered data (True) or random selection (False)
 use_ordered_data = False
+ensure_preceding_day = False
 
 # Create sliding windows with a 30-day future target
 window_size = 50
@@ -42,10 +44,18 @@ gap = 1  # The gap between the context window and the target
 X, y = [], []
 
 for target_idx in range(window_size, len(df) - gap):
+
+    # Create a sliding window of the 50 days preceding the target date
     if use_ordered_data:
         preceding_idxs = range(target_idx - window_size, target_idx)
     else:
-        preceding_idxs = sorted(np.random.choice(range(target_idx), window_size, replace=False))
+        # Randomly sample 49 dates from all available preceding dates (excluding the day right before the target)
+        preceding_idxs = np.random.choice(range(target_idx - 1), window_size - 1, replace=False)
+
+        # If ensure_preceding_day flag is set, include the day right before the target date
+        if ensure_preceding_day:
+            preceding_idxs = np.append(preceding_idxs, target_idx - 1)
+            np.random.shuffle(preceding_idxs)  # Shuffle to randomize the position of the preceding day
     
     preceding_closes = df.loc[preceding_idxs, 'Close'].values
     target_close = df.loc[target_idx + gap, 'Close']
@@ -136,6 +146,8 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
         nn.Linear(64, 1)
     )
 
+    model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
+
     optimizer = Adam(model.parameters(), lr=0.001)
     loss_fn = nn.MSELoss()
 
@@ -147,6 +159,11 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
         loss = loss_fn(predictions, y_train_tensor)
         loss.backward()
         optimizer.step()
+
+        # Print the loss every 10 epochs
+        if epoch % 10 == 0:
+            print()
+            print(f"Epoch {epoch}/{100}, Loss: {loss.item()}")
 
     # Evaluate
     model.eval()
