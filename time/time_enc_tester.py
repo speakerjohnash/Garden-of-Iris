@@ -35,8 +35,8 @@ df['Date'] = pd.to_datetime(df['Date'])
 df = df[['Date', 'Close']]
 
 # Option to use ordered data (True) or random selection (False)
-use_ordered_data = False
-ensure_preceding_day = False
+use_ordered_data = True
+ensure_preceding_day = True
 
 # Create sliding windows with a 30-day future target
 window_size = 50
@@ -88,12 +88,28 @@ X_test_iris = torch.stack([iris_encoder.encode(start_date, date) for date in X_t
 X_train_null = torch.stack([null_encoder.encode(start_date, date) for date in X_train_dates])
 X_test_null = torch.stack([null_encoder.encode(start_date, date) for date in X_test_dates])
 
-# Concatenate timestamp embeddings with input data
-X_trains = [X_train_t2v, X_train_basic, X_train_freq, X_train_iris, X_train_null]
-X_tests = [X_test_t2v, X_test_basic, X_test_freq, X_test_iris, X_test_null]
+# Dictionary mapping encoders to their corresponding datasets
+encoder_data = {
+    'Time2Vec': (X_train_t2v, X_test_t2v),
+    'SinusoidalBasic': (X_train_basic, X_test_basic),
+    'SinusoidalFrequencies': (X_train_freq, X_test_freq),
+    'MixedTime': (X_train_iris, X_test_iris),
+    'Null': (X_train_null, X_test_null)
+}
 
-# Train simple MLP
+# List of encoders you want to include
 encoders = ['Time2Vec', 'SinusoidalBasic', 'SinusoidalFrequencies', 'MixedTime', 'Null']
+encoders = ['Time2Vec', 'SinusoidalBasic', 'Null']
+
+# Initialize empty lists for training and testing datasets
+X_trains = []
+X_tests = []
+
+# Append corresponding datasets for selected encoders
+for encoder in encoders:
+    train, test = encoder_data[encoder]
+    X_trains.append(train)
+    X_tests.append(test)
 
 for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
   
@@ -146,14 +162,16 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
         nn.Linear(64, 1)
     )
 
-    model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
+    # model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
 
     optimizer = Adam(model.parameters(), lr=0.001)
     loss_fn = nn.MSELoss()
 
     # Train
     model.train()
-    for epoch in range(100):
+    epochs = 1000
+
+    for epoch in range(epochs):
         optimizer.zero_grad()
         predictions = model(X_train_tensor)
         loss = loss_fn(predictions, y_train_tensor)
@@ -163,7 +181,7 @@ for i, (X_train_encoded, X_test_encoded) in enumerate(zip(X_trains, X_tests)):
         # Print the loss every 10 epochs
         if epoch % 10 == 0:
             print()
-            print(f"Epoch {epoch}/{100}, Loss: {loss.item()}")
+            print(f"Epoch {epoch}/{epochs}, Loss: {loss.item()}")
 
     # Evaluate
     model.eval()

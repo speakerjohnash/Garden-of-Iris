@@ -1,5 +1,6 @@
 import torch
 from datetime import datetime
+from calendar import monthrange
 from math import sin, cos, pi
 
 import pandas as pd
@@ -14,6 +15,8 @@ class SinusoidalBasicEncoder:
         if isinstance(claim_date, np.datetime64):
             claim_date = pd.Timestamp(claim_date).to_pydatetime()
 
+        days_in_month = monthrange(claim_date.year, claim_date.month)[1]
+
         # Extracting the year difference
         year_difference = claim_date.year - start_date.year
 
@@ -26,7 +29,7 @@ class SinusoidalBasicEncoder:
         # Calculations
         minute_enc = [sin(2 * pi * minute / 60), cos(2 * pi * minute / 60)]
         hour_enc = [sin(2 * pi * hour / 24), cos(2 * pi * hour / 24)]
-        day_enc = [sin(2 * pi * day / 31), cos(2 * pi * day / 31)]
+        day_enc = [sin(2 * pi * day / days_in_month), cos(2 * pi * day / days_in_month)]
         month_enc = [sin(2 * pi * month / 12), cos(2 * pi * month / 12)]
         year_enc = [sin(2 * pi * year_difference / 1000), cos(2 * pi * year_difference / 1000)]
 

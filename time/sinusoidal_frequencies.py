@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import datetime
+from calendar import monthrange
 import calendar
 import torch
 
@@ -19,11 +20,13 @@ class SinusoidalFrequenciesEncoder:
 		if isinstance(claim_date, np.datetime64):
 			claim_date = pd.Timestamp(claim_date).to_pydatetime()
 
+		days_in_month = monthrange(claim_date.year, claim_date.month)[1]
+
 		# Extract time components
 		time_components = [
 			claim_date.minute / 60.0,
 			claim_date.hour / 24.0, 
-			claim_date.day / 31.0,
+			claim_date.day / days_in_month,
 			claim_date.month / 12.0,
 			(claim_date.year - start_date.year) / 1000.0
 		]
