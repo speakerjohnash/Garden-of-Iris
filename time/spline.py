@@ -48,6 +48,24 @@ class SyntheticTimeSeriesGenerator:
 		oscillation = 0.02 * np.sin(10 * 2 * np.pi * np.arange(len(prices)) / 365.25)
 		return prices + oscillation
 
+	def add_monthly_trends(self, prices):
+		days_in_month = 30.44  # average days in a month
+		monthly_trend = 1 + 0.03 * np.sin(2 * np.pi * np.arange(len(prices)) / days_in_month)
+		return prices * monthly_trend
+
+	def add_significant_monthly_events(self, prices):
+		months = np.linspace(0, len(prices), num=int(len(prices) // (365.25/12)))
+		event_months = np.random.choice(months, size=24, replace=False)  # choosing 2 months per year for significant events
+		for month in event_months:
+			start, end = int(month), int(month + (365.25/12))
+			event_factor = np.random.uniform(0.9, 1.1)
+			prices[start:end] *= event_factor
+		return prices
+
+	def add_daily_variation_within_month(self, prices):
+		day_pattern = np.random.choice([0.98, 1.02], size=len(prices))  # randomly assign a surge or drop for each day
+		return prices * day_pattern
+
 	def generate(self):
 		date_range = pd.date_range(self.start_date, self.end_date, periods=self.num_points)
 		prices = self.create_base_pattern()
@@ -56,6 +74,11 @@ class SyntheticTimeSeriesGenerator:
 		prices = self.add_seasonal_variation(prices)
 		prices = self.add_significant_annual_events(prices)
 		prices = self.add_yearly_oscillation(prices)
+
+		# Adding monthly perturbations
+		prices = self.add_monthly_trends(prices)
+		prices = self.add_significant_monthly_events(prices)
+		prices = self.add_daily_variation_within_month(prices)
 		
 		self.data = pd.DataFrame({
 			'Date': date_range,
