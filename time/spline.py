@@ -6,10 +6,11 @@ from scipy.interpolate import CubicSpline
 
 class SyntheticTimeSeriesGenerator:
 
-	def __init__(self, start_date, end_date, num_points):
-		self.start_date = start_date
-		self.end_date = end_date
-		self.num_points = num_points
+	def __init__(self, start_date, end_date):
+		self.start_date = pd.to_datetime(start_date)
+		self.end_date = pd.to_datetime(end_date)
+		self.date_range = pd.date_range(self.start_date, self.end_date, freq='T') # Minute frequency
+		self.num_points = len(self.date_range)
 		self.data = pd.DataFrame()
 
 	def create_base_pattern(self):
@@ -74,7 +75,7 @@ class SyntheticTimeSeriesGenerator:
 		return prices * day_pattern
 
 	def generate(self):
-		date_range = pd.date_range(self.start_date, self.end_date, periods=self.num_points)
+		date_range = self.date_range
 		prices = self.create_base_pattern()
 		
 		# Adding yearly perturbations
@@ -124,6 +125,11 @@ class SyntheticTimeSeriesGenerator:
 			start_month_date = self.data['Date'].iloc[start_month_idx]
 			end_month_date = start_month_date + timedelta(weeks=4) # Approximate a month as 4 weeks
 			month_data = self.data[(self.data['Date'] >= start_month_date) & (self.data['Date'] < end_month_date)]
+			
+			# Subsample if more than 1000 points
+			if len(month_data) > 1000:
+				month_data = month_data.iloc[::len(month_data)//1000, :]
+
 			axes[1, 1].plot(month_data['Date'], month_data['Close'])
 			axes[1, 1].set_title('Random Month')
 			axes[1, 1].grid(True)
@@ -150,7 +156,7 @@ class SyntheticTimeSeriesGenerator:
 			plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='1920-01-01', end_date='2020-01-01', num_points=500000)
+generator = SyntheticTimeSeriesGenerator(start_date='1999-01-01', end_date='2020-01-01')
 generator.generate()
 generator.plot()
 generator.save_to_csv()
