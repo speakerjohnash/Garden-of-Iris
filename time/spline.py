@@ -87,16 +87,47 @@ class SyntheticTimeSeriesGenerator:
 		return self.data
 
 	def plot(self):
-		plt.figure(figsize=(12, 6))
-		plt.plot(self.data['Date'], self.data['Close'])
-		plt.title('Synthetic Time Series with Yearly Perturbations')
-		plt.xlabel('Date')
-		plt.ylabel('Close Price')
-		plt.grid(True)
+		fig, axes = plt.subplots(3, 2, figsize=(18, 12))
+		
+		# Plot full range
+		axes[0, 0].plot(self.data['Date'], self.data['Close'])
+		axes[0, 0].set_title('Full Range')
+		axes[0, 0].grid(True)
+
+		# Plot random decade (10 years)
+		start_decade = np.random.randint(0, len(self.data) - 365 * 10)
+		axes[0, 1].plot(self.data['Date'].iloc[start_decade:start_decade + 365 * 10], self.data['Close'].iloc[start_decade:start_decade + 365 * 10])
+		axes[0, 1].set_title('Random Decade')
+		axes[0, 1].grid(True)
+
+		# Plot random year
+		start_year = np.random.randint(0, len(self.data) - 365)
+		axes[1, 0].plot(self.data['Date'].iloc[start_year:start_year + 365], self.data['Close'].iloc[start_year:start_year + 365])
+		axes[1, 0].set_title('Random Year')
+		axes[1, 0].grid(True)
+
+		# Plot random month
+		start_month = np.random.randint(0, len(self.data) - 30)
+		axes[1, 1].plot(self.data['Date'].iloc[start_month:start_month + 30], self.data['Close'].iloc[start_month:start_month + 30])
+		axes[1, 1].set_title('Random Month')
+		axes[1, 1].grid(True)
+
+		# Plot random week
+		start_week = np.random.randint(0, len(self.data) - 7)
+		axes[2, 0].plot(self.data['Date'].iloc[start_week:start_week + 7], self.data['Close'].iloc[start_week:start_week + 7])
+		axes[2, 0].set_title('Random Week')
+		axes[2, 0].grid(True)
+
+		# Plot random day
+		start_day = np.random.randint(0, len(self.data) - 1)
+		axes[2, 1].plot(self.data['Date'].iloc[start_day:start_day + 1], self.data['Close'].iloc[start_day:start_day + 1])
+		axes[2, 1].set_title('Random Day')
+		axes[2, 1].grid(True)
+
 		plt.tight_layout()
 		plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='1920-01-01', end_date='2020-01-01', num_points=365*100)
+generator = SyntheticTimeSeriesGenerator(start_date='1920-01-01', end_date='2020-01-01', num_points=500000)
 generator.generate()
 generator.plot()
