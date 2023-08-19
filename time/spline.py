@@ -141,6 +141,7 @@ class SyntheticTimeSeriesGenerator:
 		self.data.to_csv('synthetic_data.csv', index=False)
 
 	def plot(self):
+		
 		def plot_range(ax, title, start_idx, duration):
 			data = self.data.iloc[start_idx:start_idx + duration]
 			if len(data) > 1000:
@@ -150,41 +151,28 @@ class SyntheticTimeSeriesGenerator:
 			ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			ax.grid(True)
 
-		fig, axes = plt.subplots(3, 2, figsize=(18, 12))
+		fig = plt.figure(figsize=(18, 12))
 
-		# Plot full range
-		plot_range(axes[0, 0], 'Full Range', 0, len(self.data))
+		plot_data = [
+			('Full Range', 0, len(self.data)),
+			('Random Decade', np.random.randint(0, len(self.data) - 365 * 24 * 60 * 10), 365 * 24 * 60 * 10) if len(self.data) >= 365 * 24 * 60 * 10 else None,
+			('Random Year', np.random.randint(0, len(self.data) - 365 * 24 * 60), 365 * 24 * 60) if len(self.data) >= 365 * 24 * 60 else None,
+			('Random Month', np.random.randint(0, len(self.data) - 30 * 24 * 60), 30 * 24 * 60) if len(self.data) >= 30 * 24 * 60 else None,
+			('Random Week', np.random.randint(0, len(self.data) - 7 * 24 * 60), 7 * 24 * 60) if len(self.data) >= 7 * 24 * 60 else None,
+			('Random Day', np.random.randint(0, len(self.data) - 24 * 60), 24 * 60) if len(self.data) >= 24 * 60 else None
+		]
 
-		# Plot random decade if there's enough data
-		if len(self.data) >= 365 * 24 * 60 * 10:
-			start_decade_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60 * 10)
-			plot_range(axes[0, 1], 'Random Decade', start_decade_idx, 365 * 24 * 60 * 10)
+		plot_data = [item for item in plot_data if item is not None]
 
-		# Plot random year if there's enough data
-		if len(self.data) >= 365 * 24 * 60:
-			start_year_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60)
-			plot_range(axes[1, 0], 'Random Year', start_year_idx, 365 * 24 * 60)
-
-		# Plot random month if there's enough data
-		if len(self.data) >= 30 * 24 * 60:
-			start_month_idx = np.random.randint(0, len(self.data) - 30 * 24 * 60)
-			plot_range(axes[1, 1], 'Random Month', start_month_idx, 30 * 24 * 60)
-
-		# Plot random week if there's enough data
-		if len(self.data) >= 7 * 24 * 60:
-			start_week_idx = np.random.randint(0, len(self.data) - 7 * 24 * 60)
-			plot_range(axes[2, 0], 'Random Week', start_week_idx, 7 * 24 * 60)
-
-		# Plot random day if there's enough data
-		if len(self.data) >= 24 * 60:
-			start_day_idx = np.random.randint(0, len(self.data) - 24 * 60)
-			plot_range(axes[2, 1], 'Random Day', start_day_idx, 24 * 60)
+		for i, (title, start_idx, duration) in enumerate(plot_data):
+			ax = fig.add_subplot(3, 2, i + 1)
+			plot_range(ax, title, start_idx, duration)
 
 		plt.tight_layout()
 		plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2019-01-01', end_date='2019-01-15', mode="simple")
+generator = SyntheticTimeSeriesGenerator(start_date='2017-01-01', end_date='2019-01-15', mode="simple")
 generator.generate()
 generator.plot()
 generator.save_to_csv()
