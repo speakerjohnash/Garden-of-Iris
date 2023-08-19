@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from datetime import timedelta
 from scipy.interpolate import CubicSpline
 
@@ -148,15 +149,27 @@ class SyntheticTimeSeriesGenerator:
 			axes[0, 0].grid(True)
 
 			# Plot random decade (10 years)
-			start_decade_idx = np.random.randint(0, len(self.data) - 365 * 10)
-			axes[0, 1].plot(self.data['Date'].iloc[start_decade_idx:start_decade_idx + 365 * 10], self.data['Close'].iloc[start_decade_idx:start_decade_idx + 365 * 10])
+			# Select a random start index for the decade, ensuring a full 10-year span (in minutes)
+			start_decade_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60 * 10) # 365 days, 24 hours, 60 minutes, and 10 for a decade
+
+			# Select the decade data using the start index
+			decade_data = self.data.iloc[start_decade_idx:start_decade_idx + 365 * 24 * 60 * 10]
+
+			# Sub-sample 1000 points from the selected data
+			if len(decade_data) > 1000:
+				decade_data = decade_data.sample(n=1000).sort_index() # Randomly sample 1000 points and sort by index
+
+			# Plot the random decade
+			axes[0, 1].plot(decade_data['Date'], decade_data['Close'])
 			axes[0, 1].set_title('Random Decade')
+			axes[0, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			axes[0, 1].grid(True)
 
 			# Plot random year
 			start_year_idx = np.random.randint(0, len(self.data) - 365)
 			axes[1, 0].plot(self.data['Date'].iloc[start_year_idx:start_year_idx + 365], self.data['Close'].iloc[start_year_idx:start_year_idx + 365])
 			axes[1, 0].set_title('Random Year')
+			axes[1, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			axes[1, 0].grid(True)
 
 			# Plot random month
@@ -171,6 +184,7 @@ class SyntheticTimeSeriesGenerator:
 
 			axes[1, 1].plot(month_data['Date'], month_data['Close'])
 			axes[1, 1].set_title('Random Month')
+			axes[1, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			axes[1, 1].grid(True)
 
 			# Plot random week
@@ -180,6 +194,7 @@ class SyntheticTimeSeriesGenerator:
 			week_data = self.data[(self.data['Date'] >= start_week_date) & (self.data['Date'] < end_week_date)]
 			axes[2, 0].plot(week_data['Date'], week_data['Close'])
 			axes[2, 0].set_title('Random Week')
+			axes[2, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			axes[2, 0].grid(True)
 
 			# Plot random day
@@ -189,13 +204,14 @@ class SyntheticTimeSeriesGenerator:
 			day_data = self.data[(self.data['Date'] >= start_day_date) & (self.data['Date'] < end_day_date)]
 			axes[2, 1].plot(day_data['Date'], day_data['Close'])
 			axes[2, 1].set_title('Random Day')
+			axes[2, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
 			axes[2, 1].grid(True)
 
 			plt.tight_layout()
 			plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2020-01-01', mode="simple")
+generator = SyntheticTimeSeriesGenerator(start_date='2000-01-01', end_date='2020-01-01', mode="simple")
 generator.generate()
 generator.plot()
 generator.save_to_csv()
