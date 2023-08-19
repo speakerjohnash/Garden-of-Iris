@@ -141,85 +141,50 @@ class SyntheticTimeSeriesGenerator:
 		self.data.to_csv('synthetic_data.csv', index=False)
 
 	def plot(self):
+		def plot_range(ax, title, start_idx, duration):
+			data = self.data.iloc[start_idx:start_idx + duration]
+			if len(data) > 1000:
+				data = data.sample(n=1000).sort_index()
+			ax.plot(data['Date'], data['Close'])
+			ax.set_title(title)
+			ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
+			ax.grid(True)
+
 		fig, axes = plt.subplots(3, 2, figsize=(18, 12))
 
 		# Plot full range
-		axes[0, 0].plot(self.data['Date'], self.data['Close'])
-		axes[0, 0].set_title('Full Range')
-		axes[0, 0].grid(True)
+		plot_range(axes[0, 0], 'Full Range', 0, len(self.data))
 
-		# Select a random start index for the decade, ensuring a full 10-year span (in minutes)
-		start_decade_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60 * 10) # 365 days, 24 hours, 60 minutes, and 10 for a decade
+		# Plot random decade if there's enough data
+		if len(self.data) >= 365 * 24 * 60 * 10:
+			start_decade_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60 * 10)
+			plot_range(axes[0, 1], 'Random Decade', start_decade_idx, 365 * 24 * 60 * 10)
 
-		# Select the decade data using the start index
-		decade_data = self.data.iloc[start_decade_idx:start_decade_idx + 365 * 24 * 60 * 10]
+		# Plot random year if there's enough data
+		if len(self.data) >= 365 * 24 * 60:
+			start_year_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60)
+			plot_range(axes[1, 0], 'Random Year', start_year_idx, 365 * 24 * 60)
 
-		# Sub-sample 1000 points from the selected data
-		if len(decade_data) > 1000:
-			decade_data = decade_data.sample(n=1000).sort_index() # Randomly sample 1000 points and sort by index
+		# Plot random month if there's enough data
+		if len(self.data) >= 30 * 24 * 60:
+			start_month_idx = np.random.randint(0, len(self.data) - 30 * 24 * 60)
+			plot_range(axes[1, 1], 'Random Month', start_month_idx, 30 * 24 * 60)
 
-		# Plot the random decade
-		axes[0, 1].plot(decade_data['Date'], decade_data['Close'])
-		axes[0, 1].set_title('Random Decade')
-		axes[0, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-		axes[0, 1].grid(True)
+		# Plot random week if there's enough data
+		if len(self.data) >= 7 * 24 * 60:
+			start_week_idx = np.random.randint(0, len(self.data) - 7 * 24 * 60)
+			plot_range(axes[2, 0], 'Random Week', start_week_idx, 7 * 24 * 60)
 
-		# Select a random start index for the year, ensuring a full 1-year span (in minutes)
-		start_year_idx = np.random.randint(0, len(self.data) - 365 * 24 * 60) # 365 days, 24 hours, 60 minutes for a year
-
-		# Select the year data using the start index
-		year_data = self.data.iloc[start_year_idx:start_year_idx + 365 * 24 * 60]
-
-		# Sub-sample 1000 points from the selected data (optional)
-		if len(year_data) > 1000:
-			year_data = year_data.sample(n=1000).sort_index() # Randomly sample 1000 points and sort by index
-
-		# Plot the random year
-		axes[1, 0].plot(year_data['Date'], year_data['Close'])
-		axes[1, 0].set_title('Random Year')
-		axes[1, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-		axes[1, 0].grid(True)
-
-		# Plot random month
-		start_month_idx = np.random.randint(0, len(self.data) - 30)
-		start_month_date = self.data['Date'].iloc[start_month_idx]
-		end_month_date = start_month_date + timedelta(weeks=4) # Approximate a month as 4 weeks
-		month_data = self.data[(self.data['Date'] >= start_month_date) & (self.data['Date'] < end_month_date)]
-		
-		# Subsample if more than 1000 points
-		if len(month_data) > 1000:
-			month_data = month_data.iloc[::len(month_data)//1000, :]
-
-		axes[1, 1].plot(month_data['Date'], month_data['Close'])
-		axes[1, 1].set_title('Random Month')
-		axes[1, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-		axes[1, 1].grid(True)
-
-		# Plot random week
-		start_week_idx = np.random.randint(0, len(self.data) - 7)
-		start_week_date = self.data['Date'].iloc[start_week_idx]
-		end_week_date = start_week_date + timedelta(weeks=1)
-		week_data = self.data[(self.data['Date'] >= start_week_date) & (self.data['Date'] < end_week_date)]
-		axes[2, 0].plot(week_data['Date'], week_data['Close'])
-		axes[2, 0].set_title('Random Week')
-		axes[2, 0].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-		axes[2, 0].grid(True)
-
-		# Plot random day
-		start_day_idx = np.random.randint(0, len(self.data) - 1)
-		start_day_date = self.data['Date'].iloc[start_day_idx]
-		end_day_date = start_day_date + timedelta(days=1)
-		day_data = self.data[(self.data['Date'] >= start_day_date) & (self.data['Date'] < end_day_date)]
-		axes[2, 1].plot(day_data['Date'], day_data['Close'])
-		axes[2, 1].set_title('Random Day')
-		axes[2, 1].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%y'))
-		axes[2, 1].grid(True)
+		# Plot random day if there's enough data
+		if len(self.data) >= 24 * 60:
+			start_day_idx = np.random.randint(0, len(self.data) - 24 * 60)
+			plot_range(axes[2, 1], 'Random Day', start_day_idx, 24 * 60)
 
 		plt.tight_layout()
 		plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2000-01-01', end_date='2020-01-01', mode="simple")
+generator = SyntheticTimeSeriesGenerator(start_date='2019-01-01', end_date='2019-01-15', mode="simple")
 generator.generate()
 generator.plot()
 generator.save_to_csv()
