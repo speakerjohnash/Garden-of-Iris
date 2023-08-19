@@ -118,9 +118,23 @@ class SyntheticTimeSeriesGenerator:
 
 		return self.data
 
-	# Simple sine wave  
-	def generate_simple(self):
-		pass
+	# Updated Simple sine wave generation method
+	def generate_simple(self, num_cycles=5):
+
+		# Calculate sine wave
+		time_delta = self.end_date - self.start_date
+		ang_freq = 2 * np.pi * num_cycles / time_delta.total_seconds() * 60 # Considering minute frequency
+
+		values = np.sin(ang_freq * np.arange(self.num_points))
+		values = (values + 1) * 500
+
+		# Create dataframe
+		self.data = pd.DataFrame({
+				'Date': self.date_range,
+				'Close': values
+		})
+
+		return self.data
 
 	def save_to_csv(self):
 		self.data.to_csv('synthetic_data.csv', index=False)
@@ -181,7 +195,7 @@ class SyntheticTimeSeriesGenerator:
 			plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2020-01-01', mode="complex")
+generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2020-01-01', mode="simple")
 generator.generate()
 generator.plot()
 generator.save_to_csv()
