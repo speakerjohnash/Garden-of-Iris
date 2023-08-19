@@ -119,7 +119,7 @@ class SyntheticTimeSeriesGenerator:
 
 		return self.data
 
-	# Updated Simple sine wave generation method
+	# Simple sine wave generation method
 	def generate_simple(self, num_cycles=5):
 
 		# Calculate sine wave
@@ -137,11 +137,14 @@ class SyntheticTimeSeriesGenerator:
 
 		return self.data
 
-	def save_to_csv(self):
-		self.data.to_csv('synthetic_data.csv', index=False)
+	def save_to_csv(self, max_points=None):
+		data = self.data
+		if max_points is not None and len(data) > max_points:
+			data = data.sample(n=max_points).sort_values('Date')
+		data.to_csv('synthetic_data.csv', index=False)
 
 	def plot(self):
-		
+
 		def plot_range(ax, title, start_idx, duration):
 			data = self.data.iloc[start_idx:start_idx + duration]
 			if len(data) > 1000:
@@ -172,7 +175,7 @@ class SyntheticTimeSeriesGenerator:
 		plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2017-01-01', end_date='2019-01-15', mode="simple")
+generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2019-01-15', mode="simple")
 generator.generate()
 generator.plot()
-generator.save_to_csv()
+generator.save_to_csv(max_points=10000)
