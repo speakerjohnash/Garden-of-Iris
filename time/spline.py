@@ -6,12 +6,13 @@ from scipy.interpolate import CubicSpline
 
 class SyntheticTimeSeriesGenerator:
 
-	def __init__(self, start_date, end_date):
+	def __init__(self, start_date, end_date, mode='default'):
 		self.start_date = pd.to_datetime(start_date)
 		self.end_date = pd.to_datetime(end_date)
 		self.date_range = pd.date_range(self.start_date, self.end_date, freq='T') # Minute frequency
 		self.num_points = len(self.date_range)
 		self.data = pd.DataFrame()
+		self.mode = mode
 
 	def create_base_pattern(self):
 		# Generate key time points spanning 0 to 1
@@ -75,6 +76,25 @@ class SyntheticTimeSeriesGenerator:
 		return prices * day_pattern
 
 	def generate(self):
+
+		mode = self.mode
+
+		# Call complex data generation
+		if mode == 'complex':
+			return self.generate_complex()
+		
+		# Call simple sine wave generation
+		elif mode == 'simple':	
+			return self.generate_simple()
+
+		elif mode == 'default':	
+			return self.generate_complex()
+
+		else:
+			raise ValueError("Invalid mode specified")
+
+	# Complex Data Generation
+	def generate_complex(self):
 		date_range = self.date_range
 		prices = self.create_base_pattern()
 		
@@ -95,10 +115,15 @@ class SyntheticTimeSeriesGenerator:
 			'Date': date_range,
 			'Close': prices
 		})
+
 		return self.data
 
+	# Simple sine wave  
+	def generate_simple(self):
+		pass
+
 	def save_to_csv(self):
-		self.data.to_csv('generated_data.csv', index=False)
+		self.data.to_csv('synthetic_data.csv', index=False)
 
 	def plot(self):
 			fig, axes = plt.subplots(3, 2, figsize=(18, 12))
@@ -156,7 +181,7 @@ class SyntheticTimeSeriesGenerator:
 			plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='1999-01-01', end_date='2020-01-01')
+generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2020-01-01', mode="complex")
 generator.generate()
 generator.plot()
 generator.save_to_csv()
