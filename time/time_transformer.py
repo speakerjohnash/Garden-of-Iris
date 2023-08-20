@@ -1,39 +1,38 @@
-import torch
 import torch.nn as nn
 
 class TimeEncodingTransformer(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_dim, nhead=1, num_layers=1, dim_feedforward=64):
         super(TimeEncodingTransformer, self).__init__()
-        
-        self.embedding_dim = 64 # Reduced from 128
-        self.embedding = nn.Linear(input_dim, self.embedding_dim)
 
+        # Transformer layer
         self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=self.embedding_dim, nhead=4), 
-            num_layers=2 # Reduced from 3
+            nn.TransformerEncoderLayer(d_model=input_dim, nhead=nhead, dim_feedforward=dim_feedforward),
+            num_layers=num_layers
         )
 
-        self.fc1 = nn.Linear(self.embedding_dim, 64) # Reduced from 128
-        self.fc2 = nn.Linear(64, 32) # Reduced from 64
-        self.fc3 = nn.Linear(32, 1) # Output layer remains the same
+        # Sequential feedforward classifier
+        self.sequential_classifier = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, x):
-        
-        # Embedding
-        x = x.view(-1, x.shape[-1]) # Flatten the first two dimensions
-        x = self.embedding(x)
-        x = x.view(x.shape[0], -1, self.embedding_dim) # Reshape back to (batch_size, seq_len, embedding_dim)
+        # Transformer expects input shape (seq_len, batch, feature)
+        # Since our sequence length is 1 (only one target), we'll add a dummy dimension
+        x_transformer = x.unsqueeze(0)
 
-        # Transformer
-        x = self.transformer_encoder(x)
+        # Pass through the transformer
+        x_encoded = self.transformer_encoder(x_transformer)
 
-        # Flattening the sequence dimension
-        x = x.mean(dim=1)
+        # Remove the dummy sequence length dimension
+        x_encoded = x_encoded.squeeze(0)
 
-        # Feed-forward layers
-        x = nn.ReLU()(self.fc1(x))
-        x = nn.ReLU()(self.fc2(x))
-        x = self.fc3(x)
+        # Pass through the sequential feedforward classifier
+        output = self.sequential_classifier(x_encoded)
 
-        return x
+        return output
+
 
