@@ -5,33 +5,33 @@ import pandas as pd
 
 class UnixTimePositionalEncoder:
 
+    def __init__(self, d_model=32):
+        self.d_model = d_model
+
     def encode(self, start_date, claim_date):
 
-        if isinstance(start_date, str):
-            start_date = pd.Timestamp(start_date).to_pydatetime()
-        if isinstance(claim_date, str):
-            claim_date = pd.Timestamp(claim_date).to_pydatetime()
+        # No need to convert strings to datetimes
 
-        # Calculate Unix time difference in seconds
-        unix_difference = (claim_date - start_date).total_seconds()
+        time_diff = (claim_date - start_date).total_seconds()
+        
+        # Nested cyclic encoding 
+        minute_of_hour = [sin(time_diff * 2*pi / 60)] * self.d_model + [cos(time_diff * 2*pi / 60)] * self.d_model
+        hour_of_day = [sin(time_diff * 2*pi / 3600)] * self.d_model + [cos(time_diff * 2*pi / 3600)] * self.d_model   
+        day_of_month = [sin(time_diff * 2*pi / 86400)] * self.d_model + [cos(time_diff * 2*pi / 86400)] * self.d_model
+        month_of_year = [sin(time_diff * 2*pi / 2592000)] * self.d_model + [cos(time_diff * 2*pi / 2592000)] * self.d_model
+        year_of_1000 = [sin(time_diff * 2*pi / 31536000)] * self.d_model + [cos(time_diff * 2*pi / 31536000)] * self.d_model
 
-        # Calculate frequency scaling factors for different time components
-        scaling_factors = [60, 3600, 86400, 2592000, 31536000] # Corresponding to minute, hour, day, month, year
-
-        # Stacked encoding
-        stacked_enc = []
-        for scale in scaling_factors:
-            scaled_unix = unix_difference / scale
-            component_enc = [sin(2 * pi * scaled_unix), cos(2 * pi * scaled_unix)]
-            stacked_enc.append(component_enc)
+        stacked_enc = [minute_of_hour, hour_of_day, day_of_month, month_of_year, year_of_1000]
 
         return torch.tensor(stacked_enc)
 
 if __name__ == '__main__':
 
-    encoder = UnixTimePositionalEncoder()
-    start_date = '2023-01-01'
-    claim_date = '2023-02-01'
+    encoder = UnixTimePositionalEncoder(d_model=32)
+
+    start_date = datetime(2023, 1, 1)
+    claim_date = datetime(2023, 2, 1)
+
     encoded = encoder.encode(start_date, claim_date)
 
     print("Unix time positional encoding:")
