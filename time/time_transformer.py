@@ -23,7 +23,6 @@ class TimeEncodingTransformer(nn.Module):
         )
 
     def forward(self, x):
-        # Transformer expects input shape (seq_len, batch, feature)
 
         # Pass through the transformer
         x_encoded = self.transformer_encoder(x)

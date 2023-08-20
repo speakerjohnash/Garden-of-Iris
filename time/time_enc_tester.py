@@ -1,6 +1,8 @@
 import sys
 import torch
+import math
 import torch.nn as nn 
+import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 
@@ -45,6 +47,7 @@ df['Date'] = pd.to_datetime(df['Date'])
 df = df[['Date', 'Close']]
 use_ordered_data = False
 ensure_preceding_day = True
+batch_size = 128
 window_size = 8
 gap = 1
 X, y = [], []
@@ -109,11 +112,11 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 
 	X_train_prices = torch.tensor(X_train, dtype=torch.float32).unsqueeze(-1)
 	X_test_prices = torch.tensor(X_test, dtype=torch.float32).unsqueeze(-1)
-  
+
 	# Adjust the shapes for concatenation
 	X_train_encoded = X_train_encoded.view(*X_train_prices.shape[:-1], -1)
 	X_test_encoded = X_test_encoded.view(*X_test_prices.shape[:-1], -1)
-  
+
 	# Concatenate the prices with their corresponding temporal encodings
 	X_train_combined = torch.cat([X_train_prices, X_train_encoded], dim=-1)
 	X_test_combined = torch.cat([X_test_prices, X_test_encoded], dim=-1)
@@ -124,6 +127,29 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 	y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
 	y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
 
+	print(f"Original y_test size: {len(y_test_tensor)}")
+	print(f"Window size: {window_size}")
+
+	# Calculate target size that is divisible by window_size
+	orig_size = len(y_test_tensor)
+	target_size = int(math.ceil(orig_size / window_size) * window_size)
+
+	print(f"Target size: {target_size}") 
+
+	# Calculate padding amount  
+	pad_amount = target_size - orig_size
+
+	print(f"Padding amount: {pad_amount}")
+
+	# Dynamically pad tensor
+	pad = (0, 0, pad_amount, 0) 
+	y_test_tensor = F.pad(y_test_tensor, pad, value=1)
+
+	print(f"Padded tensor size: {len(y_test_tensor)}")
+
+	y_test_tensor = F.pad(y_test_tensor, (0, pad_amount))
+	y_test_tensor = y_test_tensor.reshape(-1, window_size)
+
 	print(f"y_train_tensor shape: {y_train_tensor.shape}")
 	print(f"y_test_tensor shape: {y_test_tensor.shape}")
 
@@ -133,6 +159,38 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 	# Print their shapes
 	print(f"X_train_tensor shape: {X_train_tensor.shape}")
 	print(f"X_test_tensor shape: {X_test_tensor.shape}")
+
+	# Batching code
+	batch_size = 128
+	window_size = 8
+
+	# Print original shapes
+	print(f"Original y_train_tensor shape: {y_train_tensor.shape}")
+	print(f"Original X_train_tensor shape: {X_train_tensor.shape}")
+
+	# Reshape the data
+	X_train_tensor = X_train_tensor.reshape(-1, window_size, X_train_tensor.shape[-1])
+	X_test_tensor = X_test_tensor.reshape(-1, window_size, X_test_tensor.shape[-1])
+
+	num_train_batches = len(X_train_tensor) // batch_size
+	num_test_batches = len(X_test_tensor) // batch_size
+
+	X_train_tensor = X_train_tensor[:num_train_batches * batch_size]
+	y_train_tensor = y_train_tensor[:num_train_batches * batch_size]  # Adjust size to match X_train_tensor
+
+	# Reshape y_train_tensor to match X_train_tensor
+	y_train_tensor = y_train_tensor.reshape(-1, window_size, 1)
+
+	# Print shapes after reshaping
+	print(f"Reshaped y_train_tensor shape: {y_train_tensor.shape}")
+	print(f"Reshaped X_train_tensor shape: {X_train_tensor.shape}")
+
+	X_test_tensor = X_test_tensor[:num_test_batches * batch_size] 
+	y_test_tensor = y_test_tensor[:num_test_batches * batch_size]
+
+	# Print batched shapes
+	print(f"Batched X_train_tensor shape: {X_train_tensor.shape}")
+	print(f"Batched X_test_tensor shape: {X_test_tensor.shape}")
 
 	# Sequential model for benchmark
 	model = nn.Sequential(
@@ -154,8 +212,19 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 
 	for epoch in range(epochs):
 		optimizer.zero_grad()
+
+		# Train
 		predictions = model(X_train_tensor)
-		loss = loss_fn(predictions, y_train_tensor)
+		
+		print(f"Predictions shape before mean: {predictions.shape}") 
+
+		predictions = predictions.mean(dim=1).reshape(-1, 1)
+
+		# Print shapes before loss calculation
+		print(f"Predictions shape before loss: {predictions.shape}")
+		print(f"y_train_tensor shape before loss: {y_train_tensor.view(-1, 1).shape}")
+
+		loss = loss_fn(predictions, y_train_tensor.view(-1, 1))
 		loss.backward()
 		optimizer.step()
 
