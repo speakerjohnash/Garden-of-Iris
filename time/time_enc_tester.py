@@ -144,7 +144,7 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 		nn.Linear(64, 1)
 	)
 
-	# model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
+	model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
 
 	optimizer = Adam(model.parameters(), lr=0.001)
 	loss_fn = nn.MSELoss()

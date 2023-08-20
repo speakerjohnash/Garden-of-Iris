@@ -23,11 +23,16 @@ class TimeEncodingTransformer(nn.Module):
         )
 
     def forward(self, x):
+        # Reshape the input to add the sequence length dimension
+        x = x.unsqueeze(1) # Shape becomes (batch size, 1, d_model)
+
+        # Transpose batch and sequence length dimensions
+        x = x.transpose(0, 1) # Shape becomes (1, batch size, d_model)
 
         # Pass through the transformer
         x_encoded = self.transformer_encoder(x)
 
-        # Remove the dummy sequence length dimension
+        # Squeeze the sequence length dimension
         x_encoded = x_encoded.squeeze(0)
 
         # Pass through the sequential feedforward classifier
