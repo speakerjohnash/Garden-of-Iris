@@ -11,6 +11,7 @@ from datetime import datetime
 
 from time2vec import Time2VecEncoder  
 from time_transformer import TimeEncodingTransformer
+from pos_unix_enc import  UnixTimePositionalEncoder
 import sinusoidal_basic as basic
 import sinusoidal_frequencies as freq
 import mixed_time_enc as iris
@@ -31,11 +32,12 @@ encoder_objects = {
 	'SinusoidalBasic': basic.SinusoidalBasicEncoder(),
 	'SinusoidalFrequencies': freq.SinusoidalFrequenciesEncoder(),
 	'MixedTime': iris.IrisTimeEncoder(in_features=10, out_features=6),
+    'UnixTimePositional': UnixTimePositionalEncoder(),
 	'Null': NullEncoder() 
 }
 
 # List of encoders you want to include
-encoders = ['SinusoidalBasic', 'Null']  
+encoders = ['UnixTimePositional', 'Null']  
 
 # Load data
 df = pd.read_csv('synthetic_data.csv')

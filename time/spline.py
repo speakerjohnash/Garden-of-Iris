@@ -120,7 +120,7 @@ class SyntheticTimeSeriesGenerator:
 		return self.data
 
 	# Simple sine wave generation method
-	def generate_simple(self, num_cycles=5):
+	def generate_simple(self, num_cycles=9):
 
 		# Calculate sine wave
 		time_delta = self.end_date - self.start_date
@@ -175,7 +175,7 @@ class SyntheticTimeSeriesGenerator:
 		plt.show()
 
 # Usage
-generator = SyntheticTimeSeriesGenerator(start_date='2010-01-01', end_date='2019-01-15', mode="simple")
+generator = SyntheticTimeSeriesGenerator(start_date='2008-01-01', end_date='2019-01-15', mode="simple")
 generator.generate()
 generator.plot()
 generator.save_to_csv(max_points=10000)
