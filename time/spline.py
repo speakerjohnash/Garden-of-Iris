@@ -178,4 +178,4 @@ class SyntheticTimeSeriesGenerator:
 generator = SyntheticTimeSeriesGenerator(start_date='2008-01-01', end_date='2019-01-15', mode="simple")
 generator.generate()
 generator.plot()
-generator.save_to_csv(max_points=10000)
+generator.save_to_csv(max_points=20000)

@@ -21,7 +21,7 @@ class UnixTimePositionalEncoder:
         month_of_year = [sin(time_diff * 2*pi / 2592000)] * self.d_model + [cos(time_diff * 2*pi / 2592000)] * self.d_model
         year_of_1000 = [sin(time_diff * 2*pi / 31536000)] * self.d_model + [cos(time_diff * 2*pi / 31536000)] * self.d_model
 
-        stacked_enc = [minute_of_hour, hour_of_day, day_of_month, month_of_year, year_of_1000]
+        stacked_enc = minute_of_hour + hour_of_day + day_of_month + month_of_year + year_of_1000
 
         return torch.tensor(stacked_enc)
 

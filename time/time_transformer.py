@@ -4,6 +4,9 @@ class TimeEncodingTransformer(nn.Module):
     def __init__(self, input_dim, nhead=1, num_layers=1, dim_feedforward=64):
         super(TimeEncodingTransformer, self).__init__()
 
+        print("Input Dimension: " + str(input_dim))
+        print("Number of Heads: " + str(nhead))
+
         # Transformer layer
         self.transformer_encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=input_dim, nhead=nhead, dim_feedforward=dim_feedforward),
@@ -21,11 +24,9 @@ class TimeEncodingTransformer(nn.Module):
 
     def forward(self, x):
         # Transformer expects input shape (seq_len, batch, feature)
-        # Since our sequence length is 1 (only one target), we'll add a dummy dimension
-        x_transformer = x.unsqueeze(0)
 
         # Pass through the transformer
-        x_encoded = self.transformer_encoder(x_transformer)
+        x_encoded = self.transformer_encoder(x)
 
         # Remove the dummy sequence length dimension
         x_encoded = x_encoded.squeeze(0)

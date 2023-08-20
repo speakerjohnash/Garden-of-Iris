@@ -32,7 +32,7 @@ encoder_objects = {
 	'SinusoidalBasic': basic.SinusoidalBasicEncoder(),
 	'SinusoidalFrequencies': freq.SinusoidalFrequenciesEncoder(),
 	'MixedTime': iris.IrisTimeEncoder(in_features=10, out_features=6),
-    'UnixTimePositional': UnixTimePositionalEncoder(),
+	'UnixTimePositional': UnixTimePositionalEncoder(),
 	'Null': NullEncoder() 
 }
 
@@ -45,7 +45,7 @@ df['Date'] = pd.to_datetime(df['Date'])
 df = df[['Date', 'Close']]
 use_ordered_data = False
 ensure_preceding_day = True
-window_size = 5
+window_size = 8
 gap = 1
 X, y = [], []
 i = 0
@@ -107,33 +107,32 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 	print(f"Encoding size: {size}")
 	print(f"X_train shape: {X_train.shape}")
 
-	X_train_flat = X_train_encoded.flatten(start_dim=1)
-	X_test_flat = X_test_encoded.flatten(start_dim=1)
-
-	print(f"X_train_flat shape: {X_train_flat.shape}")
-	print(f"X_test_flat shape: {X_test_flat.shape}")
-
-	X_train_flat = X_train_flat.detach().numpy()
-	X_test_flat = X_test_flat.detach().numpy()
-
-	print(f"X_train_flat dtype: {X_train_flat.dtype}")
-	print(f"X_test_flat dtype: {X_test_flat.dtype}")
-
-	X_train_combined = np.hstack([X_train, X_train_flat])
-	X_test_combined = np.hstack([X_test, X_test_flat])
+	X_train_prices = torch.tensor(X_train, dtype=torch.float32).unsqueeze(-1)
+	X_test_prices = torch.tensor(X_test, dtype=torch.float32).unsqueeze(-1)
+  
+	# Adjust the shapes for concatenation
+	X_train_encoded = X_train_encoded.view(*X_train_prices.shape[:-1], -1)
+	X_test_encoded = X_test_encoded.view(*X_test_prices.shape[:-1], -1)
+  
+	# Concatenate the prices with their corresponding temporal encodings
+	X_train_combined = torch.cat([X_train_prices, X_train_encoded], dim=-1)
+	X_test_combined = torch.cat([X_test_prices, X_test_encoded], dim=-1)
 
 	print(f"X_train_combined shape: {X_train_combined.shape}")
 	print(f"X_test_combined shape: {X_test_combined.shape}")
 
-	X_train_tensor = torch.tensor(X_train_combined, dtype=torch.float32)
-	X_test_tensor = torch.tensor(X_test_combined, dtype=torch.float32)  
 	y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
 	y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
 
-	print(f"X_train_tensor shape: {X_train_tensor.shape}")
-	print(f"X_test_tensor shape: {X_test_tensor.shape}")
 	print(f"y_train_tensor shape: {y_train_tensor.shape}")
 	print(f"y_test_tensor shape: {y_test_tensor.shape}")
+
+	X_train_tensor = torch.tensor(X_train_combined, dtype=torch.float32)
+	X_test_tensor = torch.tensor(X_test_combined, dtype=torch.float32)
+
+	# Print their shapes
+	print(f"X_train_tensor shape: {X_train_tensor.shape}")
+	print(f"X_test_tensor shape: {X_test_tensor.shape}")
 
 	# Sequential model for benchmark
 	model = nn.Sequential(
@@ -144,7 +143,7 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 		nn.Linear(64, 1)
 	)
 
-	# model = TimeEncodingTransformer(input_dim=X_train_combined.shape[1])
+	model = TimeEncodingTransformer(input_dim=X_train_combined.shape[-1])
 
 	optimizer = Adam(model.parameters(), lr=0.001)
 	loss_fn = nn.MSELoss()
