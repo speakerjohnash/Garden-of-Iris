@@ -21,13 +21,14 @@ class NullEncoder:
 		return torch.tensor([])
 
 # Function to encode sequences of 8 dates
-def encode_data(encoder, start_date, date_sequences):
+def encode_data(encoder, start_date, date_sequences, target_dates):
     print(f"Number of date sequences: {len(date_sequences)}")
     
     X_encoded_list = []
-    for dates in date_sequences:
+    for dates, target_date in zip(date_sequences, target_dates):
         encoded_sequence = [encoder.encode(date, start_date) for date in dates]
-        concatenated_encoding = torch.cat(encoded_sequence, dim=0)
+        target_encoded = encoder.encode(target_date, start_date)
+        concatenated_encoding = torch.cat(encoded_sequence + [target_encoded], dim=0)
         X_encoded_list.append(concatenated_encoding)
     
     X_encoded = torch.stack(X_encoded_list, dim=0)
@@ -55,7 +56,7 @@ df['Date'] = pd.to_datetime(df['Date'])
 df = df[['Date', 'Close']]
 use_ordered_data = False
 ensure_preceding_day = True
-window_size = 8
+window_size = 4
 gap = 1
 X, y = [], []
 i = 0
@@ -97,11 +98,14 @@ for target_idx in range(window_size, len(df) - gap):
 
 X, y = np.array(X), np.array(y)
 
-print(X.shape)
-print(y.shape)
-
 # Split X_dates into training and test sets
 X_dates_train, X_dates_test = train_test_split(X_dates, test_size=0.2, shuffle=False)
+
+# Create target_dates array
+target_dates = [df.loc[target_idx + gap, 'Date'] for target_idx in range(window_size, len(df) - gap)]
+
+# Split target_dates into training and test sets
+target_dates_train, target_dates_test = train_test_split(target_dates, test_size=0.2, shuffle=False)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 train_idxs, test_idxs = train_test_split(range(window_size, len(df) - gap), test_size=0.2, shuffle=False)
@@ -113,8 +117,8 @@ X_test_dates = [df.loc[idx + gap, 'Date'] for idx in test_idxs]
 encoder_data = {}
 for encoder_name in encoders:
     encoder = encoder_objects[encoder_name]
-    X_train_encoded = encode_data(encoder, start_date, X_dates_train)
-    X_test_encoded = encode_data(encoder, start_date, X_dates_test)
+    X_train_encoded = encode_data(encoder, start_date, X_dates_train, target_dates_train)
+    X_test_encoded = encode_data(encoder, start_date, X_dates_test, target_dates_test)
     encoder_data[encoder_name] = (X_train_encoded, X_test_encoded)
 
 for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
@@ -171,7 +175,7 @@ for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 
 	# Train  
 	model.train()
-	epochs = 250
+	epochs = 550
 
 	for epoch in range(epochs):
 		optimizer.zero_grad()
