@@ -5,7 +5,7 @@ import pandas as pd
 
 class UnixTimePositionalEncoder:
 
-    def __init__(self, d_model=32):
+    def __init__(self, d_model=8):
         self.d_model = d_model
 
     def encode(self, start_date, claim_date):

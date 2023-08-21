@@ -20,11 +20,21 @@ class NullEncoder:
 	def encode(self, start_date, date):
 		return torch.tensor([])
 
-# Function to encode data
-def encode_data(encoder, start_date, train_dates, test_dates):
-	X_train_encoded = torch.stack([encoder.encode(date, start_date) for date in train_dates])
-	X_test_encoded = torch.stack([encoder.encode(date, start_date) for date in test_dates])
-	return X_train_encoded, X_test_encoded
+# Function to encode sequences of 8 dates
+def encode_data(encoder, start_date, date_sequences):
+    print(f"Number of date sequences: {len(date_sequences)}")
+    
+    X_encoded_list = []
+    for dates in date_sequences:
+        encoded_sequence = [encoder.encode(date, start_date) for date in dates]
+        concatenated_encoding = torch.cat(encoded_sequence, dim=0)
+        X_encoded_list.append(concatenated_encoding)
+    
+    X_encoded = torch.stack(X_encoded_list, dim=0)
+    
+    print("Number of date sequences encoded:", X_encoded.shape[0])
+    
+    return X_encoded
 
 # Dictionary mapping encoder names to objects  
 encoder_objects = {
@@ -32,7 +42,7 @@ encoder_objects = {
 	'SinusoidalBasic': basic.SinusoidalBasicEncoder(),
 	'SinusoidalFrequencies': freq.SinusoidalFrequenciesEncoder(),
 	'MixedTime': iris.IrisTimeEncoder(in_features=10, out_features=6),
-    'UnixTimePositional': UnixTimePositionalEncoder(),
+	'UnixTimePositional': UnixTimePositionalEncoder(),
 	'Null': NullEncoder() 
 }
 
@@ -43,12 +53,13 @@ encoders = ['UnixTimePositional', 'Null']
 df = pd.read_csv('synthetic_data.csv')
 df['Date'] = pd.to_datetime(df['Date']) 
 df = df[['Date', 'Close']]
-use_ordered_data = True
+use_ordered_data = False
 ensure_preceding_day = True
-window_size = 5
+window_size = 8
 gap = 1
 X, y = [], []
 i = 0
+X_dates = []
 
 for target_idx in range(window_size, len(df) - gap):
 	
@@ -78,12 +89,20 @@ for target_idx in range(window_size, len(df) - gap):
 		print("Target date:")  
 		print(target_date)
 
+	X_dates.append(preceding_dates)
 	X.append(preceding_closes)
 	y.append(target_close)
 
 	i = i + 1
 
 X, y = np.array(X), np.array(y)
+
+print(X.shape)
+print(y.shape)
+
+# Split X_dates into training and test sets
+X_dates_train, X_dates_test = train_test_split(X_dates, test_size=0.2, shuffle=False)
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 train_idxs, test_idxs = train_test_split(range(window_size, len(df) - gap), test_size=0.2, shuffle=False)
 start_date = df.loc[window_size-1, 'Date']
@@ -93,9 +112,10 @@ X_test_dates = [df.loc[idx + gap, 'Date'] for idx in test_idxs]
 # Encode timestamps using different techniques
 encoder_data = {}
 for encoder_name in encoders:
-	encoder = encoder_objects[encoder_name] 
-	X_train_encoded, X_test_encoded = encode_data(encoder, start_date, X_train_dates, X_test_dates)
-	encoder_data[encoder_name] = (X_train_encoded, X_test_encoded)
+    encoder = encoder_objects[encoder_name]
+    X_train_encoded = encode_data(encoder, start_date, X_dates_train)
+    X_test_encoded = encode_data(encoder, start_date, X_dates_test)
+    encoder_data[encoder_name] = (X_train_encoded, X_test_encoded)
 
 for encoder_name, (X_train_encoded, X_test_encoded) in encoder_data.items():
 
