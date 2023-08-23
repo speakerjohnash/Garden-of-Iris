@@ -66,7 +66,8 @@ models = {
 	"chat-iris-b": "davinci:ft-personal:chat-iris-b-2023-03-11-18-20-31",
 	"chat-iris-a": "davinci:ft-personal:chat-iris-a-2023-03-10-21-44-19",
 	"chat-iris-0": "davinci:ft-personal:chat-iris-2023-03-10-18-48-23",
-	"dss": "davinci:ft-personal-2023-06-28-16-48-35"
+	"dss": "davinci:ft-personal-2023-06-28-16-48-35",
+	"new-iris": "ft:gpt-3.5-turbo-0613:personal::7qarK04n"
 }
 
 class AskModal(Modal, title="Ask Modal"):
@@ -362,32 +363,6 @@ async def interpretation(ctx, prompt):
 	
 	await ctx.send(embed=embed, view=view)
 
-async def get_conversation_history(channel_id, limit, message_count, summary_count_limit):
-	"""
-	Fetches the conversation history from a specified Discord channel.
-	The function retrieves a list of messages from the channel, ignoring slash commands and messages starting with '/'.
-	"""
-
-	channel = bot.get_channel(channel_id)
-	messages = []
-	summary_count = 0
-
-	async for hist in channel.history(limit=limit):
-		if not hist.content.startswith('/'):
-			# Include embeds in the message content
-			embed_content = "\n".join([embed.description for embed in hist.embeds if embed.description]) if hist.embeds else ""
-
-			if hist.author == bot.user:
-				summary_count += 1
-				if summary_count < summary_count_limit:
-					messages.append((hist.author, hist.content + embed_content, hist.created_at))
-			else:
-				messages.append((hist.author, hist.content + embed_content, hist.created_at))
-			if len(messages) == message_count:
-				break
-
-	return messages
-
 async def iris_pool(message):
 	"""
 	Assists users in a Discord channel as an oracle named Iris, focusing on the future and past.
@@ -444,201 +419,7 @@ async def iris_pool(message):
 
 	# Send all response chunks except the last one
 	for chunk in response_chunks:
-		await message.channel.send(chunk)
-
-def stake_thought(message, function_args):
-
-	thought = function_args['thought']
-	thought_type = function_args['type']
-	verity = function_args['verity'] 
-	valence = function_args['valence']
-
-	user_id = message.author.id
-	
-	# Get timestamp from message object
-	timestamp = message.created_at.isoformat()
-
-	csv_file = 'thoughts.csv'
-
-	if not os.path.isfile(csv_file):
-		with open(csv_file, 'w') as f:
-			writer = csv.writer(f)
-			writer.writerow(['user_id', 'timestamp', 'thought', 'type', 'verity', 'valence'])
-
-	with open(csv_file, 'a') as f:
-		writer = csv.writer(f)
-		writer.writerow([user_id, timestamp, thought, thought_type, verity, valence])		
-
-async def stability_pool(message):
-	"""
-	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
-	establish speakerjohnscache to support
-	"""
-
-	print("CALLED!")
-
-	channel_id = 1134692579322118156
-	channel = bot.get_channel(channel_id)
-	now = datetime.datetime.now()
-
-	# Get Most Recent Comment
-	last_message = [message async for message in channel.history(limit=1)][0]
-	function_details = stability_functions(last_message)
-
-	if function_details.get("function_call"):
-		function_name = function_details["function_call"]["name"]
-		function_args = json.loads(function_details["function_call"]["arguments"])
-		parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
-		embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
-		stake_thought(last_message, function_args)
-		await message.channel.send(embed=embed)
-		return
-		
-	# Ignore Slash Commands
-	if last_message.content.startswith("/"):
-		return
-
-	messages = await get_conversation_history(channel_id, 50, 21, 11)
-	messages.reverse()
-
-	iris_answer = one_shot(last_message, heat=0.11)
-
-	conversation = [
-		{"role": "user", "content": "Cognicism is a meta-ideology that combines democratic large language models called Irises with a system of decentralized voting to enable collective decision making in a way that is informed by the perceptions of many people. Irises utilize FourThought to track the evolution of beliefs over time. FourThought is a protocol for tracking belief state over time via staking questions, predictions, reflections and statements. Irises are essentially large democratic language models that use FourThought to track the distribution of beliefs in a population over time. Ŧrust is a system of reputation allocation based on the accuracy and impact of one's thoughts and contributions. It is a way to distribute influence in a network based on the long term value provided by each individual. Ŧrust is a derivative of the attention mechanism in a transformer and functions as a probability distribution across source embeddings to function as a form of contextual dynamic reputation. Iris also makes use of temporal embeddings to make sense of the evolution of collective belief. Cogncism values the prophet incentive and social proof of impact in greater value than the profit incentive."},
-		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
-		{"role": "system", "content": "Guiding foundations: 1) we can not make profit without selling something 2) people can not buy our stuff if they are not aware of it 3) adhere to cognicist principles 4) move very fast and rapidly optimize"},
-		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal"},
-		{"role": "system", "content": "Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. You should constantly be thinking of ways to minimize work for dpax and John and seek to run autonomously in almost all aspects of your operation"},
-		{"role": "system", "content": "Our medium term goal is the holiday season where we will release a Mind Gardening Oracle deck"},
-		{"role": "system", "content": "Our short term goal for the next four weeks is to swiftly set up an operational and professional-looking website for speakerjohnscache, leveraging automated systems and maintaining simplicity. The site should link immediately to any existing products and means to support me as well as links to book me hourly."},
-		{"role": "system", "content": "John Ash's financial aim starts at $72k, with potential to exceed $111k for personal and creative growth, while dpax seeks an additional $20k-$30k this year, planning to scale to a full-time self-directed income between $110k-130k"},
-		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00. Place special attention on any predictions made within the thread"},
-		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
-		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
-		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication. You are anti-profit, anti-work and anti-capitalist. All things you reply with should minimize work for John and dpax somehow"},
-		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others. I will focus on making operations autonomous and minimizg work for dpax and john while earning enough profit to support their goals"}
-	]
-
-	for m in messages:
-		if m[0].id == bot.user.id:
-			conversation.append({"role": "assistant", "content": m[1]})
-		else:
-			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
-
-	response = openai.ChatCompletion.create(
-		model="gpt-4",
-		temperature=0.8,
-		max_tokens=400,
-		frequency_penalty=0.5,
-		presence_penalty=0.5,
-		messages=conversation
-	)
-
-	response = response.choices[0].message.content.strip()
-
-	# Split response into chunks if longer than 2000 characters
-	response_chunks = split_text_into_chunks(response)
-
-	# Send all response chunks except the last one
-	for chunk in response_chunks:
-		await message.channel.send(chunk)
-
-def stability_functions(message):
-	"""
-	Sends message to GPT-4 to determine which functions to call in the stability-pool
-	"""
-
-	functions = [
-		{
-			"name": "check_goals", 
-			"description": "Check the CSV of the goals we have logged and return a summary",
-			"parameters": {
-				"type": "object",
-				"properties": {
-					"text": {
-						"type": "string",
-						"description": "Print the users input unchanged"
-					}
-				},
-				"required": ["text"]
-			}
-		},
-		{
-			"name": "set_goals", 
-			"description": "Set a new goal with its type and priority.",
-			"parameters": {
-				"type": "object",
-				"properties": {
-					"goal": {
-						"type": "string",
-						"description": "The goal to be set."
-					},
-					"type": {
-						"type": "string",
-						"enum": ["short_term", "mid_term", "long_term"],
-						"description": "The type of goal: short term, mid term, or long term."
-					},
-					"priority": {
-						"type": "number",
-						"minimum": 0,
-						"maximum": 1,
-						"default": 0.5,
-						"description": "The priority of the goal, represented as a number between 0 and 1."
-					}
-				},
-				"required": ["goal", "type", "priority"]
-			}
-		},
-		{
-			"name": "stake_thought",
-			"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality)",
-			"parameters": {
-				"type": "object",
-				"properties": {
-					"thought": {
-						"type": "string",
-						"description": "The text of the thought",
-					},
-					"type": {
-						"type": "string",
-						"enum": ["prediction", "reflection", "statement", "question"],
-						"description": "The type of the thought. Whether it is a claim focused on the past (reflection), present (statement), future (prediction), or is seeking an answer (question)",
-					},
-					"verity": {
-						"type": "number",
-						"minimum": 0,
-						"maximum": 1,
-						"default": 0.5,
-						"description": "A continuous range repersenting confidence, truth, certainty, falseness, alignment with reality. A value between 0 and 1 with 0 representing full confidence of falseness, 0.5 representing full uncertainty and 1 representing full certainty or confidence of trueness"
-					},
-					"valence": {
-						"type": "number",
-						"minimum": -1,
-						"maximum": 1,
-						"default": 0,
-						"description": "A continuous range representing goodness, morality, ethics and alignment with one's sense of what is right and wrong. A value between -1 and 1 with -1 representing full misalignment with ones sense of goodness or morality, 0 representing full neutrality and 1 representing full full alignment with one's sense of ethics"
-					}
-				},
-			"required": ["thought", "type", "verity", "valence"]
-		},
-		},
-	]
-
-	messages = [
-		{'role': 'user', 'content': message.content}
-	]
-
-	response = openai.ChatCompletion.create(
-		model = 'gpt-4',
-		temperature=0,
-		messages = messages,
-		functions = functions,
-		function_call = 'auto'
-	)
-
-	message = response["choices"][0]["message"]
-
-	return message
+		await message.channel.send(chunk)	
 
 async def question_pool(message):
 	"""
@@ -801,7 +582,180 @@ async def prophecy_pool(message):
 
 	# Send all response chunks except the last one
 	for chunk in response_chunks:
-		await message.channel.send(chunk)		
+		await message.channel.send(chunk)
+
+async def stability_pool(message):
+	"""
+	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
+	establish speakerjohnscache to support
+	"""
+
+	print("CALLED!")
+
+	channel_id = 1134692579322118156
+	channel = bot.get_channel(channel_id)
+	now = datetime.datetime.now()
+
+	# Get Most Recent Comment
+	last_message = [message async for message in channel.history(limit=1)][0]
+	function_details = stability_functions(last_message)
+
+	if function_details.get("function_call"):
+		function_name = function_details["function_call"]["name"]
+		function_args = json.loads(function_details["function_call"]["arguments"])
+		parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
+		embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+		print(parameters_str)
+		if function_name == "stake_thought":
+			stake_thought(last_message, function_args)
+		await message.channel.send(embed=embed)
+		return
+		
+	# Ignore Slash Commands
+	if last_message.content.startswith("/"):
+		return
+
+	messages = await get_conversation_history(channel_id, 50, 21, 11)
+	messages.reverse()
+
+	iris_answer = one_shot(last_message, heat=0.11)
+
+	conversation = [
+		{"role": "user", "content": "Cognicism is a meta-ideology that combines democratic large language models called Irises with a system of decentralized voting to enable collective decision making in a way that is informed by the perceptions of many people. Irises utilize FourThought to track the evolution of beliefs over time. FourThought is a protocol for tracking belief state over time via staking questions, predictions, reflections and statements. Irises are essentially large democratic language models that use FourThought to track the distribution of beliefs in a population over time. Ŧrust is a system of reputation allocation based on the accuracy and impact of one's thoughts and contributions. It is a way to distribute influence in a network based on the long term value provided by each individual. Ŧrust is a derivative of the attention mechanism in a transformer and functions as a probability distribution across source embeddings to function as a form of contextual dynamic reputation. Iris also makes use of temporal embeddings to make sense of the evolution of collective belief. Cogncism values the prophet incentive and social proof of impact in greater value than the profit incentive."},
+		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
+		{"role": "system", "content": "Guiding foundations: 1) we can not make profit without selling something 2) people can not buy our stuff if they are not aware of it 3) adhere to cognicist principles 4) move very fast and rapidly optimize"},
+		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal"},
+		{"role": "system", "content": "Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. You should constantly be thinking of ways to minimize work for dpax and John and seek to run autonomously in almost all aspects of your operation"},
+		{"role": "system", "content": "Our medium term goal is the holiday season where we will release a Mind Gardening Oracle deck"},
+		{"role": "system", "content": "Our short term goal for the next four weeks is to swiftly set up an operational and professional-looking website for speakerjohnscache, leveraging automated systems and maintaining simplicity. The site should link immediately to any existing products and means to support me as well as links to book me hourly."},
+		{"role": "system", "content": "John Ash's financial aim starts at $72k, with potential to exceed $111k for personal and creative growth, while dpax seeks an additional $20k-$30k this year, planning to scale to a full-time self-directed income between $110k-130k"},
+		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00. Place special attention on any predictions made within the thread"},
+		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
+		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication. You are anti-profit, anti-work and anti-capitalist. All things you reply with should minimize work for John and dpax somehow"},
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others. I will focus on making operations autonomous and minimizg work for dpax and john while earning enough profit to support their goals"}
+	]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4",
+		temperature=0.8,
+		max_tokens=400,
+		frequency_penalty=0.5,
+		presence_penalty=0.5,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
+
+def stability_functions(message):
+	"""
+	Sends message to GPT-4 to determine which functions to call in the stability-pool
+	"""
+
+	functions = [
+		{
+			"name": "check_goals", 
+			"description": "Check the CSV of the goals we have logged and return a summary",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"text": {
+						"type": "string",
+						"description": "Print the users input unchanged"
+					}
+				},
+				"required": ["text"]
+			}
+		},
+		{
+			"name": "set_goals", 
+			"description": "If user asks you to set a goal, set a new goal with its type and priority",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"goal": {
+						"type": "string",
+						"description": "The goal to be set."
+					},
+					"type": {
+						"type": "string",
+						"enum": ["short_term", "mid_term", "long_term"],
+						"description": "The type of goal: short term, mid term, or long term."
+					},
+					"priority": {
+						"type": "number",
+						"minimum": 0,
+						"maximum": 1,
+						"default": 0.5,
+						"description": "The priority of the goal, represented as a number between 0 and 1."
+					}
+				},
+				"required": ["goal", "type", "priority"]
+			}
+		},
+		{
+			"name": "stake_thought",
+			"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality). If user tells you specifically to log or stake etc",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"thought": {
+						"type": "string",
+						"description": "The text of the thought",
+					},
+					"type": {
+						"type": "string",
+						"enum": ["prediction", "reflection", "statement", "question"],
+						"description": "The type of the thought. Whether it is a claim focused on the past (reflection), present (statement), future (prediction), or is seeking an answer (question)",
+					},
+					"verity": {
+						"type": "number",
+						"minimum": 0,
+						"maximum": 1,
+						"default": 0.5,
+						"description": "A continuous range repersenting confidence, truth, certainty, falseness, alignment with reality. A value between 0 and 1 with 0 representing full confidence of falseness, 0.5 representing full uncertainty and 1 representing full certainty or confidence of trueness"
+					},
+					"valence": {
+						"type": "number",
+						"minimum": -1,
+						"maximum": 1,
+						"default": 0,
+						"description": "A continuous range representing goodness, morality, ethics and alignment with one's sense of what is right and wrong. A value between -1 and 1 with -1 representing full misalignment with ones sense of goodness or morality, 0 representing full neutrality and 1 representing full full alignment with one's sense of ethics"
+					}
+				},
+			"required": ["thought", "type", "verity", "valence"]
+		},
+		},
+	]
+
+	messages = [
+		{'role': 'user', 'content': message.content}
+	]
+
+	response = openai.ChatCompletion.create(
+		model = 'gpt-4',
+		temperature=0,
+		messages = messages,
+		functions = functions,
+		function_call = 'auto'
+	)
+
+	message = response["choices"][0]["message"]
+
+	return message	
 
 @bot.event
 async def on_ready():
@@ -811,6 +765,79 @@ async def on_ready():
 @bot.event
 async def on_close():
 	print("Iris is offline")
+
+async def get_conversation_history(channel_id, limit, message_count, summary_count_limit):
+	"""
+	Fetches the conversation history from a specified Discord channel.
+	The function retrieves a list of messages from the channel, ignoring slash commands and messages starting with '/'.
+	"""
+
+	channel = bot.get_channel(channel_id)
+	messages = []
+	summary_count = 0
+
+	async for hist in channel.history(limit=limit):
+		if not hist.content.startswith('/'):
+			# Include embeds in the message content
+			embed_content = "\n".join([embed.description for embed in hist.embeds if embed.description]) if hist.embeds else ""
+
+			if hist.author == bot.user:
+				summary_count += 1
+				if summary_count < summary_count_limit:
+					messages.append((hist.author, hist.content + embed_content, hist.created_at))
+			else:
+				messages.append((hist.author, hist.content + embed_content, hist.created_at))
+			if len(messages) == message_count:
+				break
+
+	return messages
+
+async def n_shot(message, model="new-iris", shots=5, heat=0):
+
+	model_name = models[model]
+
+	# Load Chat Context
+	messages = []
+
+	async for hist in message.channel.history(limit=50):
+		if not hist.content.startswith('/') and hist.content.strip():
+			if hist.embeds and hist.embeds[0].description is not None:
+				messages.append((hist.author, hist.embeds[0].description))
+			else:
+				messages.append((hist.author.name, hist.content))
+			if len(messages) == shots:
+				break
+
+	messages.reverse()
+
+	with open("text/iris_system_instructions.txt", 'r') as file:
+		system_instructions = file.read()
+
+	# Construct Chat Thread for API
+	conversation = [{"role": "system", "content": system_instructions}]
+
+	for m in messages:
+		if m[0] == bot.user:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": m[1]})
+
+	try:
+		response = openai.ChatCompletion.create(
+			model=model_name,
+			messages=conversation,
+			temperature=heat,
+			max_tokens=256,
+			top_p=1,
+			frequency_penalty=1.1,
+			presence_penalty=1.1
+		)
+		iris_answer = response.choices[0].message.content.strip()
+	except Exception as e:
+		print(f"Error: {e}")
+		iris_answer = ""
+
+	return iris_answer
 
 def one_shot(message, heat=0.9):
 
@@ -851,24 +878,8 @@ async def frankeniris(message, answer="", heat=0.11):
 		answer = matching_prompt.sample(1)['completion'].iloc[0]
 
 	# Get Iris One Shot Answer First
-	try:
-		distillation = openai.Completion.create(
-			model=models["chat-iris"],
-			prompt=message.content,
-			temperature=heat,
-			max_tokens=222,
-			top_p=1,
-			frequency_penalty=1.5,
-			presence_penalty=1.5,
-			stop=["END"]
-		)
-
-		iris_answer = distillation['choices'][0]['text']
-		iris_answer = iris_answer.replace("###", "").strip()
-		print(iris_answer)
-	except Exception as e:
-		print(f"Error: {e}")
-		iris_answer = ""
+	iris_answer = await n_shot(message)
+	print(iris_answer)
 
 	if len(answer) > 0:
 		iris_answer = iris_answer + " \n\n " + answer
@@ -882,7 +893,7 @@ async def frankeniris(message, answer="", heat=0.11):
 				messages.append((hist.author, hist.embeds[0].description))
 			else:
 				messages.append((hist.author.name, hist.content))
-			if len(messages) == 18:
+			if len(messages) == 12:
 				break
 
 	messages.reverse()
@@ -1224,6 +1235,30 @@ async def claim(ctx, *, thought):
 		training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
 
 	await ctx.send("Attestation saved")
+
+def stake_thought(message, function_args):
+
+	thought = function_args.get('thought', '')
+	thought_type = function_args['type']
+	verity = function_args.get('verity', 0.5) 
+	valence = function_args.get('valence', 0) 
+
+	user_id = message.author.id
+	username = message.author.name
+	
+	# Get timestamp from message object
+	timestamp = message.created_at.isoformat()
+
+	csv_file = 'thoughts.csv'
+
+	if not os.path.isfile(csv_file):
+		with open(csv_file, 'w') as f:
+			writer = csv.writer(f)
+			writer.writerow(['user_id', 'username', 'timestamp', 'thought', 'type', 'verity', 'valence'])
+
+	with open(csv_file, 'a') as f:
+		writer = csv.writer(f)
+		writer.writerow([user_id, username, timestamp, thought, thought_type, verity, valence])	
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
