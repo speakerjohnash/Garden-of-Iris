@@ -51,6 +51,9 @@ except:
 
 training_data = ""
 
+with open("text/iris_system_instructions.txt", 'r') as file:
+    system_instructions = file.read()
+
 models = {
 	"living": "davinci:ft-personal:living-iris-2022-09-04-04-45-28",
 	"osiris": "davinci:ft-personal:osiris-the-unstructured-2022-09-28-02-31-57",
@@ -381,7 +384,8 @@ async def iris_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 13, 11)
 	messages.reverse()
 
-	iris_answer = one_shot(last_message, heat=0.11)
+	iris_answer = await n_shot(message)
+	print(iris_answer)
 
 	if messages[-1][1].startswith("Iris,"):
 
@@ -599,6 +603,7 @@ async def stability_pool(message):
 	# Get Most Recent Comment
 	last_message = [message async for message in channel.history(limit=1)][0]
 	function_details = stability_functions(last_message)
+	# function_details = {}
 
 	if function_details.get("function_call"):
 		function_name = function_details["function_call"]["name"]
@@ -618,7 +623,8 @@ async def stability_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 21, 11)
 	messages.reverse()
 
-	iris_answer = one_shot(last_message, heat=0.11)
+	iris_answer = await n_shot(message)
+	print(iris_answer)
 
 	conversation = [
 		{"role": "user", "content": "Cognicism is a meta-ideology that combines democratic large language models called Irises with a system of decentralized voting to enable collective decision making in a way that is informed by the perceptions of many people. Irises utilize FourThought to track the evolution of beliefs over time. FourThought is a protocol for tracking belief state over time via staking questions, predictions, reflections and statements. Irises are essentially large democratic language models that use FourThought to track the distribution of beliefs in a population over time. Ŧrust is a system of reputation allocation based on the accuracy and impact of one's thoughts and contributions. It is a way to distribute influence in a network based on the long term value provided by each individual. Ŧrust is a derivative of the attention mechanism in a transformer and functions as a probability distribution across source embeddings to function as a form of contextual dynamic reputation. Iris also makes use of temporal embeddings to make sense of the evolution of collective belief. Cogncism values the prophet incentive and social proof of impact in greater value than the profit incentive."},
@@ -668,7 +674,7 @@ def stability_functions(message):
 	functions = [
 		{
 			"name": "check_goals", 
-			"description": "Check the CSV of the goals we have logged and return a summary",
+			"description": "If user asks you to check goals, check the CSV of the goals we have logged and return a summary",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -708,7 +714,7 @@ def stability_functions(message):
 		},
 		{
 			"name": "stake_thought",
-			"description": "Log or stake a belief within the schema of the fourthought dialectic including thought type (prediction, reflection, statement, prediction), valence (goodness or moral alignment), uncertainty (truth or alignment with reality). If user tells you specifically to log or stake etc",
+			"description": "If the user asks to log or stake a belief, the function processes it within the FourThought framework. The function takes a 'thought' as text and derives type, valence, and verity either from the user's input or uses defaults. The 'type' can be a prediction, reflection, statement, or question. Valence ranges from -1 (full misalignment) to 1 (full alignment), defaulting to 0. Verity ranges from 0 (fully false) to 1 (fully true), defaulting to 0.5. The function requires all these parameters for operation.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -809,9 +815,6 @@ async def n_shot(message, model="new-iris", shots=5, heat=0):
 				break
 
 	messages.reverse()
-
-	with open("text/iris_system_instructions.txt", 'r') as file:
-		system_instructions = file.read()
 
 	# Construct Chat Thread for API
 	conversation = [{"role": "system", "content": system_instructions}]
@@ -938,6 +941,8 @@ async def frankeniris(message, answer="", heat=0.11):
 	)
 
 	response = response.choices[0].message.content.strip()
+
+	print(response)
 
 	response_chunks = split_text_into_chunks(response)
 
