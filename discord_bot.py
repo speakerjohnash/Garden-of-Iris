@@ -602,18 +602,27 @@ async def stability_pool(message):
 
 	# Get Most Recent Comment
 	last_message = [message async for message in channel.history(limit=1)][0]
+	
+	# Function Calling
 	function_details = stability_functions(last_message)
 	# function_details = {}
 
 	if function_details.get("function_call"):
+
 		function_name = function_details["function_call"]["name"]
 		function_args = json.loads(function_details["function_call"]["arguments"])
 		parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
 		embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+		
 		print(parameters_str)
+
 		if function_name == "stake_thought":
 			stake_thought(last_message, function_args)
+		if function_name == "set_goals":
+			await set_goals(last_message, function_args)
+
 		await message.channel.send(embed=embed)
+
 		return
 		
 	# Ignore Slash Commands
@@ -678,12 +687,12 @@ def stability_functions(message):
 			"parameters": {
 				"type": "object",
 				"properties": {
-					"text": {
+					"query": {
 						"type": "string",
-						"description": "Print the users input unchanged"
+						"description": "Sentence describing the date range and priority the user is seeking info about"
 					}
 				},
-				"required": ["text"]
+				"required": ["query"]
 			}
 		},
 		{
@@ -696,10 +705,9 @@ def stability_functions(message):
 						"type": "string",
 						"description": "The goal to be set."
 					},
-					"type": {
+					"goal_date": {
 						"type": "string",
-						"enum": ["short_term", "mid_term", "long_term"],
-						"description": "The type of goal: short term, mid term, or long term."
+						"description": "A description of the when the goal is meant to be achieved by"
 					},
 					"priority": {
 						"type": "number",
@@ -709,7 +717,7 @@ def stability_functions(message):
 						"description": "The priority of the goal, represented as a number between 0 and 1."
 					}
 				},
-				"required": ["goal", "type", "priority"]
+				"required": ["goal", "goal_date", "priority"]
 			}
 		},
 		{
@@ -761,7 +769,76 @@ def stability_functions(message):
 
 	message = response["choices"][0]["message"]
 
-	return message	
+	return message
+
+async def set_goals(message, function_args):
+	"""
+	Save the goals set by the user into a CSV file in a structured form.
+	"""
+
+	goal = function_args.get('goal', '')
+	goal_date = function_args.get('goal_date', '')
+	priority = function_args.get('priority', 0.5)
+
+	user_id = message.author.id
+	username = message.author.name
+	
+	# Get timestamp from message object
+	timestamp = message.created_at.isoformat()
+
+	csv_file = 'goals.csv'
+
+	# Create the CSV file if it doesn't exist
+	if not os.path.isfile(csv_file):
+		with open(csv_file, 'w') as f:
+			writer = csv.writer(f)
+			writer.writerow(['user_id', 'username', 'timestamp', 'goal', 'goal_date', 'priority'])
+
+	# Append the new goal to the CSV file
+	with open(csv_file, 'a') as f:
+		writer = csv.writer(f)
+		writer.writerow([user_id, username, timestamp, goal, goal_date, priority])
+
+def stake_thought(message, function_args):
+
+	thought = function_args.get('thought', '')
+	thought_type = function_args['type']
+	verity = function_args.get('verity', 0.5) 
+	valence = function_args.get('valence', 0) 
+
+	user_id = message.author.id
+	username = message.author.name
+	
+	# Get timestamp from message object
+	timestamp = message.created_at.isoformat()
+
+	csv_file = 'thoughts.csv'
+
+	if not os.path.isfile(csv_file):
+		with open(csv_file, 'w') as f:
+			writer = csv.writer(f)
+			writer.writerow(['user_id', 'username', 'timestamp', 'thought', 'type', 'verity', 'valence'])
+
+	with open(csv_file, 'a') as f:
+		writer = csv.writer(f)
+		writer.writerow([user_id, username, timestamp, thought, thought_type, verity, valence])	
+
+@bot.command()
+async def claim(ctx, *, thought):
+	"""
+	/claim log a claim for the iris to learn
+	"""
+
+	global training_data
+
+	# Send Clarification and Share UI
+	prompt = "Share something about in the general latent space of Cognicism"
+
+	if thought is not None:
+		training_data.loc[len(training_data.index)] = [prompt, thought, ctx.message.author.name] 
+		training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
+
+	await ctx.send("Attestation saved")
 
 @bot.event
 async def on_ready():
@@ -1223,47 +1300,6 @@ async def davinci(ctx, *, thought):
 
 	await ctx.send(embed=embed)
 	await ctx.send(view=view)
-
-@bot.command()
-async def claim(ctx, *, thought):
-	"""
-	/claim log a claim for the iris to learn
-	"""
-
-	global training_data
-
-	# Send Clarification and Share UI
-	prompt = "Share something about in the general latent space of Cognicism"
-
-	if thought is not None:
-		training_data.loc[len(training_data.index)] = [prompt, thought, ctx.message.author.name] 
-		training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
-
-	await ctx.send("Attestation saved")
-
-def stake_thought(message, function_args):
-
-	thought = function_args.get('thought', '')
-	thought_type = function_args['type']
-	verity = function_args.get('verity', 0.5) 
-	valence = function_args.get('valence', 0) 
-
-	user_id = message.author.id
-	username = message.author.name
-	
-	# Get timestamp from message object
-	timestamp = message.created_at.isoformat()
-
-	csv_file = 'thoughts.csv'
-
-	if not os.path.isfile(csv_file):
-		with open(csv_file, 'w') as f:
-			writer = csv.writer(f)
-			writer.writerow(['user_id', 'username', 'timestamp', 'thought', 'type', 'verity', 'valence'])
-
-	with open(csv_file, 'a') as f:
-		writer = csv.writer(f)
-		writer.writerow([user_id, username, timestamp, thought, thought_type, verity, valence])	
 
 @bot.command()
 async def pullcard(ctx, *, intention=""):
