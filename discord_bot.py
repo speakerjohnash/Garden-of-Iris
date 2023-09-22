@@ -588,6 +588,69 @@ async def prophecy_pool(message):
 	for chunk in response_chunks:
 		await message.channel.send(chunk)
 
+async def health_pool(message):
+	"""
+	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
+	me get into a healthy state of mind without relying on mediation
+	"""
+
+	channel_id = 1147287913927807028
+	channel = bot.get_channel(channel_id)
+	now = datetime.datetime.now()
+
+	# Get Most Recent Comment
+	last_message = [message async for message in channel.history(limit=1)][0]
+	
+	# Function Calling
+	function_details = stability_functions(last_message)
+	# function_details = {}
+		
+	# Check Log
+	if last_message.content.startswith("/check_log"):
+		return
+
+	# Ignore Slash Commands
+	if last_message.content.startswith("/"):
+		return
+
+	messages = await get_conversation_history(channel_id, 50, 21, 11)
+	messages.reverse()
+
+	iris_answer = await n_shot(message)
+
+	conversation = [
+		{"role": "system", "content": "You are a helpful tool that helps people focus on their long term health over time. In this case you are helping someone gradually diminish their THC intake by increasing the time between hits. All hits will be precede with #log and then a description of the hit"},
+		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-09-01T15:02:00. Place special attention on any predictions made within the thread"},
+		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
+		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Help who ever you're speaking to get to a healthier state of being"},
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to guide people towards a healthier future. All hits are logged preceded with #log and all other messages are general health discussion"}
+	]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4",
+		temperature=0.5,
+		max_tokens=300,
+		frequency_penalty=0.42,
+		presence_penalty=0.42,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
+
 async def stability_pool(message):
 	"""
 	Assists users in a Discord channel as an oracle named Iris, with the goal of helping 
@@ -696,6 +759,20 @@ def stability_functions(message):
 			}
 		},
 		{
+			"name": "check_fourthought",
+			"description": "If user asks you to check the ledger of staked thoughts, check the CSV of thoughts logged and return a summary",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"query": {
+						"type": "string",
+						"description": "Sentence describing the date range and other parameters the user is seeking info about, e.g., type, verity, or valence."
+					}
+				},
+			"required": ["query"]
+			}
+		},
+		{
 			"name": "set_goals", 
 			"description": "If user asks you to set a goal, set a new goal with its type and priority",
 			"parameters": {
@@ -771,6 +848,71 @@ def stability_functions(message):
 
 	return message
 
+async def check_goals(message, function_args):
+	"""
+	Check the goals set by the user in a CSV file and summarize it in context using a call to GPT
+	"""
+
+async def check_fourthought(message, function_args):
+	"""
+	Check the fourthought ledger recorded by the user into a CSV file and summarize it in context using a call to GPT
+	"""
+
+	# Retrieve the query parameters from function_args
+	query = function_args.get('query', '')
+
+	# Define the CSV file to read from
+	csv_file = 'fourthought_ledger.csv'
+	channel_id = 1134692579322118156
+	csv_contents = []
+
+	# Open and read the CSV file
+	if os.path.isfile(csv_file):
+		with open(csv_file, 'r') as f:
+			reader = csv.DictReader(f)
+			for row in reader:
+				csv_contents.append(row)
+
+	messages = await get_conversation_history(channel_id, 50, 21, 11)
+	messages.reverse()
+
+	# Start with system message describing the task
+	conversation = [{
+		"role": "system",
+		"content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv"
+	}]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+
+	# Append the user message containing JSON serialized CSV data and the query
+	csv_data_string = json.dumps(csv_contents)
+	conversation.append({
+		"role": "user",
+		"content": f"CSV Data: {csv_data_string}\nQuery: {query}"
+	})
+
+	response = openai.ChatCompletion.create(
+		model="gpt-4",
+		temperature=0.8,
+		max_tokens=400,
+		frequency_penalty=0.5,
+		presence_penalty=0.5,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
+
 async def set_goals(message, function_args):
 	"""
 	Save the goals set by the user into a CSV file in a structured form.
@@ -812,7 +954,7 @@ def stake_thought(message, function_args):
 	# Get timestamp from message object
 	timestamp = message.created_at.isoformat()
 
-	csv_file = 'thoughts.csv'
+	csv_file = 'fourthought_ledger.csv'
 
 	if not os.path.isfile(csv_file):
 		with open(csv_file, 'w') as f:
@@ -1055,6 +1197,7 @@ async def on_message(message):
 		(1103037773327368333, iris_pool),
 		(1086437563654475846, question_pool),
 		(1083409321754378290, prophecy_pool),
+		(1147287913927807028, health_pool),
 	]
 
 	# Iterate over the channel ids and functions
