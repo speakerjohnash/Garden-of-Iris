@@ -600,14 +600,6 @@ async def health_pool(message):
 
 	# Get Most Recent Comment
 	last_message = [message async for message in channel.history(limit=1)][0]
-	
-	# Function Calling
-	function_details = stability_functions(last_message)
-	# function_details = {}
-		
-	# Check Log
-	if last_message.content.startswith("/check_log"):
-		return
 
 	# Ignore Slash Commands
 	if last_message.content.startswith("/"):
@@ -683,6 +675,8 @@ async def stability_pool(message):
 			stake_thought(last_message, function_args)
 		if function_name == "set_goals":
 			await set_goals(last_message, function_args)
+		if function_name == "check_fourthought":
+			await check_fourthought(last_message, function_args)
 
 		await message.channel.send(embed=embed)
 
