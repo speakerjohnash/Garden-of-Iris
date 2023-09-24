@@ -611,12 +611,12 @@ async def health_pool(message):
 	iris_answer = await n_shot(message)
 
 	conversation = [
-		{"role": "system", "content": "You are a helpful tool that helps people focus on their long term health over time. In this case you are helping someone gradually diminish their THC intake by increasing the time between hits. All hits will be precede with #log and then a description of the hit"},
-		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-09-01T15:02:00. Place special attention on any predictions made within the thread"},
+		{"role": "system", "content": "You are a helpful tool developed by John Ash that helps people focus on their long term health over time. The user will log discrete values via #log: [number and unit] and then any notes describing what they're tracking. Your job is to make sense of their progress over time"},
+		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-09-01T15:02:00. Place special attention on any predictions or tracking made within the thread"},
 		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
-		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
+		{"role": "system", "content": "You can see the output of another model called proto-Iris. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
 		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Help who ever you're speaking to get to a healthier state of being"},
-		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to guide people towards a healthier future. All hits are logged preceded with #log and all other messages are general health discussion"}
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, helping users towards healthier outcomes overtime based on values they log their their notes about their progress"}
 	]
 
 	for m in messages:
@@ -672,11 +672,11 @@ async def stability_pool(message):
 		print(parameters_str)
 
 		if function_name == "stake_thought":
-			stake_thought(last_message, function_args)
+			await stake_thought(last_message, function_args)
 		if function_name == "set_goals":
 			await set_goals(last_message, function_args)
-		if function_name == "check_fourthought":
-			await check_fourthought(last_message, function_args)
+		if function_name == "check_log":
+			await check_log(last_message, function_args)
 
 		await message.channel.send(embed=embed)
 
@@ -740,7 +740,7 @@ def stability_functions(message):
 	functions = [
 		{
 			"name": "check_goals", 
-			"description": "If user asks you to check goals, check the CSV of the goals we have logged and return a summary",
+			"description": "If a message starts with /check_goals, check the CSV of the goals we have logged and return a summary",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -753,8 +753,8 @@ def stability_functions(message):
 			}
 		},
 		{
-			"name": "check_fourthought",
-			"description": "If user asks you to check the ledger of staked thoughts, check the CSV of thoughts logged and return a summary",
+			"name": "check_log",
+			"description": "If a message starts with /check_log, check the CSV of thoughts logged and return a summary",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -768,7 +768,7 @@ def stability_functions(message):
 		},
 		{
 			"name": "set_goals", 
-			"description": "If user asks you to set a goal, set a new goal with its type and priority",
+			"description": "If a message starts with /set_goal, set a new goal with its type and priority",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -793,7 +793,7 @@ def stability_functions(message):
 		},
 		{
 			"name": "stake_thought",
-			"description": "If the user asks to log or stake a belief, the function processes it within the FourThought framework. The function takes a 'thought' as text and derives type, valence, and verity either from the user's input or uses defaults. The 'type' can be a prediction, reflection, statement, or question. Valence ranges from -1 (full misalignment) to 1 (full alignment), defaulting to 0. Verity ranges from 0 (fully false) to 1 (fully true), defaulting to 0.5. The function requires all these parameters for operation.",
+			"description": "If a message starts with /stake_thought, the function processes it within the FourThought framework. The function takes a 'thought' as text and derives type, valence, and verity either from the user's input or uses defaults. The 'type' can be a prediction, reflection, statement, or question. Valence ranges from -1 (full misalignment) to 1 (full alignment), defaulting to 0. Verity ranges from 0 (fully false) to 1 (fully true), defaulting to 0.5. The function requires all these parameters for operation.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -847,7 +847,7 @@ async def check_goals(message, function_args):
 	Check the goals set by the user in a CSV file and summarize it in context using a call to GPT
 	"""
 
-async def check_fourthought(message, function_args):
+async def check_log(message, function_args):
 	"""
 	Check the fourthought ledger recorded by the user into a CSV file and summarize it in context using a call to GPT
 	"""
@@ -873,7 +873,7 @@ async def check_fourthought(message, function_args):
 	# Start with system message describing the task
 	conversation = [{
 		"role": "system",
-		"content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv"
+		"content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv. Integrate the summary into a singular paragraph"
 	}]
 
 	for m in messages:
@@ -884,10 +884,7 @@ async def check_fourthought(message, function_args):
 
 	# Append the user message containing JSON serialized CSV data and the query
 	csv_data_string = json.dumps(csv_contents)
-	conversation.append({
-		"role": "user",
-		"content": f"CSV Data: {csv_data_string}\nQuery: {query}"
-	})
+	conversation.append({"role": "user", "content": f"Summarize the following into a paragraph relevant to the current users focus. \n\nCSV Data: {csv_data_string}\nQuery: {query}"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
@@ -935,7 +932,7 @@ async def set_goals(message, function_args):
 		writer = csv.writer(f)
 		writer.writerow([user_id, username, timestamp, goal, goal_date, priority])
 
-def stake_thought(message, function_args):
+async def stake_thought(message, function_args):
 
 	thought = function_args.get('thought', '')
 	thought_type = function_args['type']
