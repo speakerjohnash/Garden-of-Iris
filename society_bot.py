@@ -147,17 +147,24 @@ def chunk_text(text, max_chunk_size=2000):
 
 async def get_full_sentences(text_chunk):
 	
-	prompt = "You are an assistant that takes in noisy text scraped from the internet or pdfs and parses it into only the full sentences to save to a CSV"
-	prompt += "\n The text you are receiving maybe be quite noisy and contain non-standard capitalization. You will print a plain list of full sentences separated by new lines"
-	prompt += "\n Please print a list full sentences found in this text chunk with a new line after each sentence. Capitalize each line and only include full sentences. Ignore fragments. Here is the text chunk: " + text_chunk
+	prompt = """
+	You are an assistant that takes in noisy text scraped from the internet or pdfs and parses it into only the full sentences to save to a CSV.
+	The text you are receiving may be quite noisy and contain non-standard capitalization. You will print a plain list of full sentences separated by new lines.
+	Your primary objective is to extract sentences that pertain directly to the main content of the article. 
+	Please:
+	- Exclude meta-information, website navigation, site disclaimers, and other non-article content.
+	- Ignore fragments, headers, subheaders, footnotes, and questions.
+	- Capitalize each line and only include full sentences.
+	If no relevant sentences are found in a chunk, return an empty string without any explanations or meta-comments.
+	Here is the text chunk: """ + text_chunk
 
 	conversation = [{"role": "system", "content": prompt}]
-	conversation.append({"role": "system", "content": "When printing the list of full sentences, make sure to exclude any headings, subheadings, or other non-paragraph elements."})
-	conversation.append({"role": "user", "content": "Please print a list full sentences found in this text chunk with a new line after each sentence. Ignore questions. Do not repeat any content. Here is the text chunk: " + text_chunk})
+	conversation.append({"role": "system", "content": "Focus on capturing the essence of the article's content. If a chunk does not contain any relevant sentences, simply return an empty string without any explanations."})
+	conversation.append({"role": "user", "content": f"Please print a list of full sentences found in this text chunk. If none are relevant, return an empty string. Here is the text chunk: {text_chunk}"})
 
 	response = openai.ChatCompletion.create(
 		model="gpt-4",
-		temperature=0.5,
+		temperature=0.1,
 		messages=conversation
 	)
 
