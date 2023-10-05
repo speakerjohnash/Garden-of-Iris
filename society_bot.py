@@ -154,7 +154,7 @@ async def get_full_sentences(text_chunk):
 	Please:
 	- Exclude meta-information, website navigation, site disclaimers, and other non-article content.
 	- Ignore fragments, headers, subheaders, footnotes, and questions.
-	- Capitalize each line and only include full sentences.
+	- Capitalize only the first letter of each line and only include full sentences.
 	If no relevant sentences are found in a chunk, return an empty string without any explanations or meta-comments.
 	Here is the text chunk: """ + text_chunk
 
@@ -408,15 +408,33 @@ async def bulk_parse(ctx):
 		claim_id = row[1]['ID']
 		claim = row[1]['Source Sentence']
 
+		# Add context by including a few preceding sentences
+		preceding_context = " ".join(df['Source Sentence'].iloc[max(0, idx-2):idx].tolist())
+
 		# Use the existing parse logic to parse the claim into sub-claims
 		conversation = [
-			{"role": "system", "content": "You are an AI language model. Your task is to break down the given claim into sub-claims. Do not provide any additional information or responses. Only provide the sub-claims as a numbered list."},
+			{"role": "system", "content": "Your task is to analyze and deconstruct the provided claim into distinct, standalone sub-claims. Follow these guidelines:"},
+			{"role": "system", "content": 
+				"""
+				1. **Self-Contained Sub-Claims:** Each sub-claim must be standalone. It should not require any additional context from outside the sub-claim itself to be understood. This means:
+					a. Avoid using pronouns or vague references.
+					b. Explicitly use proper nouns and specific details in each sub-claim.
+					c. Refrain from referencing other sub-claims or the main claim.
+					
+				2. **Specificity:** Be as specific as possible in each sub-claim, providing concrete details rather than vague or general statements.
+
+				3. **No Assumed Knowledge:** Assume the reader of the sub-claim has no knowledge of the original claim or any external context. The sub-claim should be comprehensible on its own.
+
+				4. **Reiteration:** It's okay to reiterate key details across multiple sub-claims if it ensures clarity and standalone understanding.
+				"""
+			},
+			{"role": "user", "content": f"Context: {preceding_context}. Use this context to ensure each sub-claim is self-contained and comprehensible on its own."},
 			{"role": "user", "content": f"Break down the claim into sub-claims: {claim}"}
 		]
 
 		response = openai.ChatCompletion.create(
 			model="gpt-4",
-			temperature=0.7,
+			temperature=0.1,
 			messages=conversation
 		)
 
