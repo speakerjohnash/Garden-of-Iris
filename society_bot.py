@@ -10,6 +10,10 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 import openai
 
+import requests
+from PyPDF2 import PdfReader
+from io import BytesIO
+
 discord_key = os.getenv("SOCIETY_DISCORD_BOT_KEY")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -308,22 +312,27 @@ async def scrape(ctx, *, link):
 
 				print("Scraping for first time")
 
-				# Scrape the website and save the text to a file
-				options = webdriver.ChromeOptions()
-				options.add_argument('--headless')
-				options.add_argument('--disable-gpu')
-				options.add_argument("--no-sandbox")
-				options.add_argument("--disable-dev-shm-usage")
-				driver = webdriver.Chrome(options=options)
-				driver.get(link)
-				html_content = driver.page_source
-				driver.quit()
+				if link.endswith('.pdf'):
+					# Download the PDF
+					response = requests.get(link)
+					with BytesIO(response.content) as open_pdf_file:
+						reader = PdfReader(open_pdf_file)
+						text = "\n".join(reader.pages[i].extract_text() for i in range(len(reader.pages)))
+				else:
+					# Scrape the website and save the text to a file
+					options = webdriver.ChromeOptions()
+					options.add_argument('--headless')
+					options.add_argument('--disable-gpu')
+					options.add_argument("--no-sandbox")
+					options.add_argument("--disable-dev-shm-usage")
+					driver = webdriver.Chrome(options=options)
+					driver.get(link)
+					html_content = driver.page_source
+					driver.quit()
 
-				soup = BeautifulSoup(html_content, 'html.parser')
-				# text = soup.get_text()
-
-				paragraphs = soup.find_all('p')
-				text = ' '.join(paragraph.text for paragraph in paragraphs)
+					soup = BeautifulSoup(html_content, 'html.parser')
+					paragraphs = soup.find_all('p')
+					text = ' '.join(paragraph.text for paragraph in paragraphs)
 
 				# Save the text to the file
 				with open(file_name, 'w', encoding='utf-8') as f:
