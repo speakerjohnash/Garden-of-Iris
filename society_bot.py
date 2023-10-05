@@ -413,23 +413,24 @@ async def bulk_parse(ctx):
 
 		# Use the existing parse logic to parse the claim into sub-claims
 		conversation = [
-			{"role": "system", "content": "Your task is to analyze and deconstruct the provided claim into distinct, standalone sub-claims. Follow these guidelines:"},
+			{"role": "system", "content": "Your task is to succinctly deconstruct the provided claim into distinct, standalone sub-claims. Adhere to the following guidelines:"},
 			{"role": "system", "content": 
 				"""
-				1. **Self-Contained Sub-Claims:** Each sub-claim must be standalone. It should not require any additional context from outside the sub-claim itself to be understood. This means:
+				1. **Brevity:** Limit the number of sub-claims. Focus on the primary ideas and avoid creating multiple sub-claims that convey the same concept.
+
+				2. **Self-Contained Sub-Claims:** Each sub-claim should stand on its own. This means:
 					a. Avoid using pronouns or vague references.
-					b. Explicitly use proper nouns and specific details in each sub-claim.
-					c. Refrain from referencing other sub-claims or the main claim.
-					
-				2. **Specificity:** Be as specific as possible in each sub-claim, providing concrete details rather than vague or general statements.
+					b. Ensure each sub-claim doesn't rely on the context of other sub-claims to be understood.
 
-				3. **No Assumed Knowledge:** Assume the reader of the sub-claim has no knowledge of the original claim or any external context. The sub-claim should be comprehensible on its own.
+				3. **Specificity:** Offer concrete details in each sub-claim and refrain from general statements.
 
-				4. **Reiteration:** It's okay to reiterate key details across multiple sub-claims if it ensures clarity and standalone understanding.
+				4. **No Assumed Knowledge:** The sub-claim should be clear to someone unfamiliar with the original claim or any external context.
+
+				5. **Avoid Reiteration:** While key details can be mentioned for clarity, avoid unnecessary repetition.
 				"""
 			},
-			{"role": "user", "content": f"Context: {preceding_context}. Use this context to ensure each sub-claim is self-contained and comprehensible on its own."},
-			{"role": "user", "content": f"Break down the claim into sub-claims: {claim}"}
+			{"role": "user", "content": f"Context: {preceding_context}. This context should help guide the deconstruction"},
+			{"role": "user", "content": f"Please deconstruct the claim into sub-claims: {claim}"}
 		]
 
 		response = openai.ChatCompletion.create(
