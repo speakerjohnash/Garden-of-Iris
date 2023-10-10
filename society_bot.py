@@ -1,5 +1,6 @@
 import os
 import csv
+import sys
 import discord
 import random
 import string
@@ -296,122 +297,120 @@ async def parse(ctx, claim_id: str):
 
 @bot.command()
 async def scrape(ctx, *, link):
-    """
-    Bring in a source into the stream via scraping and parsing
-    """
+	"""
+	Bring in a source into the stream via scraping and parsing
+	"""
 
-    claims = []
+	claims = []
 
-    if link.startswith('http'):
+	if link.startswith('http'):
 
-        # Prepare the file paths
-        file_name = f"{link.replace('/', '_')}_cached.txt"
-        progress_file = f"{link.replace('/', '_')}_progress.csv"
+		# Prepare the file paths
+		file_name = f"{link.replace('/', '_')}_cached.txt"
+		progress_file = f"{link.replace('/', '_')}_progress.csv"
 
-        # Initialize token counts for later accounting
-        total_input_tokens = 0
-        total_output_tokens = 0
+		# Initialize token counts for later accounting
+		total_input_tokens = 0
+		total_output_tokens = 0
 
-        # Check if the cached CSV file exists
-        if os.path.exists(progress_file):
-            print("Loading from cached CSV")
-            with open(progress_file, 'r', newline='', encoding='utf-8') as csvfile:
-                csvreader = csv.reader(csvfile)
-                next(csvreader)  # Skip the header row
-                all_sentences = [row[0] for row in csvreader]  # Load only the "Source Sentence" column
+		# Check if the cached CSV file exists
+		if os.path.exists(progress_file):
+			print("Loading from cached CSV")
+			with open(progress_file, 'r', newline='', encoding='utf-8') as csvfile:
+				csvreader = csv.reader(csvfile)
+				next(csvreader)  # Skip the header row
+				all_sentences = [row[0] for row in csvreader]  # Load only the "Source Sentence" column
 
-        else:
-            # Check if the cached text file exists
-            if not os.path.exists(file_name):
+		else:
+			# Check if the cached text file exists
+			if not os.path.exists(file_name):
 
-                print("Scraping for first time")
+				print("Scraping for first time")
 
-                if link.endswith('.pdf'):
-                    # Download the PDF
-                    response = requests.get(link)
-                    with BytesIO(response.content) as open_pdf_file:
-                        reader = PdfReader(open_pdf_file)
-                        text = "\n".join(reader.pages[i].extract_text() for i in range(len(reader.pages)))
-                else:
-                    # Scrape the website and save the text to a file
-                    options = webdriver.ChromeOptions()
-                    options.add_argument('--headless')
-                    options.add_argument('--disable-gpu')
-                    options.add_argument("--no-sandbox")
-                    options.add_argument("--disable-dev-shm-usage")
-                    driver = webdriver.Chrome(options=options)
-                    driver.get(link)
-                    html_content = driver.page_source
-                    driver.quit()
+				if link.endswith('.pdf'):
+					# Download the PDF
+					response = requests.get(link)
+					with BytesIO(response.content) as open_pdf_file:
+						reader = PdfReader(open_pdf_file)
+						text = "\n".join(reader.pages[i].extract_text() for i in range(len(reader.pages)))
+				else:
+					# Scrape the website and save the text to a file
+					options = webdriver.ChromeOptions()
+					options.add_argument('--headless')
+					options.add_argument('--disable-gpu')
+					options.add_argument("--no-sandbox")
+					options.add_argument("--disable-dev-shm-usage")
+					driver = webdriver.Chrome(options=options)
+					driver.get(link)
+					html_content = driver.page_source
+					driver.quit()
 
-                    soup = BeautifulSoup(html_content, 'html.parser')
-                    paragraphs = soup.find_all('p')
-                    text = ' '.join(paragraph.text for paragraph in paragraphs)
+					soup = BeautifulSoup(html_content, 'html.parser')
+					paragraphs = soup.find_all('p')
+					text = ' '.join(paragraph.text for paragraph in paragraphs)
 
-                # Save the text to the file
-                with open(file_name, 'w', encoding='utf-8') as f:
-                    f.write(text)
+				# Save the text to the file
+				with open(file_name, 'w', encoding='utf-8') as f:
+					f.write(text)
 
-            # Read the text from the file
-            with open(file_name, 'r', encoding='utf-8') as f:
-                text = f.read()
+			# Read the text from the file
+			with open(file_name, 'r', encoding='utf-8') as f:
+				text = f.read()
 
-            # Chunk text
-            text_chunks = chunk_text(text)
-            all_sentences = []
+			# Chunk text
+			text_chunks = chunk_text(text)
+			all_sentences = []
 
-            await ctx.send(f"Number of chunks in the scraped source: {len(text_chunks)}")
+			await ctx.send(f"Number of chunks in the scraped source: {len(text_chunks)}")
 
-            for i, text_chunk in enumerate(text_chunks):
-                await ctx.send(f"Processing text chunk #{i+1}")
-                sentences, input_tokens, output_tokens = await get_full_sentences(text_chunk)
-                total_input_tokens += input_tokens
-                total_output_tokens += output_tokens
-                all_sentences.extend(sentences)
+			for i, text_chunk in enumerate(text_chunks):
+				await ctx.send(f"Processing text chunk #{i+1}")
+				sentences, input_tokens, output_tokens = await get_full_sentences(text_chunk)
+				total_input_tokens += input_tokens
+				total_output_tokens += output_tokens
+				all_sentences.extend(sentences)
 
-                # Prepare the sentences for sending
-                sentences_message = "\n".join([f"{j+1}. {sentence}" for j, sentence in enumerate(sentences)])
+				# Prepare the sentences for sending
+				sentences_message = "\n".join([f"{j+1}. {sentence}" for j, sentence in enumerate(sentences)])
 
-                # Send the sentences
-                message_to_send = f"Processed sentences from text chunk #{i+1}:\n{sentences_message}"
-                
-                for chunk in chunk_text(message_to_send):
-                    await ctx.send(chunk)
+				# Send the sentences
+				message_to_send = f"Processed sentences from text chunk #{i+1}:\n{sentences_message}"
+				
+				for chunk in chunk_text(message_to_send):
+					await ctx.send(chunk)
 
-            # Write sentences to the progress CSV
-            with open(progress_file, 'w', newline='', encoding='utf-8') as csvfile:
-                csvwriter = csv.writer(csvfile)
-                csvwriter.writerow(["Source Sentence", "Sub-Claims", "ID"])  # Write the header row
-                for sentence in all_sentences:
-                    id_ = generate_hex_id()
-                    csvwriter.writerow([sentence, "", id_])  # Leave the Sub-Claim column blank
+			# Write sentences to the progress CSV
+			with open(progress_file, 'w', newline='', encoding='utf-8') as csvfile:
+				csvwriter = csv.writer(csvfile)
+				csvwriter.writerow(["Source Sentence", "Sub-Claims", "ID"])  # Write the header row
+				for sentence in all_sentences:
+					id_ = generate_hex_id()
+					csvwriter.writerow([sentence, "", id_])  # Leave the Sub-Claim column blank
 
-        # Compute the total cost
-        total_cost = total_input_tokens / 1000 * MODEL_PRICING['gpt-4']['input'] + total_output_tokens / 1000 * MODEL_PRICING['gpt-4']['output']
-        cost_per_sentence = total_cost / len(all_sentences) if all_sentences else 0  # protect against division by zero
+		# Compute the total cost
+		if not os.path.exists(progress_file):
 
-        await ctx.send(f"Total input tokens used: {total_input_tokens}")
-        await ctx.send(f"Total output tokens used: {total_output_tokens}")
-        await ctx.send(f"Total cost for parsing: ${total_cost:.2f}")
-        await ctx.send(f"Number of sentences: {len(all_sentences)}")
-        await ctx.send(f"Cost per sentence: ${cost_per_sentence:.5f}")
+			total_cost = total_input_tokens / 1000 * MODEL_PRICING['gpt-4']['input'] + total_output_tokens / 1000 * MODEL_PRICING['gpt-4']['output']
+			cost_per_sentence = total_cost / len(all_sentences) if all_sentences else 0  # protect against division by zero
 
-        # Get the user_id and the corresponding user_session
-        user_id = ctx.author.id
-        user_session = user_sessions[user_id]
+			await ctx.send(f"Total input tokens used: {total_input_tokens}")
+			await ctx.send(f"Total output tokens used: {total_output_tokens}")
+			await ctx.send(f"Total cost for parsing: ${total_cost:.2f}")
+			await ctx.send(f"Number of sentences: {len(all_sentences)}")
+			await ctx.send(f"Cost per sentence: ${cost_per_sentence:.5f}")
 
-        # Update user_session with the desired information
-        user_session['text_file'] = file_name
-        user_session['csv_file'] = progress_file
-        user_session['website'] = link
-        user_session['num_sentences'] = len(all_sentences)
-        user_session['current_claim_id'] = ""
-        user_session['current_claim_text'] = ""
-        user_session['current_subclaim_list'] = ""
+		# Get the user_id and the corresponding user_session
+		user_id = ctx.author.id
+		user_session = user_sessions[user_id]
 
-        user_session_str = "Number of Sentences: " + str(user_session["num_sentences"])
-        
-        await ctx.send(user_session_str)
+		# Update user_session with the desired information
+		user_session['text_file'] = file_name
+		user_session['csv_file'] = progress_file
+		user_session['website'] = link
+		user_session['num_sentences'] = len(all_sentences)
+		user_session['current_claim_id'] = ""
+		user_session['current_claim_text'] = ""
+		user_session['current_subclaim_list'] = ""
 
 @bot.command()
 async def bulk_parse(ctx):
@@ -431,6 +430,7 @@ async def bulk_parse(ctx):
 	await ctx.send("Starting the bulk parsing process. This might take a while...")
 
 	update_interval = len(df) // 10
+	
 	if update_interval == 0:
 		update_interval = 1
 
@@ -464,7 +464,7 @@ async def bulk_parse(ctx):
 			{"role": "user", "content": f"Please deconstruct the claim into sub-claims: {claim}"}
 		]
 
-		model_name = "gpt-3.5-turbo"
+		model_name = "gpt-4"
 
 		response = openai.ChatCompletion.create(
 			model=model_name,
