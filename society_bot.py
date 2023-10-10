@@ -16,7 +16,7 @@ from PyPDF2 import PdfReader
 from io import BytesIO
 
 discord_key = os.getenv("SOCIETY_DISCORD_BOT_KEY")
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("SOCIETY_OPENAI_KEY")
 
 intents = discord.Intents.default()
 intents.members = True
@@ -413,7 +413,7 @@ async def scrape(ctx, *, link):
 		user_session['current_subclaim_list'] = ""
 
 @bot.command()
-async def bulk_parse(ctx):
+async def bulk_parse(ctx, author: str = None, article_title: str = None):
 	"""
 	Bulk parses all lines in the document and saves them to the CSV.
 	"""
@@ -430,7 +430,7 @@ async def bulk_parse(ctx):
 	await ctx.send("Starting the bulk parsing process. This might take a while...")
 
 	update_interval = len(df) // 10
-	
+
 	if update_interval == 0:
 		update_interval = 1
 
@@ -460,9 +460,14 @@ async def bulk_parse(ctx):
 				5. **Avoid Reiteration:** While key details can be mentioned for clarity, avoid unnecessary repetition.
 				"""
 			},
-			{"role": "user", "content": f"Context: {preceding_context}. This context should help guide the deconstruction"},
+			{"role": "assistant", "content": "I will NEVER start a sub-claim with 'The claim' instead making the sub-claim self-contained using context"},
+			{"role": "user", "content": f"This is the preceding text from the article: {preceding_context}. This context should help guide the deconstruction when the current claim is vague"},
 			{"role": "user", "content": f"Please deconstruct the claim into sub-claims: {claim}"}
 		]
+
+		# Add the author and article title context to the conversation if provided
+		if author and article_title:
+			conversation.insert(4, {"role": "user", "content": f"The claim comes from an article. The author's name is {author}. The title of the article is '{article_title}'. Do NOT start a sub-claim with 'The claim' or 'The paper' or 'The speaker' or 'The author'. Instead each sub-claim must make sense on its own and be a standalone statement"})
 
 		model_name = "gpt-4"
 
