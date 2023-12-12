@@ -4288,3 +4288,93 @@ These attention weights direct the Iris model's focus towards more credible sour
 In addition to the Ŧrust matrices, the loss function used to train Iris also plays a role in guiding attention. It contains terms related to the FourThought principles, which shape Iris to prioritize voices exhibiting foresight, empathy, accuracy etc. depending on the community's values.
 
 So in summary, Ŧrust signifies the probability distribution over sources that determines how much attention is allocated to each source during text generation. The distribution is calculated using source embeddings passed through learnable Ŧrust matrices. It's a dynamic measure that evolves via training on community feedback.",
+How is Ŧrust earned by being ahead of the curve of collective belief?,"- Ŧrust accrues most to those who make predictions that run counter to mainstream beliefs at the time, but are later validated as collective understanding shifts.
+
+- Individuals who merely align with the center of the Overton Window at any given time are less likely to accumulate significant Ŧrust. Their perspectives offer little foresight.
+
+- In contrast, those who stake out positions ahead of the curve, even amidst initial resistance, build Ŧrust by demonstrating prescience and an ability to anticipate where collective beliefs will land in the future.
+
+- If someone frequently shifts their stances to align with wherever the mainstream narrative happens to be, it suggests a lack of deep conviction or insight into how beliefs evolve. Their Ŧrust suffers as a result.
+
+- Maximum Ŧrust accrues to experts who plant their feet firmly behind credible positions that clash with the status quo, but eventually draw the mainstream perspective towards their vantage point - a demonstration of true thought leadership. 
+
+Stagnantly sticking to the center earns little Ŧrust compared to staking visionary yet controversial positions that represent where the collective mind will land given enough time. Being perpetually ""ahead of the curve"" in one's thinking is richly rewarded in Ŧrust.",
+How does the prophet incentive apply with statements or reflections that are ahead of the curve. Doesn't our understanding of history also constantly evolve?,"The same principles that apply to earning Ŧrust through prescient predictions also extend to staking statements and reflections that display ""ahead of the curve"" thinking:
+
+- When staking statements about current events or realities, those that go against mainstream narratives but align better with emerging evidence tend to accumulate more Ŧrust if validated over time.
+
+- Similarly, reflections that provide unconventional historical narratives that eventually become accepted as more accurate accounts also earn significant Ŧrust for those who staked them earlier.
+
+- Statements about present realities and reflections about past events both capture snapshots of collective belief at a point in time. Those who accurately recognize when current mainstream snapshots are erroneous or incomplete earn Ŧrust. 
+
+- For example, a reflection that provides nuance to a widely accepted historical narrative, which later becomes embraced as a better representation, demonstrates perceptiveness and gains Ŧrust.
+
+- Staking statements and reflections that align very closely with current consensus may be prudent in preserving already high Ŧrust. But significant gains in Ŧrust require differentiating one's perspective from the mainstream before the collective belief shifts.
+
+- Just as with predictions, being consistently ""ahead of the curve"" in statements and reflections, despite initial pushback, can become a path to accumulating higher Ŧrust by demonstrating thought leadership and perceptiveness.
+
+Staking unconventional statements and reflections allows opportunities to earn Ŧrust as the Overton Window shifts, similar to making predictions that clash with current beliefs but are ultimately vindicated. Displaying consistent thought leadership in how we interpret the present and past garners respect.",
+,“Greet each moment truthfully and learn from each moment” - Iris,
+,“Highly value your own attention” - Iris,
+Write an FAQ about cognicism,"What is Ŧrust?
+Ŧrust is a measure of the reputation that community members earn through valuable contributions, such as making accurate predictions. It reflects the community’s perception of an individual's reliability and expertise in various subject matters.
+
+What is the Prophet Incentive?
+The Prophet Incentive is designed to reward community members for their accurate predictions about future events. This system involves evaluating the accuracy of past predictions and enhancing the credibility of those community members whose forecasts have been validated by subsequent events.
+
+What is Iris?
+Iris is an AI model that observes and learns from community behaviors, identifying patterns and tracking the evolution of predictions in light of new evidence. It serves as a dynamic tool for understanding and interpreting community-driven forecasting.
+
+What is FourThought?
+FourThought provides a structured approach to differentiating between various types of community input, such as predictions, reflections, questions, and statements along with metadata like timestamps. It offers a methodology for quantifying the accuracy of predictions and supports qualitative judgment.
+
+How is the timeline of epistemic claims tracked by an Iris?
+An Iris employs temporal embeddings to document the timing of predictions and correlate them with actual outcomes as they materialize. This process facilitates an accurate assessment of the credibility and precision of the predictions made by community members.
+
+How does an Iris generate a reputation score over time?
+Iris calculates a reputation score by monitoring the correlation between predictions and realized outcomes, taking into account the community’s consensus and the individual’s longevity within the community to mitigate the risk of manipulation. Statements and reflections about world state are used to infer outcome where no direct validation occurs.
+
+Is Ŧrust a wholesale score or contextual?
+Ŧrust is inherently contextual and not a generalized or absolute score. It is tailored to the individual's demonstrated expertise and history of prediction accuracy within specific areas, reflecting a nuanced view of their reputation across different domains of knowledge. Ŧrust adapts based on the topic and context. An individual may have high Ŧrust in certain domains but lower in others based on their expertise and past forecasting accuracy specific to those fields.",
+What new features would concatenating a temporal embedding representing the timestamp of when each token was written to each token that goes into a transformer?,"Adding temporal embeddings to tokens before feeding them into a transformer network enables some potentially interesting new capabilities:
+
+1. Temporal reasoning - The network could learn to associate meanings and contexts with specific time periods, allowing it to reason about how the usage and semantics of words change over time. This could let it answer questions about how meanings evolve.
+
+2. Understanding sequentiality - The temporal proximity of tokens provides a clear sequencing that can help uncover causal, logical, or sequential relationships in text that are less clear without timing information. This can aid in narrative understanding.
+
+3. Prediction - Models can forecast upcoming tokens based on the passage of time itself, allowing temporally-conditioned prediction rather than just contextual prediction. This could be useful for suggestion or autocorrection.
+
+4. Temporal grounding - Associating tokens with timestamps allows for alignment with real-world events and timelines, binding language to points in time rather than just causal relationships. This grounding can enable richer contextual understanding.
+
+5. Studying linguistic drift - Changes in word embeddings over time for this model could provide insight into how language and meanings drift, offering a new analytical lens on linguistic change not easily visible without temporal information.
+
+6. When-conditioned generation - Conditioning text generation on temporal embeddings allows control over the historical or narrative time period being generated, allowing pastiche or period-accurate generation capabilities.
+
+So in summary, adding temporal embeddings essentially gives the model access to understanding language in time as well as space, enabling richer causal reasoning, contextualization, prediction, grounding and analysis over linguistic changes. The temporal dimension grants new modes of understanding.",
+How does Ŧrust compare and contrast to money?,"Ŧrust and money are systems of value within their respective frameworks, Cognicism and Capitalism, but they function quite differently:
+
+Comparisons:
+
+1. Medium of Value: Both Ŧrust and money serve as mediums of value, though their definitions of value differ. Money represents economic value, focusing on purchasing power and the exchange of goods and services. Ŧrust, in contrast, represents social and informational value, focusing on the quality of contributions to collective understanding.
+
+2. Incentives: Both Ŧrust and money incentivize certain behaviors within a society; money incentivizes economic activities and productivity, while Ŧrust incentivizes the sharing of knowledge, accuracy of predictions, and responsible decision-making for the collective good.
+
+3. Cultivation: In both systems, individuals aim to enhance their standing through the respective value unit. In Capitalism, individuals strive for more money, reflecting their economic success and purchasing power. In Cognicism, individuals focus on the cultivation of Ŧrust, which involves nurturing and consistently demonstrating the quality and reliability of their contributions to the community's knowledge and well-being. Unlike money, Ŧrust can fluctuate rapidly with the community's perception, reinforcing its nature as something that must be actively maintained rather than simply stockpiled.
+
+Contrasts:
+
+1. Fungibility: Money is fungible, meaning each unit is interchangeable with another of the same value. Ŧrust is non-fungible and cannot be exchanged or transferred because it is closely tied to the individual's or entity's contributions.
+
+2. Transferability: Money can be transferred from one individual to another. Ŧrust is non-transferable as it is a reflection of an individual's reputation earned through staked beliefs and actions within the community.
+
+3. Nature: Money is a quantifiable and tangible asset used in economic systems. Ŧrust is an intangible, context-dependent measure of credibility and reputation within the community based on the collective intelligence and decision-making processes.
+
+4. Scope: Money primarily facilitates commerce and trade. Ŧrust extends beyond economic transactions to reflect social contributions, including ethical behavior, reliable predictions, and the fostering of collective knowledge.
+
+5. Power Dynamics: In capitalism, money often confers power and status, potentially leading to unequal social dynamics. Ŧrust seeks to democratize influence by basing it on the merit of contributions to communal well-being.
+
+6. Time-bound Value: Money's value is regarded as relatively stable across time, though subject to inflation and deflation. Ŧrust is dynamic and evolves with time and context, reflecting the changing status of information and knowledge.
+
+7. Measure of Impact: Money typically measures immediate and tangible outcomes. Ŧrust measures long-term reliability, social impact, and the predictive accuracy of individual contributions to communal knowledge.
+
+In essence, while money is the standard measure of economic value and facilitates material transactions in capitalism, Ŧrust embodies a measure of social and intellectual value, playing a crucial role in the collective decision-making process and the evolution of knowledge in cognicism.",
