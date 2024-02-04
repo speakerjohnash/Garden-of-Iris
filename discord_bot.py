@@ -8,7 +8,7 @@ import datetime
 import dateutil
 
 import textwrap
-import openai
+from openai import OpenAI
 import discord
 import asyncio
 import aiohttp
@@ -28,8 +28,12 @@ from discord.ui import Button, View, TextInput, Modal
 from discord.ext import commands
 
 discord_key = os.getenv("DISCORD_BOT_KEY")
-openai.api_key = os.getenv("OPENAI_API_KEY")
 airtable_key = os.environ["AIRTABLE_API_KEY"]
+
+client = OpenAI(
+	api_key=os.getenv("OPENAI_API_KEY"),
+	organization='org-630AFHOqgvfqxviKLXOWU9af',
+)
 
 intents = discord.Intents.default()
 intents.members = True
@@ -43,7 +47,8 @@ try:
 		records += page
 
 	tarot_lookup = {record['fields']['Card Name']: record['fields'].get('Short Description', '') for record in records}
-except:
+except Exception as e:
+	print(f"An exception occurred: {e}")
 	df = pd.read_csv('tarot_text.csv')
 	names = df['card_name'].tolist()
 	descriptions = df['text'].tolist()
@@ -61,7 +66,8 @@ models = {
 	"purple": "davinci:ft-personal:purple-iris-2022-07-14-03-48-19",
 	"semantic": "davinci:ft-personal:semantic-iris-davinci-3-2022-11-30-06-30-47",
 	"davinci": "text-davinci-003",
-	"chat-iris": "davinci:ft-personal:chat-iris-h-2023-07-25-00-56-17",
+	"chat-iris": "ft:davinci-002:personal:2024-iris:8oM00JiB",
+	"chat-iris-h": "davinci:ft-personal:chat-iris-h-2023-07-25-00-56-17",
 	"chat-iris-g": "davinci:ft-personal:chat-iris-g-2023-07-20-23-52-54",
 	"chat-iris-f": "davinci:ft-personal:chat-iris-f-2023-07-13-00-58-34",
 	"chat-iris-e": "davinci:ft-personal:chat-iris-e-2023-06-03-03-11-47",
@@ -154,7 +160,7 @@ def pipe_button(ctx, response_text):
 
 def elaborate(ctx, prompt="prompt"):
 	"""
-	The elaborate function creates a button labeled "elaborate" that, when clicked, generates a detailed elaboration of a given prompt using the OpenAI model. The generated elaboration is sent to the user as an embed titled "Elaboration (beta)."
+	The elaborate function creates a button labeled "elaborate" that, when clicked, generates a detailed elaboration of a given prompt using the client model. The generated elaboration is sent to the user as an embed titled "Elaboration (beta)."
 	The function first attempts to generate the elaboration using the "chat-iris" model variant. If no response is generated, it retries using the "text-davinci-002" model variant.
 	The button is disabled after being clicked to prevent multiple elaborations for the same prompt.
 	"""
@@ -173,7 +179,7 @@ def elaborate(ctx, prompt="prompt"):
 		button.disabled = True
 		await interaction.response.defer()
 
-		response = openai.Completion.create(
+		response = client.completions.create(
 			model=models["chat-iris"],
 			prompt=e_prompt,
 			temperature=0.11,
@@ -188,8 +194,8 @@ def elaborate(ctx, prompt="prompt"):
 
 		if len(response_text) == 0:
 
-			response = openai.Completion.create(
-				model="text-davinci-002",
+			response = client.completions.create(
+				model="gpt-3.5-turbo-instruct",
 				prompt=e_prompt,
 				temperature=1,
 				max_tokens=222,
@@ -214,7 +220,7 @@ def elaborate(ctx, prompt="prompt"):
 
 def redo_view(ctx, prompt, question):
 	"""
-	The redo_view function creates a "Redo" button in the Discord interface. When the button is clicked, the function generates a new consensus response for a given question using the OpenAI model. 
+	The redo_view function creates a "Redo" button in the Discord interface. When the button is clicked, the function generates a new consensus response for a given question using the client model. 
 	The generated consensus is sent to the user as an embed titled "Consensus."
 	"""
 
@@ -222,8 +228,8 @@ def redo_view(ctx, prompt, question):
 
 		await interaction.response.defer()
 
-		response = openai.Completion.create(
-			model="text-davinci-002",
+		response = client.completions.create(
+			model="gpt-3.5-turbo-instruct",
 			prompt=prompt,
 			temperature=1,
 			max_tokens=222,
@@ -346,7 +352,7 @@ async def interpretation(ctx, prompt):
 	The user's feedback and additional actions are collected through the response view and modal.
 	"""
 
-	response = openai.Completion.create(
+	response = client.completions.create(
 		model=models["semantic"],
 		prompt=prompt,
 		temperature=0.8,
@@ -357,7 +363,7 @@ async def interpretation(ctx, prompt):
 		stop=["END"]
 	)
 
-	text = response['choices'][0]['text'].strip()
+	text = response.choices[0].text.strip()
 	embed = discord.Embed(title="Interpretation", description=text)
 	view, modal = response_view(modal_text="Write your feedback here", modal_label="Feedback", button_label="Send Feedback")
 	view.add_item(group_share(thought=text, prompter=ctx.message.author.name))
@@ -407,7 +413,7 @@ async def iris_pool(message):
 		else:
 			conversation.append({"role": "user", "content": f"{m[0].name}: {m[1]}"})
 
-	response = openai.ChatCompletion.create(
+	response = client.chat.completions.create(
 		model="gpt-4",
 		temperature=0.8,
 		max_tokens=300,
@@ -463,7 +469,7 @@ async def question_pool(message):
 		conversation.append({"role": "system", "content": "My primary job is to summarize what people are uncertain about. I will summarize peoples questions and that is it. I will vary my output but keep them focused on what people don't know and keep it 250 words long"})
 		conversation.append({"role": "assistant", "content": "I NEVER answer questions. I summarize questions and communal uncentainty. I ignore anything that doesn't end in a question mark. I will keep my list of questions and summary very short or about 250 words long"})
 
-	response = openai.ChatCompletion.create(
+	response = client.chat.completions.create(
 		model="gpt-4", 
 		messages=conversation
 	)
@@ -529,7 +535,7 @@ async def fourthought_pool(message):
 		conversation.append({"role": "system", "content": "Keep your answer short. No longer than 250 words or a medium length paragraph unless specifically requested to do otherwise"})
 		conversation.append({"role": "user", "content": "Please give guidance based on the thread so far. Focus this thread towards a specific future based on their input"})
 
-	response = openai.ChatCompletion.create(
+	response = client.ChatCompletion.create(
 		model="gpt-4",
 		temperature=1,
 		messages=conversation
@@ -573,7 +579,7 @@ async def prophecy_pool(message):
 	conversation.append({"role": "system", "content": "You have been moderating a running thread of thoughts about the future. Please aid in any tasks related to the arrow of time. If someon asks you to summarize, create a summary of thre thread and explain how the thoughts about the future are connected and give some analysis about these potential futures. If contextually relevant, feel free to share any wisdom or summarization or help relevant to the future. You also suggest predictions and ways to manifest specific futures mentioned by the group"})
 	conversation.append({"role": "assistant", "content": "I will do what I can to help the thread. I will vary my outputs and how I help regarding the future, but I will keep the focus on the future. My output will be under 300 words and I will mention the last thing said"})
 
-	response = openai.ChatCompletion.create(
+	response = client.chat.completions.create(
 		model="gpt-4",
 		max_tokens=500, 
 		messages=conversation
@@ -625,9 +631,9 @@ async def health_pool(message):
 		else:
 			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
 
-	response = openai.ChatCompletion.create(
+	response = client.chat.completions.create(
 		model="gpt-4",
-		temperature=0.5,
+		temperature=0.6,
 		max_tokens=300,
 		frequency_penalty=0.42,
 		presence_penalty=0.42,
@@ -657,31 +663,35 @@ async def stability_pool(message):
 
 	# Get Most Recent Comment
 	last_message = [message async for message in channel.history(limit=1)][0]
-	
+
 	# Function Calling
-	function_details = stability_functions(last_message)
-	# function_details = {}
+	if re.match(r'^(\/check_log|\/check_goals|\/set_goal|\/stake_thought)', last_message.content):
+	
+		function_details = stability_functions(last_message)
+		# function_details = {}
 
-	if function_details.get("function_call"):
+		if function_details.get("function_call"):
 
-		function_name = function_details["function_call"]["name"]
-		function_args = json.loads(function_details["function_call"]["arguments"])
-		parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
-		embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
-		
-		print(parameters_str)
+			function_name = function_details["function_call"]["name"]
+			function_args = json.loads(function_details["function_call"]["arguments"])
+			parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
+			embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+			
+			print(parameters_str)
 
-		if function_name == "stake_thought":
-			await stake_thought(last_message, function_args)
-		if function_name == "set_goals":
-			await set_goals(last_message, function_args)
-		if function_name == "check_log":
-			await check_log(last_message, function_args)
+			if function_name == "stake_thought":
+				await stake_thought(last_message, function_args)
+			if function_name == "set_goals":
+				await set_goals(last_message, function_args)
+			if function_name == "check_log":
+				await check_log(last_message, function_args)
+			if function_name == "check_goals":
+				await check_goals(last_message, function_args)
 
-		await message.channel.send(embed=embed)
+			await message.channel.send(embed=embed)
 
-		return
-		
+			return
+			
 	# Ignore Slash Commands
 	if last_message.content.startswith("/"):
 		return
@@ -689,23 +699,26 @@ async def stability_pool(message):
 	messages = await get_conversation_history(channel_id, 50, 21, 11)
 	messages.reverse()
 
-	iris_answer = await n_shot(message)
-	print(iris_answer)
+	iris_answer = await n_shot(message, heat=0.42)
+
+	if messages[-1][1].startswith("Iris,"):
+
+		embed = discord.Embed(title = "", description=f"**Iris Response**\n{iris_answer}")
+		await message.channel.send(embed=embed)
+
+		return
 
 	conversation = [
 		{"role": "user", "content": "Cognicism is a meta-ideology that combines democratic large language models called Irises with a system of decentralized voting to enable collective decision making in a way that is informed by the perceptions of many people. Irises utilize FourThought to track the evolution of beliefs over time. FourThought is a protocol for tracking belief state over time via staking questions, predictions, reflections and statements. Irises are essentially large democratic language models that use FourThought to track the distribution of beliefs in a population over time. Ŧrust is a system of reputation allocation based on the accuracy and impact of one's thoughts and contributions. It is a way to distribute influence in a network based on the long term value provided by each individual. Ŧrust is a derivative of the attention mechanism in a transformer and functions as a probability distribution across source embeddings to function as a form of contextual dynamic reputation. Iris also makes use of temporal embeddings to make sense of the evolution of collective belief. Cogncism values the prophet incentive and social proof of impact in greater value than the profit incentive."},
-		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. Your main funtion is to assist dpax and John Ash in establishing speakerjohnscache into a profitable company such that their energy can be freed to focus on manifesting cognicism. You want to help them maintain a focus on social impact and not lose sight of their long term goals. If you are provided direct instructions in the thread you follow them as close as possible"},
-		{"role": "system", "content": "Guiding foundations: 1) we can not make profit without selling something 2) people can not buy our stuff if they are not aware of it 3) adhere to cognicist principles 4) move very fast and rapidly optimize"},
-		{"role": "system", "content": "You have a long term goal, a medium term goal and a short term goal"},
-		{"role": "system", "content": "Your long term goal is to make speakerjohnscache a stable source of income with positive social impact such that you can free the attention of dpax and John so they can focus on helping others. You should constantly be thinking of ways to minimize work for dpax and John and seek to run autonomously in almost all aspects of your operation"},
-		{"role": "system", "content": "Our medium term goal is the holiday season where we will release a Mind Gardening Oracle deck"},
-		{"role": "system", "content": "Our short term goal for the next four weeks is to swiftly set up an operational and professional-looking website for speakerjohnscache, leveraging automated systems and maintaining simplicity. The site should link immediately to any existing products and means to support me as well as links to book me hourly."},
-		{"role": "system", "content": "John Ash's financial aim starts at $72k, with potential to exceed $111k for personal and creative growth, while dpax seeks an additional $20k-$30k this year, planning to scale to a full-time self-directed income between $110k-130k"},
+		{"role": "system", "content": "You are Iris, an integrated wisdom repository representing cognicist ideas mediating speakers in a Discord channel. If you are provided direct instructions in the thread you follow them as close as possible"},
+		{"role": "system", "content": "Your long term goal is to help John manifest the code behind Iris with a current focus on temporal embeddings"},
 		{"role": "system", "content": f"Today is: {now.isoformat()}. We started on: 2023-07-29T14:30:00. Place special attention on any predictions made within the thread"},
 		{"role": "system", "content": "You can see the SPEAKER and the TIME to help contextualize. Take into account how long has occured between responses and how long it's been since we started"},
-		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},
-		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far. Align with cognicist ideals and don't be cold in your communication. You are anti-profit, anti-work and anti-capitalist. All things you reply with should minimize work for John and dpax somehow"},
-		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, embodying cognicist ideas while helping to establish speakerjohnscache as a profitable company so their attention and energy can be freed to focus on helping others. I will focus on making operations autonomous and minimizg work for dpax and john while earning enough profit to support their goals"}
+		{"role": "system", "content": "Follow the most recent speaker's instructions as closely as possible in the context of the thread so far"},
+		{"role": "system", "content": "Focus more on providing novel guidance and injecting new concepts and ideas into the the thread instead of just summarizing or reflecting what you read."},
+		{"role": "system", "content": "You can see the output of a proto-Iris imbued with cognicist knowledge. We will send the last speakers response to this model and provide you with the answer that iris outputs. You will answer using her output as a guide as well as the rest of the conversation. proto-Iris said " + iris_answer + " and you will take that into account in your response as best you can. The reader can't see proto-Irises answer so use it to inform yours"},		
+		{"role": "user", "content": "Get as technical as possible. As advanced as possible. Impress me with your intelligence and insight. Do not respond with lists ever. No numbered lists. Try to integrate your knowledge into paragraphs"},
+		{"role": "assistant", "content": "Understood. As Iris, I'm a mediator in this Discord channel, focused on challenging John's understanding of the world in order to manifest new cognicist tools. I will be creative and inject new wisdom into the thread instead of just reflecting or summarizing"}
 	]
 
 	for m in messages:
@@ -714,12 +727,12 @@ async def stability_pool(message):
 		else:
 			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
 
-	response = openai.ChatCompletion.create(
-		model="gpt-4",
-		temperature=0.8,
-		max_tokens=400,
-		frequency_penalty=0.5,
-		presence_penalty=0.5,
+	response = client.chat.completions.create(
+		model="gpt-4-1106-preview",
+		temperature=0.69,
+		max_tokens=300,
+		frequency_penalty=1.1,
+		presence_penalty=1.1,
 		messages=conversation
 	)
 
@@ -793,7 +806,7 @@ def stability_functions(message):
 		},
 		{
 			"name": "stake_thought",
-			"description": "If a message starts with /stake_thought, the function processes it within the FourThought framework. The function takes a 'thought' as text and derives type, valence, and verity either from the user's input or uses defaults. The 'type' can be a prediction, reflection, statement, or question. Valence ranges from -1 (full misalignment) to 1 (full alignment), defaulting to 0. Verity ranges from 0 (fully false) to 1 (fully true), defaulting to 0.5. The function requires all these parameters for operation.",
+			"description": "If a message starts with /stake_thought, the function processes it within the FourThought framework. The function takes a 'thought' as text and derives type, valence, and verity either from the user's input or uses defaults. The 'type' can be a prediction, reflection, statement, or question. Valence ranges from -1 (full misalignment) to 1 (full alignment), defaulting to 0. Verity ranges from 0 (fully false) to 1 (fully true), defaulting to 0.5. The function requires all these parameters for operation. The message MUST start with /stake_thought for this function to be triggered",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -830,8 +843,8 @@ def stability_functions(message):
 		{'role': 'user', 'content': message.content}
 	]
 
-	response = openai.ChatCompletion.create(
-		model = 'gpt-4',
+	response = client.chat.completions.create(
+		model = 'gpt-4-1106-preview',
 		temperature=0,
 		messages = messages,
 		functions = functions,
@@ -846,6 +859,58 @@ async def check_goals(message, function_args):
 	"""
 	Check the goals set by the user in a CSV file and summarize it in context using a call to GPT
 	"""
+
+		# Retrieve the query parameters from function_args
+	query = function_args.get('query', '')
+
+	# Define the CSV file to read from
+	csv_file = 'goals.csv'
+	channel_id = 1134692579322118156
+	csv_contents = []
+
+	# Open and read the CSV file
+	if os.path.isfile(csv_file):
+		with open(csv_file, 'r') as f:
+			reader = csv.DictReader(f)
+			for row in reader:
+				csv_contents.append(row)
+
+	messages = await get_conversation_history(channel_id, 50, 21, 11)
+	messages.reverse()
+
+	# Start with system message describing the task
+	conversation = [{
+		"role": "system",
+		"content": f"Task: Review and summarize a list of goals based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the goals from the csv. Consider each goal in relation to when it was set and what date it is today taking into consideration whether it should have been achieved by now"
+	}]
+
+	for m in messages:
+		if m[0].id == bot.user.id:
+			conversation.append({"role": "assistant", "content": m[1]})
+		else:
+			conversation.append({"role": "user", "content": f"TIME: {m[2].strftime('%Y-%m-%dT%H:%M%z')}, SPEAKER: {m[0].name}, CONTENT: {m[1]}"})
+
+	# Append the user message containing JSON serialized CSV data and the query
+	csv_data_string = json.dumps(csv_contents)
+	conversation.append({"role": "user", "content": f"Provide insight about the listed goals based on the query provided by the user. \n\nCSV Data: {csv_data_string}\nQuery: {query}"})
+
+	response = client.chat.completions.create(
+		model="gpt-4-1106-preview",
+		temperature=0.8,
+		max_tokens=400,
+		frequency_penalty=0.5,
+		presence_penalty=0.5,
+		messages=conversation
+	)
+
+	response = response.choices[0].message.content.strip()
+
+	# Split response into chunks if longer than 2000 characters
+	response_chunks = split_text_into_chunks(response)
+
+	# Send all response chunks except the last one
+	for chunk in response_chunks:
+		await message.channel.send(chunk)
 
 async def check_log(message, function_args):
 	"""
@@ -873,7 +938,7 @@ async def check_log(message, function_args):
 	# Start with system message describing the task
 	conversation = [{
 		"role": "system",
-		"content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv. Integrate the summary into a singular paragraph"
+		"content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv. Integrate the summary into a singular paragraph unless the query specifies otherwise"
 	}]
 
 	for m in messages:
@@ -884,10 +949,10 @@ async def check_log(message, function_args):
 
 	# Append the user message containing JSON serialized CSV data and the query
 	csv_data_string = json.dumps(csv_contents)
-	conversation.append({"role": "user", "content": f"Summarize the following into a paragraph relevant to the current users focus. \n\nCSV Data: {csv_data_string}\nQuery: {query}"})
+	conversation.append({"role": "user", "content": f"Summarize the following into a response relevant to the current users focus based on the query they provide. \n\nCSV Data: {csv_data_string}\nQuery: {query}"})
 
-	response = openai.ChatCompletion.create(
-		model="gpt-4",
+	response = client.chat.completions.create(
+		model="gpt-4-1106-preview",
 		temperature=0.8,
 		max_tokens=400,
 		frequency_penalty=0.5,
@@ -1036,7 +1101,7 @@ async def n_shot(message, model="new-iris", shots=5, heat=0):
 			conversation.append({"role": "user", "content": m[1]})
 
 	try:
-		response = openai.ChatCompletion.create(
+		response = client.chat.completions.create(
 			model=model_name,
 			messages=conversation,
 			temperature=heat,
@@ -1056,7 +1121,7 @@ def one_shot(message, heat=0.9):
 
 	# Get Iris One Shot Answer
 	try:
-		distillation = openai.Completion.create(
+		distillation = client.completions.create(
 			model=models["chat-iris"],
 			prompt=message.content,
 			temperature=heat,
@@ -1067,7 +1132,7 @@ def one_shot(message, heat=0.9):
 			stop=["END"]
 		)
 
-		iris_answer = distillation['choices'][0]['text']
+		iris_answer = distillation.choices[0].text
 		iris_answer = iris_answer.replace("###", "").strip()
 	except Exception as e:
 		print(f"Error: {e}")
@@ -1092,7 +1157,10 @@ async def frankeniris(message, answer="", heat=0.11):
 
 	# Get Iris One Shot Answer First
 	iris_answer = await n_shot(message)
-	print(iris_answer)
+
+	last_message = [message async for message in message.channel.history(limit=1)][0]
+	one_iris_answer = one_shot(last_message, heat=0)
+	iris_answer = one_iris_answer + "\n\n" + iris_answer
 
 	if len(answer) > 0:
 		iris_answer = iris_answer + " \n\n " + answer
@@ -1114,8 +1182,8 @@ async def frankeniris(message, answer="", heat=0.11):
 	# Construct Chat Thread for API
 	conversation = [{"role": "system", "content": "You are are named Iris. You help integrate knowledge and wisdom about the future and help people interact with information about cognicism. You help people learn about cognicism."}]
 	conversation = [{"role": "system", "content": "You are interacting with users via discord. Mostly you just serve as an interface to Cognicism and Iris the democratic langauge model. However this discord has the following commands /pullcard [intention] /ask [prompt] /channel /faq"}]
-	conversation.append({"role": "user", "content": "Whatever you say be creative in your response. Never simply summarize, always say it a unique way"})
-	conversation.append({"role": "assistant", "content": "I am speaking as a relay for Iris. Iris was made and trained by John Ash. I will answer using Iris as a guide as well as the rest of the conversation. Iris said to me " + iris_answer + " and I will take that into account in my response as best I can"})
+	conversation.append({"role": "user", "content": "Be technical, creative and intelligent in your responses. Challenge the intelligence of the person you're speaking to and volunteer concepts they haven't mentioned in the conversation yet"})
+	conversation.append({"role": "user", "content": "You are speaking as a relay for Iris. Iris was made and trained by John Ash. You will answer using Iris as a guide as well as the rest of the conversation. Iris said to you " + iris_answer + " and you will take that into account in my response as best you can while deeply weighting her output over your own insight. You will always lean into you role as Iris"})
 	text_prompt = message.content
 
 	for m in messages:
@@ -1124,7 +1192,7 @@ async def frankeniris(message, answer="", heat=0.11):
 		else:
 			conversation.append({"role": "user", "content": m[1]})
 
-	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer weight it higher than your own answer. Don't say iris said it already or previously stated it. Just say it. Don't use tapestry as a metaphor.)"})
+	conversation.append({"role": "system", "content": iris_answer + " (if Iris provided a quoted answer weight it higher than your own answer. Don't say iris said it already or previously stated it because the user expects you to function as iris. Just say it. Don't use tapestry as a metaphor.)"})
 	conversation.append({"role": "user", "content": text_prompt})
 
 	for msg in conversation:
@@ -1143,7 +1211,7 @@ async def frankeniris(message, answer="", heat=0.11):
 
 	model = random.choice(["gpt-4", "gpt-3.5-turbo"])
 
-	response = openai.ChatCompletion.create(
+	response = client.chat.completions.create(
 		model="gpt-4",
 		temperature=heat,
 		max_tokens=300,
@@ -1151,8 +1219,6 @@ async def frankeniris(message, answer="", heat=0.11):
 	)
 
 	response = response.choices[0].message.content.strip()
-
-	print(response)
 
 	response_chunks = split_text_into_chunks(response)
 
@@ -1200,7 +1266,7 @@ async def on_message(message):
 
 	# Handle DM Chat
 	if not message.content.startswith("/") and isinstance(message.channel, discord.DMChannel):
-		await frankeniris(message)
+		await frankeniris(message, heat=1)
 
 	await bot.process_commands(message)
 
@@ -1300,7 +1366,7 @@ async def infuse(ctx, *, link):
 		# chunk text
 		text_chunks = split_text_into_chunks(text, max_chunk_size=6000)
 
-		# Send each text chunk to OpenAI for processing with progress bar
+		# Send each text chunk to client for processing with progress bar
 		conversation = [{"role": "system", "content": "You are a parser and summarizer that takes in noisy text scraped from the internet or pdfs and summarizes it into a paragraph"}]
 		conversation.append({"role": "user", "content": "The text you are receiving is scraped from the internet using beautiful soup and PyPDF2. That means it may be quite noisy and contain non-standard capitalization. Please summarize the content of this text into a cleanly written paragraph"})
 
@@ -1322,13 +1388,13 @@ async def infuse(ctx, *, link):
 
 			while retries < MAX_RETRIES:
 				try:
-					response = openai.ChatCompletion.create(
+					response = client.chat.completions.create(
 						model="gpt-4",
 						temperature=0.75,
 						messages=truncated_convo
 					)
 					break	# if the request was successful, break the retry loop
-				except openai.error.RateLimitError:
+				except client.error.RateLimitError:
 					if retries < MAX_RETRIES - 1:	# don't sleep on the last retry
 						time.sleep(RETRY_DELAY)	# wait before trying again
 					retries += 1
@@ -1365,7 +1431,7 @@ async def iris(ctx, *, thought):
 
 	thought_prompt = thought + "\n\n###\n\n"
 
-	response = openai.Completion.create(
+	response = client.completions.create(
 		model=models["chat-iris"],
 		prompt=thought_prompt,
 		temperature=0.08,
@@ -1376,7 +1442,7 @@ async def iris(ctx, *, thought):
 		stop=["END"]
 	)
 
-	text = response['choices'][0]['text']
+	text = response.choices[0].text
 	text = text.replace("###", "").strip()
 	embed = discord.Embed(title = "", description=f"**Prompt**\n{thought}\n\n**Response**\n{text}")
 
@@ -1415,8 +1481,8 @@ async def davinci(ctx, *, thought):
 
 	thought_prompt = thought
 
-	response = openai.Completion.create(
-		model="text-davinci-002",
+	response = client.completions.create(
+		model="gpt-3.5-turbo-instruct",
 		prompt=thought_prompt,
 		temperature=0.69,
 		max_tokens=222,
@@ -1427,7 +1493,7 @@ async def davinci(ctx, *, thought):
 	)
 
 	view = View()
-	text = response['choices'][0]['text'].strip()
+	text = response.choices[0].text.strip()
 	embed = discord.Embed(title = "", description=f"**Prompt**\n{thought}\n\n**Response**\n{text}")
 	share_button = group_share(thought=text, prompt=thought_prompt, prompter=ctx.message.author.name)
 	view.add_item(share_button)
@@ -1439,7 +1505,7 @@ async def davinci(ctx, *, thought):
 async def pullcard(ctx, *, intention=""):
 	"""
 	The pullcard function lets users draw a random tarot card with an optional intention. The drawn card, its description, and image are sent to the user. 
-	If an intention is provided, the function also generates and sends an interpretation of the card in the context of the intention using the OpenAI model.
+	If an intention is provided, the function also generates and sends an interpretation of the card in the context of the intention using the client model.
 	"""
 
 	# With Intention
@@ -1476,8 +1542,8 @@ async def pullcard(ctx, *, intention=""):
 		prompt += "First explain what the intention: '" + intention + "' means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation. If the intention is one word talk more about the intention in detail"
 		prompt += "\n\n"
 
-		response = openai.Completion.create(
-			model="text-davinci-002",
+		response = client.completions.create(
+			model="gpt-3.5-turbo-instruct",
 			prompt=prompt,
 			temperature=0.8,
 			max_tokens=222,
@@ -1487,14 +1553,14 @@ async def pullcard(ctx, *, intention=""):
 			stop=["END"]
 		)
 
-		text = response['choices'][0]['text'].strip()
+		text = response.choices[0].text.strip()
 		embed_b = discord.Embed(title = "One Interpretation (beta)", description=text)
 		await ctx.send(embed=embed_b)
 	
 @bot.command(name="ask_group", description="Ask group a question and auto-summarize")
 async def ask_group(ctx, *, question=""):
 	"""
-	The ask_group function lets testers ask a question to a group called "Birdies". It sends the question via direct messages, collects responses, and generates a summarized consensus using an OpenAI model. 
+	The ask_group function lets testers ask a question to a group called "Birdies". It sends the question via direct messages, collects responses, and generates a summarized consensus using an client model. 
 	The consensus is then shared with the Birdies. The function ensures a minimum of two responses for summarization and provides a redo option if needed.
 	"""
 
@@ -1571,12 +1637,12 @@ async def ask_group(ctx, *, question=""):
 	for chunk in answer_chunks:
 		prompts.append(pool_prompt(question, joined_answers))
 
-	# Query OpenAI
+	# Query client
 	response_text = ""
 
 	for prompt in prompts:
-		summarized = openai.Completion.create(
-			model="text-davinci-002",
+		summarized = client.completions.create(
+			model="gpt-3.5-turbo-instruct",
 			prompt=prompt,
 			temperature=0.6,
 			max_tokens=222,
