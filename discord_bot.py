@@ -51,10 +51,10 @@ try:
     tarot_lookup = {record['fields']['Card Name']: record['fields'].get('Short Description', '') for record in records}
 except Exception as e:
     print(f"An exception occurred: {e}")
-    # df = pd.read_csv('tarot_text.csv')
-    # names = df['card_name'].tolist()
-    # descriptions = df['text'].tolist()
-    # tarot_lookup = dict(zip(names, descriptions))
+    df = pd.read_csv('tarot_text.csv')
+    names = df['card_name'].tolist()
+    descriptions = df['text'].tolist()
+    tarot_lookup = dict(zip(names, descriptions))
 
 training_data = ""
 
@@ -82,7 +82,7 @@ models = {
 }
 
 class AskModal(Modal, title="Ask Modal"):
-    
+
     answer = TextInput(label="Answer", max_length=400, style=discord.TextStyle.long)
     end_time = None
 
@@ -1690,7 +1690,14 @@ async def ask_group(ctx, *, question=""):
 
     users = []
 
-    timeout = 2700.00
+    # Parse timeout value from the question
+    timeout_match = re.search(r'--t\s*(\d+)', question)
+    if timeout_match:
+        timeout_minutes = int(timeout_match.group(1))
+        timeout = timeout_minutes * 60  # Convert minutes to seconds
+        question = re.sub(r'--t\s*\d+', '', question).strip()  # Remove the --t argument from the question
+    else:
+        timeout = 45 * 60  # Default timeout of 45 minutes
 
     # Get Birdies
     guild = bot.get_guild(989662771329269890)
