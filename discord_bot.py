@@ -673,12 +673,13 @@ async def stability_pool(message):
     if re.match(r'^(\/check_log|\/check_goals|\/set_goal|\/stake_thought)', last_message.content):
     
         function_details = stability_functions(last_message)
+
         # function_details = {}
 
-        if function_details.get("function_call"):
+        if function_details.function_call:
 
-            function_name = function_details["function_call"]["name"]
-            function_args = json.loads(function_details["function_call"]["arguments"])
+            function_name = function_details.function_call.name
+            function_args = json.loads(function_details.function_call.arguments)
             parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
             embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
             
@@ -856,7 +857,7 @@ def stability_functions(message):
         function_call = 'auto'
     )
 
-    message = response["choices"][0]["message"]
+    message = response.choices[0].message
 
     return message
 
@@ -883,10 +884,14 @@ async def check_goals(message, function_args):
     messages = await get_conversation_history(channel_id, 50, 21, 11)
     messages.reverse()
 
+    # Get today's date and time
+    now = datetime.datetime.now()
+    formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+
     # Start with system message describing the task
     conversation = [{
         "role": "system",
-        "content": f"Task: Review and summarize a list of goals based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the goals from the csv. Consider each goal in relation to when it was set and what date it is today taking into consideration whether it should have been achieved by now"
+        "content": f"Task: Review and summarize a list of goals based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the goals from the csv. Consider each goal in relation to when it was set and what date it is today taking into consideration whether it should have been achieved by now. Today's date and time is: {formatted_datetime}"
     }]
 
     for m in messages:
