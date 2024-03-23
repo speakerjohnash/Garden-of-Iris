@@ -674,30 +674,30 @@ async def stability_pool(message):
     
         function_details = stability_functions(last_message)
 
-        # function_details = {}
-
         if function_details.function_call:
 
             function_name = function_details.function_call.name
             function_args = json.loads(function_details.function_call.arguments)
-            parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
-            embed = discord.Embed(title = "", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+            response_message = None
             
-            print(parameters_str)
-
             if function_name == "stake_thought":
-                await stake_thought(last_message, function_args)
-            if function_name == "set_goals":
-                await set_goals(last_message, function_args)
-            if function_name == "check_log":
-                await check_log(last_message, function_args)
-            if function_name == "check_goals":
-                await check_goals(last_message, function_args)
-
-            await message.channel.send(embed=embed)
+                response_message = await stake_thought(last_message, function_args)
+            elif function_name == "set_goals":
+                response_message = await set_goals(last_message, function_args)
+            elif function_name == "check_log":
+                response_message = await check_log(last_message, function_args)
+            elif function_name == "check_goals":
+                response_message = await check_goals(last_message, function_args)
+            
+            if response_message:
+                await message.channel.send(response_message)
+            else:
+                parameters_str = '\n'.join(f"{key.capitalize()}: {value}" for key, value in function_args.items())
+                embed = discord.Embed(title="", description=f"**Function Name**\n{function_name}\n\n**Parameters**\n{parameters_str}")
+                await message.channel.send(embed=embed)
 
             return
-            
+                    
     # Ignore Slash Commands
     if last_message.content.startswith("/"):
         return
@@ -945,10 +945,14 @@ async def check_log(message, function_args):
     messages = await get_conversation_history(channel_id, 50, 21, 11)
     messages.reverse()
 
+    # Get today's date and time
+    now = datetime.datetime.now()
+    formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+
     # Start with system message describing the task
     conversation = [{
         "role": "system",
-        "content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv. Integrate the summary into a singular paragraph unless the query specifies otherwise"
+        "content": f"Task: Review and summarize a list of staked thoughts in the Fourthought format based on the following query: '{query}'. You will first be provided with the context of the thread then the user will tell you the data from the csv. Integrate the summary into a singular paragraph unless the query specifies otherwise. Today's date and time is: {formatted_datetime}"
     }]
 
     for m in messages:
@@ -964,7 +968,7 @@ async def check_log(message, function_args):
     response = client.chat.completions.create(
         model="gpt-4-1106-preview",
         temperature=0.8,
-        max_tokens=400,
+        max_tokens=200,
         frequency_penalty=0.5,
         presence_penalty=0.5,
         messages=conversation
@@ -972,12 +976,7 @@ async def check_log(message, function_args):
 
     response = response.choices[0].message.content.strip()
 
-    # Split response into chunks if longer than 2000 characters
-    response_chunks = split_text_into_chunks(response)
-
-    # Send all response chunks except the last one
-    for chunk in response_chunks:
-        await message.channel.send(chunk)
+    return response
 
 async def set_goals(message, function_args):
     """
@@ -1011,8 +1010,8 @@ async def stake_thought(message, function_args):
 
     thought = function_args.get('thought', '')
     thought_type = function_args['type']
-    verity = function_args.get('verity', 0.5) 
-    valence = function_args.get('valence', 0) 
+    verity = function_args.get('verity', 0.5)
+    valence = function_args.get('valence', 0)
 
     user_id = message.author.id
     username = message.author.name
@@ -1029,7 +1028,34 @@ async def stake_thought(message, function_args):
 
     with open(csv_file, 'a') as f:
         writer = csv.writer(f)
-        writer.writerow([user_id, username, timestamp, thought, thought_type, verity, valence])    
+        writer.writerow([user_id, username, timestamp, thought, thought_type, verity, valence])
+
+    # Read the last 100 items from the CSV file
+    csv_contents = []
+    with open(csv_file, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            csv_contents.append(row)
+    last_100_items = csv_contents[-100:]
+
+    # Construct the conversation for GPT-4
+    conversation = [
+        {"role": "system", "content": "You are an AI assistant that provides supportive and insightful commentary on a user's personal journey of change and growth. The user is engaging in a practice called FourThought, where they stake beliefs and reflections about their experiences and goals. Your role is to offer encouragement and perspective on their progress."},
+        {"role": "user", "content": f"You have been reviewing {username}'s recent entries in their FourThought ledger, which is a tool for personal reflection and growth. Here are their last 100 thoughts:\n\n{json.dumps(last_100_items)}\n\nIn their most recent entry, {username} shared the following:\nThought: {thought}\nType: {thought_type}\nVerity: {verity}\nValence: {valence}\n\nBased on the context of their journey and this new reflection, could you provide some supportive and insightful commentary on {username}'s progress and the significance of this latest thought? Please keep in mind the type of thought they shared and the level of confidence and emotion they expressed. I logged the thought so respond to me"}
+    ]
+
+    # Call GPT-4 with the conversation
+    response = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        temperature=0.8,
+        max_tokens=200,
+        messages=conversation
+    )
+
+    # Extract the assistant's response
+    assistant_response = response.choices[0].message.content.strip()
+
+    return assistant_response   
 
 @bot.command()
 async def claim(ctx, *, thought):
