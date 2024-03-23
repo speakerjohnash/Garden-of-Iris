@@ -1416,8 +1416,8 @@ async def channel(ctx, *, topic=""):
 
     await frankeniris(message, answer="", heat=rand_temp)
 
-@bot.command()
-async def faq(ctx, *, topic=""):
+@bot.tree.command(name="faq", description="Get a random FAQ and its answer")
+async def faq(interaction: discord.Interaction):
     """
     The faq function responds with a Frequently Asked Question (FAQ) and its corresponding answer.
     It reads the questions and answers from a CSV file containing the data, selects a random question and its corresponding completion, and sends the question and answer as an embedded message in Discord.
@@ -1441,12 +1441,14 @@ async def faq(ctx, *, topic=""):
     # Remove any duplicate question-completion pairs from the list
     question_completion_pairs = list(set(question_completion_pairs))
 
-    message = ctx.message
     random_question = random.choice(question_completion_pairs)
-    embed = discord.Embed(title = "FAQ", description=random_question[0])
+    embed = discord.Embed(title="FAQ", description=random_question[0])
+
+    await interaction.response.send_message(embed=embed)
+
+    message = await interaction.original_response()
     message.content = random_question[0]
 
-    await ctx.send(embed=embed)
     await frankeniris(message, answer=random_question[1], heat=0.22)
 
 @bot.command(aliases=['in', 'inject'])
@@ -1581,46 +1583,12 @@ async def iris(ctx, *, thought):
         training_data.loc[len(training_data.index)] = [prompt, modal.answer.value, ctx.message.author.name] 
         training_data.to_csv('chat-iris.csv', encoding='utf-8', index=False)
 
-@bot.command()
-async def davinci(ctx, *, thought):
-    """
-    /ask query an iris and get a response
-    """
-
-    global training_data
-    testers = ["John Ash's Username for Discord", "JohnAsh", "EveInTheGarden"]
-    
-    # Only Allow Some Users
-    if ctx.message.author.name not in testers:
-        return
-
-    thought_prompt = thought
-
-    response = client.completions.create(
-        model="gpt-3.5-turbo-instruct",
-        prompt=thought_prompt,
-        temperature=0.69,
-        max_tokens=222,
-        top_p=1,
-        frequency_penalty=1.8,
-        presence_penalty=1.5,
-        stop=["END"]
-    )
-
-    view = View()
-    text = response.choices[0].text.strip()
-    embed = discord.Embed(title = "", description=f"**Prompt**\n{thought}\n\n**Response**\n{text}")
-    share_button = group_share(thought=text, prompt=thought_prompt, prompter=ctx.message.author.name)
-    view.add_item(share_button)
-
-    await ctx.send(embed=embed)
-    await ctx.send(view=view)
-
-@bot.command()
-async def pullcard(ctx, *, intention=""):
+@bot.tree.command(name="pullcard", description="Draw a random tarot card with an optional intention")
+@app_commands.describe(intention="The intention for the card pull (optional)")
+async def pullcard(interaction: discord.Interaction, intention: str = ""):
     """
     The pullcard function lets users draw a random tarot card with an optional intention. The drawn card, its description, and image are sent to the user. 
-    If an intention is provided, the function also generates and sends an interpretation of the card in the context of the intention using the client model.
+    If an intention is provided, the function also generates and sends an interpretation of the card in the context of the intention using the GPT-4 model.
     """
 
     # With Intention
@@ -1647,7 +1615,7 @@ async def pullcard(ctx, *, intention=""):
     embed = discord.Embed(title = card_name, description = f"**Description**\n{description}")
     if with_intention: embed.add_field(name="Intention", value=intention, inline=False)
     if len(url) > 0: embed.set_image(url=url)
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
     # Make and Send Card Analysis
     if with_intention:
@@ -1657,20 +1625,19 @@ async def pullcard(ctx, *, intention=""):
         prompt += "First explain what the intention: '" + intention + "' means, then answer how this intention connects to the card. If it's a question the intention is to know the answer. Write a few sentences and mention the intention directly. Do NOT summarize or repeat the card. Be creative in your interpretation. If the intention is one word talk more about the intention in detail"
         prompt += "\n\n"
 
-        response = client.completions.create(
-            model="gpt-3.5-turbo-instruct",
-            prompt=prompt,
-            temperature=0.8,
-            max_tokens=222,
-            top_p=1,
-            frequency_penalty=2,
-            presence_penalty=2,
-            stop=["END"]
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a tarot card interpreter that provides insightful and creative interpretations based on the user's intention and the card drawn."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=300,
+            temperature=0.8
         )
 
-        text = response.choices[0].text.strip()
-        embed_b = discord.Embed(title = "One Interpretation (beta)", description=text)
-        await ctx.send(embed=embed_b)
+        text = response.choices[0].message.content.strip()
+        embed_b = discord.Embed(title = "One Interpretation", description=text)
+        await interaction.followup.send(embed=embed_b)
 
 @bot.tree.command(name="ask_group", description="Ask group a question and auto-summarize")
 @app_commands.describe(
@@ -1684,8 +1651,7 @@ async def ask_group(interaction: discord.Interaction, question: str, timeout: in
 
     testers = {
         572900074779049984: "speakerjohnash",
-        820377851147714611: "JohnAsh",
-        1005212665259495544: "EveInTheGarden"
+        820377851147714611: "JohnAsh"
     }
 
     users = []
