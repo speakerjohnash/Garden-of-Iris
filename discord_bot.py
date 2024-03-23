@@ -224,14 +224,13 @@ def elaborate(ctx, prompt="prompt"):
 
     return button
 
-def redo_view(ctx, prompt, question):
+def redo_view(interaction, prompt, question):
     """
     The redo_view function creates a "Redo" button in the Discord interface. When the button is clicked, the function generates a new consensus response for a given question using the client model. 
     The generated consensus is sent to the user as an embed titled "Consensus."
     """
 
     async def button_callback(interaction):
-
         await interaction.response.defer()
 
         response = client.completions.create(
@@ -246,9 +245,9 @@ def redo_view(ctx, prompt, question):
         )
 
         response_text = response.choices[0].text.strip()
-        embed = discord.Embed(title = "Consensus", description = f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
+        embed = discord.Embed(title="Consensus", description=f"**Question**\n{question}\n\n**Consensus**\n{response_text}")
 
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     view = View()
     view.timeout = None
@@ -1046,6 +1045,7 @@ async def claim(ctx, *, thought):
 
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     load_training_data()
     print("Iris is online")
 
@@ -1672,12 +1672,12 @@ async def pullcard(ctx, *, intention=""):
         embed_b = discord.Embed(title = "One Interpretation (beta)", description=text)
         await ctx.send(embed=embed_b)
 
-@bot.command(name="ask_group", description="Ask group a question and auto-summarize")
-async def ask_group(ctx, *, question=""):
-    """
-    The ask_group function lets testers ask a question to members of a specific role. It sends the question via direct messages, collects responses, and generates a summarized consensus using the GPT-4 model.
-    The consensus is then shared with the members of the role. The function ensures a minimum of two responses for summarization and provides a redo option if needed.
-    """
+@bot.tree.command(name="ask_group", description="Ask group a question and auto-summarize")
+@app_commands.describe(
+    question="The question to ask the group",
+    timeout="The timeout duration in minutes (optional, default is 45 minutes)"
+)
+async def ask_group(interaction: discord.Interaction, question: str, timeout: int = 45):
 
     if len(question) == 0:
         return
@@ -1690,24 +1690,17 @@ async def ask_group(ctx, *, question=""):
 
     users = []
 
-    # Parse timeout value from the question
-    timeout_match = re.search(r'--t\s*(\d+)', question)
-    if timeout_match:
-        timeout_minutes = int(timeout_match.group(1))
-        timeout = timeout_minutes * 60  # Convert minutes to seconds
-        question = re.sub(r'--t\s*\d+', '', question).strip()  # Remove the --t argument from the question
-    else:
-        timeout = 45 * 60  # Default timeout of 45 minutes
+    timeout_seconds = timeout * 60  # Convert minutes to seconds
 
-    # Get Birdies
+    # Get Relevant Users
     guild = bot.get_guild(989662771329269890)
     access_role = discord.utils.get(guild.roles, name="Governance")
     members = [member for member in guild.members if access_role in member.roles]
 
     # Only Allow Some Users
-    if ctx.message.author.id not in testers:
+    if interaction.user.id not in testers:
         embed = discord.Embed(title="Access Denied", description="You don't have permission to use this command. Please contact the admin to request access.")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
         return
 
     # Get people in Garden
@@ -1715,25 +1708,26 @@ async def ask_group(ctx, *, question=""):
     views = []
 
     # Calculate the end time of the voting period
-    end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
+    end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout_seconds)
     formatted_end_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Calculate the time remaining in minutes
-    time_remaining = int(timeout / 60)
-
     embed = discord.Embed(title="Confluence Experiment", description=question)
-    embed.add_field(name="Time Limit", value=f"Please reply within {time_remaining} minutes. The voting period ends at {formatted_end_time}.")
+    embed.add_field(name="Time Limit", value=f"Please reply within {timeout} minutes. The voting period ends at {formatted_end_time}.")
 
     # Message Users
     for person in members:
-        view, modal = response_view(modal_text=question, timeout=timeout)
+        view, modal = response_view(modal_text=question, timeout=timeout_seconds)
         try:
-            await person.send(embed=embed)
-            await person.send(view=view)
+            if person == interaction.user:
+                await interaction.response.send_message(embed=embed, view=view)
+            else:
+                await person.send(embed=embed)
+                await person.send(view=view)
         except:
             continue
-        responses.append(modal)
-        views.append(view)
+
+    responses.append(modal)
+    views.append(view)
 
     # Gather Answers
     all_text = []
@@ -1750,12 +1744,12 @@ async def ask_group(ctx, *, question=""):
 
     if len(joined_answers.strip()) == 0:
         j_embed = discord.Embed(title="No Responses", description=f"No responses provided to summarize")
-        await ctx.send(embed=j_embed)
+        await interaction.followup.send(embed=j_embed)
         return
 
     if len(responses) == 1:
         k_embed = discord.Embed(title="One Response", description=all_text[0])
-        await ctx.send(embed=k_embed)
+        await interaction.followup.send(embed=k_embed)
         return
 
     # Query GPT-4
@@ -1780,7 +1774,7 @@ async def ask_group(ctx, *, question=""):
             continue
 
     # Send a Redo Option
-    r_view = redo_view(ctx, f"Question: {question}\n\nResponses:\n{joined_answers}\n\nPlease provide a detailed summary and consensus of the responses.", question)
-    await ctx.send(view=r_view)
+    r_view = redo_view(interaction, f"Question: {question}\n\nResponses:\n{joined_answers}\n\nPlease provide a detailed summary and consensus of the responses.", question)
+    await interaction.followup.send(view=r_view)
 
 bot.run(discord_key)
