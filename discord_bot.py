@@ -25,7 +25,7 @@ from discord import app_commands
 from discord.utils import get
 from pprint import pprint
 from pyairtable import Table
-from discord.ui import Button, View, TextInput, Modal
+from discord.ui import Button, View, TextInput, Modal, Select
 from discord.ext import commands
 
 discord_key = os.getenv("DISCORD_BOT_KEY")
@@ -1673,9 +1673,10 @@ async def pullcard(interaction: discord.Interaction, intention: str = ""):
 @bot.tree.command(name="ask_group", description="Ask group a question and auto-summarize")
 @app_commands.describe(
     question="The question to ask the group",
+    target="The target users to ask the question (optional)",
     timeout="The timeout duration in minutes (optional, default is 45 minutes)"
 )
-async def ask_group(interaction: discord.Interaction, question: str, timeout: int = 45):
+async def ask_group(interaction: discord.Interaction, question: str, target: str = None, timeout: int = 45):
 
     if len(question) == 0:
         return
@@ -1685,14 +1686,24 @@ async def ask_group(interaction: discord.Interaction, question: str, timeout: in
         820377851147714611: "JohnAsh"
     }
 
-    users = []
-
-    timeout_seconds = timeout * 60  # Convert minutes to seconds
+    timeout_seconds = timeout * 60
 
     # Get Relevant Users
     guild = bot.get_guild(989662771329269890)
-    access_role = discord.utils.get(guild.roles, name="Governance")
-    members = [member for member in guild.members if access_role in member.roles]
+    members = []
+
+    if target:
+        target_names = [name.strip().lstrip('@') for name in target.split()]
+        for name in target_names:
+            member = discord.utils.get(guild.members, display_name=name)
+            if member:
+                members.append(member)
+    else:
+        access_role = discord.utils.get(guild.roles, name="Governance")
+        members = [member for member in guild.members if access_role in member.roles]
+
+    if interaction.user not in members:
+        members.append(interaction.user)
 
     # Only Allow Some Users
     if interaction.user.id not in testers:
@@ -1716,15 +1727,18 @@ async def ask_group(interaction: discord.Interaction, question: str, timeout: in
         view, modal = response_view(modal_text=question, timeout=timeout_seconds)
         try:
             if person == interaction.user:
-                await interaction.response.send_message(embed=embed, view=view)
+                if isinstance(interaction.channel, discord.TextChannel):
+                    await interaction.response.send_message("Polling Initiated", ephemeral=True)
+                    await person.send(embed=embed, view=view)
+                else:
+                    await interaction.response.send_message(embed=embed, view=view)
             else:
-                await person.send(embed=embed)
-                await person.send(view=view)
+                await person.send(embed=embed, view=view)
         except:
             continue
 
-    responses.append(modal)
-    views.append(view)
+        responses.append(modal)
+        views.append(view)
 
     # Gather Answers
     all_text = []
