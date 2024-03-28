@@ -79,7 +79,7 @@ import csv
 import sys
 import json
 import random
-import openai
+from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -99,5 +99,5 @@ fine_tuning_job = client.fine_tuning.jobs.create(
 print("\n\n---\n\n")
 print(json.dumps(json.loads(client.fine_tuning.jobs.list(limit=3).json()), indent=4))
 
-# print(json.dumps(json.loads(client.fine_tuning.jobs.list_events(fine_tuning_job_id="ftjob-fCOIMIJy4j3OI1kHKCHTLZuP", limit=3).json()), indent=4))
+# print(json.dumps(json.loads(client.fine_tuning.jobs.list_events(fine_tuning_job_id="ftjob-Y69ABD1Y9TOTUMX60RYBM0Jv", limit=3).json()), indent=4))
 
