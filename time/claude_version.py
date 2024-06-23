@@ -76,7 +76,10 @@ def sample_random(dates, values, context_size, num_samples):
         # Select remaining points randomly from earlier in the sequence
         other_indices = np.random.choice(range(0, close_idx), context_size-1, replace=False)
         
-        all_indices = np.sort(np.append(other_indices, close_idx))
+        all_indices = np.append(other_indices, close_idx)
+        
+        # Shuffle the indices to randomize the order
+        np.random.shuffle(all_indices)
         
         X[i] = values[all_indices]
         X_dates[i] = dates[all_indices]
@@ -86,43 +89,42 @@ def sample_random(dates, values, context_size, num_samples):
 # Visualization function
 def visualize_data(dates, values, ordered_X, ordered_X_dates, ordered_y, ordered_y_dates, 
                    random_X, random_X_dates, random_y, random_y_dates):
-    plt.figure(figsize=(20, 15))
-    
-    # Plot full dataset
-    plt.subplot(4, 1, 1)
+    plt.figure(figsize=(20, 10))
     plt.plot(dates, values)
     plt.title('Full Synthetic Dataset')
     plt.xlabel('Date')
     plt.ylabel('Value')
+    plt.tight_layout()
+    plt.show()
     
     # Plot ordered samples
+    plt.figure(figsize=(20, 15))
     for i in range(3):
-        plt.subplot(4, 1, i+2)
+        plt.subplot(3, 1, i+1)
         plt.plot(ordered_X_dates[i], ordered_X[i], 'b-o', label='Input')
         plt.plot(ordered_y_dates[i], ordered_y[i], 'ro', label='Target')
         plt.title(f'Ordered Sample {i+1}')
         plt.xlabel('Date')
         plt.ylabel('Value')
         plt.legend()
-    
     plt.tight_layout()
     plt.show()
     
-    # Plot random samples
+    # Plot random samples (sorted for visualization)
     plt.figure(figsize=(20, 15))
     for i in range(3):
+        sort_indices = np.argsort(random_X_dates[i])
         plt.subplot(3, 1, i+1)
-        plt.plot(random_X_dates[i], random_X[i], 'b-o', label='Input')
+        plt.plot(random_X_dates[i][sort_indices], random_X[i][sort_indices], 'b-o', label='Input')
         plt.plot(random_y_dates[i], random_y[i], 'ro', label='Target')
-        plt.title(f'Random Sample {i+1}')
+        plt.title(f'Random Sample {i+1} (Sorted for Visualization)')
         plt.xlabel('Date')
         plt.ylabel('Value')
         plt.legend()
-    
     plt.tight_layout()
     plt.show()
 
-# Transformer model (unchanged)
+# Transformer model
 class TimeSeriesTransformer(nn.Module):
     def __init__(self, d_model, nhead, num_layers, use_timestamp_encoding=True):
         super().__init__()
@@ -158,7 +160,7 @@ class TimeSeriesDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx], self.timestamps[idx], self.targets[idx], self.target_timestamps[idx]
 
-# Training and evaluation functions (unchanged)
+# Training function
 def train_model(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
@@ -172,6 +174,7 @@ def train_model(model, train_loader, optimizer, criterion, device):
         total_loss += loss.item()
     return total_loss / len(train_loader)
 
+# Evaluation function
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()
     total_loss = 0
@@ -212,11 +215,19 @@ def run_experiment():
     ordered_dataset = TimeSeriesDataset(ordered_X, ordered_X_dates, ordered_y, ordered_y_dates)
     random_dataset = TimeSeriesDataset(random_X, random_X_dates, random_y, random_y_dates)
 
+    # Verify random ordering
+    random_sample = random_dataset[0]
+    print("Random sample timestamps:")
+    print(random_sample[1])  # Print timestamps to verify they're not sorted
+
     # Split datasets
-    train_size = int(0.8 * len(random_dataset))
-    test_size = len(random_dataset) - train_size
-    random_train, random_test = torch.utils.data.random_split(random_dataset, [train_size, test_size])
-    ordered_train, ordered_test = torch.utils.data.random_split(ordered_dataset, [train_size, test_size])
+    random_train_size = int(0.8 * len(random_dataset))
+    random_test_size = len(random_dataset) - random_train_size
+    random_train, random_test = torch.utils.data.random_split(random_dataset, [random_train_size, random_test_size])
+
+    ordered_train_size = int(0.8 * len(ordered_dataset))
+    ordered_test_size = len(ordered_dataset) - ordered_train_size
+    ordered_train, ordered_test = torch.utils.data.random_split(ordered_dataset, [ordered_train_size, ordered_test_size])
 
     # Create data loaders
     random_train_loader = DataLoader(random_train, batch_size=batch_size, shuffle=True)
