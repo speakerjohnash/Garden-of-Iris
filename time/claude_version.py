@@ -23,11 +23,9 @@ class TimestampEncoding(nn.Module):
     def forward(self, x):
         x = x.unsqueeze(-1).float()
         linear_part = self.linear(x)
-        periodic_part = torch.cat([
-            torch.sin(x * self.frequencies + self.phase_shifts),
-            torch.cos(x * self.frequencies + self.phase_shifts)
-        ], dim=-1)
-        return torch.cat([linear_part, periodic_part], dim=-1)
+        sin_part = torch.sin(x * self.frequencies + self.phase_shifts)
+        cos_part = torch.cos(x * self.frequencies + self.phase_shifts)
+        return torch.cat([linear_part, sin_part, cos_part], dim=-1)
 
 # Synthetic data generation
 def generate_synthetic_data(num_days):
@@ -136,7 +134,7 @@ class TemporalAttention(nn.Module):
         self.k_linear = nn.Linear(d_model, d_model)
         self.v_linear = nn.Linear(d_model, d_model)
         
-    def forward(self, query, key, value, t, mask=None):
+    def forward(self, query, key, value, target_t, mask=None):
         batch_size = query.size(0)
         
         # Linear transformations
@@ -148,11 +146,9 @@ class TemporalAttention(nn.Module):
         q = q.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
         k = k.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
         v = v.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
-        t = t.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
         
         # Temporal attention calculation
-        attn = torch.matmul(q, torch.matmul(t.transpose(-2, -1), t)) / (self.head_dim ** 0.5)
-        attn = torch.matmul(attn, k.transpose(-2, -1))
+        attn = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
         
         if mask is not None:
             attn = attn.masked_fill(mask == 0, float('-inf'))
@@ -164,7 +160,6 @@ class TemporalAttention(nn.Module):
         
         return output
 
-# Transformer model
 class TimeSeriesTransformer(nn.Module):
     def __init__(self, d_model, nhead, num_layers, use_timestamp_encoding=True):
         super().__init__()
@@ -172,21 +167,23 @@ class TimeSeriesTransformer(nn.Module):
         self.value_embedding = nn.Linear(1, d_model)
         if use_timestamp_encoding:
             self.timestamp_encoding = TimestampEncoding(d_model)
-        self.temporal_attention_layers = nn.ModuleList([TemporalAttention(d_model, nhead) for _ in range(num_layers)])
-        self.fc = nn.Linear(d_model, 1)
+            self.combined_dim = d_model * 2  # Combined dimension after concatenation
+        else:
+            self.combined_dim = d_model
+        self.temporal_attention_layers = nn.ModuleList([TemporalAttention(self.combined_dim, nhead) for _ in range(num_layers)])
+        self.fc = nn.Linear(self.combined_dim, 1)
     
     def forward(self, x, timestamps, target_timestamp):
         x = self.value_embedding(x.unsqueeze(-1))
         if self.use_timestamp_encoding:
             t = self.timestamp_encoding(timestamps)
             target_t = self.timestamp_encoding(target_timestamp)
-            x = x + t
+            x = torch.cat([x, t], dim=-1)  # Concatenate instead of add
         else:
-            # If not using timestamp encoding, create a dummy target_t
-            target_t = torch.zeros_like(x[:, 0, :])
+            target_t = torch.zeros_like(x[:, :, :self.combined_dim])
         
         for layer in self.temporal_attention_layers:
-            x = layer(x, x, x, target_t.unsqueeze(1).expand(-1, x.size(1), -1))
+            x = layer(x, x, x, target_t)
         
         return self.fc(x[:, -1, :]).squeeze(-1)
 
