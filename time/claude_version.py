@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F 
 from torch.utils.data import DataLoader, Dataset
 import datetime
 import matplotlib.pyplot as plt
@@ -33,8 +34,7 @@ def generate_synthetic_data(num_days):
     start_date = np.datetime64('2020-01-01')
     dates = np.array([start_date + np.timedelta64(i, 'D') for i in range(num_days)])
     
-    # Generate more complex time series data
-    time_feature = np.arange(num_days) / 365.0  # Normalize by year
+    time_feature = np.arange(num_days) / 365.0
     trend = 0.5 * time_feature
     seasonal = np.sin(2 * np.pi * time_feature) + 0.5 * np.sin(4 * np.pi * time_feature)
     noise = 0.1 * np.random.randn(num_days)
@@ -124,6 +124,46 @@ def visualize_data(dates, values, ordered_X, ordered_X_dates, ordered_y, ordered
     plt.tight_layout()
     plt.show()
 
+# Specialized Attention
+class TemporalAttention(nn.Module):
+    def __init__(self, d_model, nhead):
+        super().__init__()
+        self.d_model = d_model
+        self.nhead = nhead
+        self.head_dim = d_model // nhead
+        
+        self.q_linear = nn.Linear(d_model, d_model)
+        self.k_linear = nn.Linear(d_model, d_model)
+        self.v_linear = nn.Linear(d_model, d_model)
+        
+    def forward(self, query, key, value, t, mask=None):
+        batch_size = query.size(0)
+        
+        # Linear transformations
+        q = self.q_linear(query)
+        k = self.k_linear(key)
+        v = self.v_linear(value)
+        
+        # Reshape for multi-head attention
+        q = q.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
+        t = t.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
+        
+        # Temporal attention calculation
+        attn = torch.matmul(q, torch.matmul(t.transpose(-2, -1), t)) / (self.head_dim ** 0.5)
+        attn = torch.matmul(attn, k.transpose(-2, -1))
+        
+        if mask is not None:
+            attn = attn.masked_fill(mask == 0, float('-inf'))
+        
+        attn = F.softmax(attn, dim=-1)
+        
+        output = torch.matmul(attn, v)
+        output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+        
+        return output
+
 # Transformer model
 class TimeSeriesTransformer(nn.Module):
     def __init__(self, d_model, nhead, num_layers, use_timestamp_encoding=True):
@@ -132,25 +172,29 @@ class TimeSeriesTransformer(nn.Module):
         self.value_embedding = nn.Linear(1, d_model)
         if use_timestamp_encoding:
             self.timestamp_encoding = TimestampEncoding(d_model)
-        self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model, nhead, batch_first=True),
-            num_layers
-        )
+        self.temporal_attention_layers = nn.ModuleList([TemporalAttention(d_model, nhead) for _ in range(num_layers)])
         self.fc = nn.Linear(d_model, 1)
     
-    def forward(self, x, timestamps):
+    def forward(self, x, timestamps, target_timestamp):
         x = self.value_embedding(x.unsqueeze(-1))
         if self.use_timestamp_encoding:
             t = self.timestamp_encoding(timestamps)
+            target_t = self.timestamp_encoding(target_timestamp)
             x = x + t
-        x = self.transformer(x)
+        else:
+            # If not using timestamp encoding, create a dummy target_t
+            target_t = torch.zeros_like(x[:, 0, :])
+        
+        for layer in self.temporal_attention_layers:
+            x = layer(x, x, x, target_t.unsqueeze(1).expand(-1, x.size(1), -1))
+        
         return self.fc(x[:, -1, :]).squeeze(-1)
 
 # Dataset
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, timestamps, targets, target_timestamps):
         self.data = torch.FloatTensor(data)
-        self.timestamps = torch.FloatTensor(timestamps.astype(int))  # Convert to Unix timestamp
+        self.timestamps = torch.FloatTensor(timestamps.astype(int))
         self.targets = torch.FloatTensor(targets)
         self.target_timestamps = torch.FloatTensor(target_timestamps.astype(int))
     
@@ -165,9 +209,9 @@ def train_model(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
     for batch in train_loader:
-        data, timestamps, targets, _ = [b.to(device) for b in batch]
+        data, timestamps, targets, target_timestamps = [b.to(device) for b in batch]
         optimizer.zero_grad()
-        outputs = model(data, timestamps)
+        outputs = model(data, timestamps, target_timestamps)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
@@ -180,8 +224,8 @@ def evaluate_model(model, test_loader, criterion, device):
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
-            data, timestamps, targets, _ = [b.to(device) for b in batch]
-            outputs = model(data, timestamps)
+            data, timestamps, targets, target_timestamps = [b.to(device) for b in batch]
+            outputs = model(data, timestamps, target_timestamps)
             loss = criterion(outputs, targets)
             total_loss += loss.item()
     return total_loss / len(test_loader)
@@ -198,7 +242,7 @@ def run_experiment():
     nhead = 4
     num_layers = 2
     batch_size = 64
-    num_epochs = 50
+    num_epochs = 500
 
     # Generate data
     dates, values = generate_synthetic_data(num_days)
@@ -207,10 +251,6 @@ def run_experiment():
     ordered_X, ordered_X_dates, ordered_y, ordered_y_dates = sample_ordered(dates, values, window_size, target_offset)
     random_X, random_X_dates, random_y, random_y_dates = sample_random(dates, values, context_size, num_samples)
 
-    # Visualize the data
-    visualize_data(dates, values, ordered_X, ordered_X_dates, ordered_y, ordered_y_dates, 
-                   random_X, random_X_dates, random_y, random_y_dates)
-
     # Create datasets
     ordered_dataset = TimeSeriesDataset(ordered_X, ordered_X_dates, ordered_y, ordered_y_dates)
     random_dataset = TimeSeriesDataset(random_X, random_X_dates, random_y, random_y_dates)
@@ -218,7 +258,7 @@ def run_experiment():
     # Verify random ordering
     random_sample = random_dataset[0]
     print("Random sample timestamps:")
-    print(random_sample[1])  # Print timestamps to verify they're not sorted
+    print(random_sample[1])
 
     # Split datasets
     random_train_size = int(0.8 * len(random_dataset))
