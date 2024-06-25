@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 import datetime
 import matplotlib.pyplot as plt
+import math
 
 # Device selection
 device = torch.device("mps" if torch.backends.mps.is_available() else
@@ -134,31 +135,50 @@ class TemporalAttention(nn.Module):
         self.k_linear = nn.Linear(d_model, d_model)
         self.v_linear = nn.Linear(d_model, d_model)
         
-    def forward(self, query, key, value, target_t, mask=None):
-        batch_size = query.size(0)
+    def forward(self, x):
+        batch_size, seq_len, _ = x.shape
         
         # Linear transformations
-        q = self.q_linear(query)
-        k = self.k_linear(key)
-        v = self.v_linear(value)
+        q = self.q_linear(x)
+        k = self.k_linear(x)
+        v = self.v_linear(x)
         
         # Reshape for multi-head attention
-        q = q.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
-        k = k.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
-        v = v.view(batch_size, -1, self.nhead, self.head_dim).transpose(1, 2)
+        q = q.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
         
-        # Temporal attention calculation
-        attn = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        
-        if mask is not None:
-            attn = attn.masked_fill(mask == 0, float('-inf'))
-        
+        # Attention calculation
+        attn = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         attn = F.softmax(attn, dim=-1)
         
         output = torch.matmul(attn, v)
-        output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+        output = output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
         
         return output
+
+class TemporalTransformerLayer(nn.Module):
+    def __init__(self, d_model, n_heads, d_ff):
+        super().__init__()
+        self.attention = TemporalAttention(d_model, n_heads)
+        self.feed_forward = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Linear(d_ff, d_model)
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        
+    def forward(self, x):
+        # Self-attention
+        attn_output = self.attention(x)
+        x = self.norm1(x + attn_output)
+        
+        # Feed forward
+        ff_output = self.feed_forward(x)
+        x = self.norm2(x + ff_output)
+        
+        return x
 
 class TimeSeriesTransformer(nn.Module):
     def __init__(self, d_model, nhead, num_layers, use_timestamp_encoding=True):
@@ -167,23 +187,20 @@ class TimeSeriesTransformer(nn.Module):
         self.value_embedding = nn.Linear(1, d_model)
         if use_timestamp_encoding:
             self.timestamp_encoding = TimestampEncoding(d_model)
-            self.combined_dim = d_model * 2  # Combined dimension after concatenation
+            self.d_model = d_model * 2
         else:
-            self.combined_dim = d_model
-        self.temporal_attention_layers = nn.ModuleList([TemporalAttention(self.combined_dim, nhead) for _ in range(num_layers)])
-        self.fc = nn.Linear(self.combined_dim, 1)
+            self.d_model = d_model
+        self.temporal_transformer_layers = nn.ModuleList([TemporalTransformerLayer(self.d_model, nhead, self.d_model * 4) for _ in range(num_layers)])
+        self.fc = nn.Linear(self.d_model, 1)
     
     def forward(self, x, timestamps, target_timestamp):
         x = self.value_embedding(x.unsqueeze(-1))
         if self.use_timestamp_encoding:
             t = self.timestamp_encoding(timestamps)
-            target_t = self.timestamp_encoding(target_timestamp)
             x = torch.cat([x, t], dim=-1)  # Concatenate instead of add
-        else:
-            target_t = torch.zeros_like(x[:, :, :self.combined_dim])
         
-        for layer in self.temporal_attention_layers:
-            x = layer(x, x, x, target_t)
+        for layer in self.temporal_transformer_layers:
+            x = layer(x)
         
         return self.fc(x[:, -1, :]).squeeze(-1)
 
