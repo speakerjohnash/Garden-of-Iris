@@ -41,6 +41,57 @@ def generate_synthetic_data(num_days):
     
     return dates, values
 
+def demonstrate_source_predictions(data, timestamps, targets):
+    num_sources = 5
+    num_time_periods = 10
+    generator = SourcePredictionGenerator(data, num_sources, num_time_periods)
+    
+    # Generate and visualize predictions
+    generator.visualize_predictions(feature_index=0)
+    
+    # Print expertise levels
+    print("Expertise levels for each source in each time period:")
+    print(generator.expertise_levels)
+
+    # You might want to return the generated predictions for further use
+    return generator.generate_predictions()
+
+class SourcePredictionGenerator:
+    def __init__(self, true_data, num_sources, num_time_periods):
+        self.true_data = true_data
+        self.num_sources = num_sources
+        self.num_time_periods = num_time_periods
+        self.time_period_boundaries = np.linspace(0, true_data.shape[1], num_time_periods + 1, dtype=int)
+        self.expertise_levels = np.random.rand(num_sources, num_time_periods)
+        
+    def generate_predictions(self):
+        predictions = np.zeros((self.num_sources, *self.true_data.shape))
+        for source in range(self.num_sources):
+            for period in range(self.num_time_periods):
+                start, end = self.time_period_boundaries[period], self.time_period_boundaries[period+1]
+                noise_level = 1 - self.expertise_levels[source, period]
+                noise = np.random.normal(0, noise_level, size=self.true_data[:, start:end].shape)
+                predictions[source, :, start:end] = self.true_data[:, start:end] + noise
+        return predictions
+    
+    def visualize_predictions(self, feature_index=0):
+        predictions = self.generate_predictions()
+        plt.figure(figsize=(15, 10))
+        plt.plot(self.true_data[0, :, feature_index], label='True Data', color='black', linewidth=2)
+        
+        colors = plt.cm.rainbow(np.linspace(0, 1, self.num_sources))
+        for i in range(min(2, self.num_sources)):
+            plt.plot(predictions[i, 0, :, feature_index], label=f'Source {i+1}', color=colors[i], alpha=0.7)
+        
+        for boundary in self.time_period_boundaries[1:-1]:
+            plt.axvline(x=boundary, color='gray', linestyle='--', alpha=0.5)
+        
+        plt.title(f'True Data vs Source Predictions (Feature {feature_index})')
+        plt.xlabel('Time')
+        plt.ylabel('Value')
+        plt.legend()
+        plt.show()
+
 # Sampling function for ordered data
 def sample_ordered(dates, values, window_size, target_offset):
     num_samples = len(dates) - window_size - target_offset
@@ -264,6 +315,13 @@ def run_experiment():
     # Sample ordered and random data
     ordered_X, ordered_X_dates, ordered_y, ordered_y_dates = sample_ordered(dates, values, window_size, target_offset)
     random_X, random_X_dates, random_y, random_y_dates = sample_random(dates, values, context_size, num_samples)
+
+    # Visualize data
+    visualize_data(dates, values, ordered_X, ordered_X_dates, ordered_y, ordered_y_dates, random_X, random_X_dates, random_y, random_y_dates)
+
+    # Demonstrate source predictions
+    demonstrate_source_predictions(values.reshape(1, -1, 1), np.arange(len(values)), np.zeros(len(values)))
+
 
     # Create datasets
     ordered_dataset = TimeSeriesDataset(ordered_X, ordered_X_dates, ordered_y, ordered_y_dates)
