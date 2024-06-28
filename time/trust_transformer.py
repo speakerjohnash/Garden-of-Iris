@@ -311,27 +311,49 @@ class TemporalTransformerLayer(nn.Module):
 
 # Updated TimeSeriesTransformer
 class TrustTransformer(nn.Module):
-    def __init__(self, d_model, nhead, num_layers, num_sources):
+    def __init__(self, d_model, nhead, num_layers, num_sources, use_temporal=True, use_source=True):
         super().__init__()
         self.value_embedding = nn.Linear(1, d_model)
-        self.timestamp_encoding = TimestampEncoding(d_model)
-        self.source_embedding = SourceEmbedding(num_sources, d_model)
-        self.d_model = d_model * 3
+        self.use_temporal = use_temporal
+        self.use_source = use_source
+        
+        if use_temporal:
+            self.timestamp_encoding = TimestampEncoding(d_model)
+        if use_source:
+            self.source_embedding = SourceEmbedding(num_sources, d_model)
+        
+        self.d_model = d_model * (1 + use_temporal + use_source)
         self.temporal_transformer_layers = nn.ModuleList([TemporalTransformerLayer(self.d_model, nhead, self.d_model * 4) for _ in range(num_layers)])
         self.fc = nn.Linear(self.d_model, 1)
     
     def forward(self, x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids):
         # Embed context
         x_context = self.value_embedding(x_context.unsqueeze(-1))
-        t_context = self.timestamp_encoding(timestamps_context)
-        s_context = self.source_embedding(source_ids[:, :x_context.size(1)])
-        x_context = torch.cat([x_context, t_context, s_context], dim=-1)
+        embeddings = [x_context]
+        
+        if self.use_temporal:
+            t_context = self.timestamp_encoding(timestamps_context)
+            embeddings.append(t_context)
+        
+        if self.use_source:
+            s_context = self.source_embedding(source_ids[:, :x_context.size(1)])
+            embeddings.append(s_context)
+        
+        x_context = torch.cat(embeddings, dim=-1)
         
         # Embed predictions
         x_predictions = self.value_embedding(x_predictions.unsqueeze(-1))
-        t_predictions = self.timestamp_encoding(timestamps_predictions)
-        s_predictions = self.source_embedding(source_ids[:, x_context.size(1):])
-        x_predictions = torch.cat([x_predictions, t_predictions.unsqueeze(1).expand_as(x_predictions), s_predictions.unsqueeze(1).expand_as(x_predictions)], dim=-1)
+        embeddings = [x_predictions]
+        
+        if self.use_temporal:
+            t_predictions = self.timestamp_encoding(timestamps_predictions)
+            embeddings.append(t_predictions.unsqueeze(1).expand_as(x_predictions))
+        
+        if self.use_source:
+            s_predictions = self.source_embedding(source_ids[:, x_context.size(1):])
+            embeddings.append(s_predictions.unsqueeze(1).expand_as(x_predictions))
+        
+        x_predictions = torch.cat(embeddings, dim=-1)
         
         # Combine context and predictions
         x = torch.cat([x_context, x_predictions.view(x_predictions.size(0), -1, self.d_model)], dim=1)
@@ -371,9 +393,9 @@ def evaluate_model(model, test_loader, criterion, device):
 def run_experiment():
     # Parameters
     num_days = 1000
-    context_size = 5  # Reduced to 5 context points
-    min_future_distance = 30  # Minimum distance to future prediction
-    max_future_distance = 100  # Maximum distance to future prediction
+    context_size = 5
+    min_future_distance = 30
+    max_future_distance = 100
     num_sources = 5
     num_samples = 10000
     d_model = 64
@@ -414,21 +436,35 @@ def run_experiment():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    # Create model
-    model = TrustTransformer(d_model, nhead, num_layers, num_sources + 1).to(device)
+    # Create models
+    models = {
+        "Baseline (Value Only)": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=False, use_source=False).to(device),
+        "Temporal Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=True, use_source=False).to(device),
+        "Source Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=False, use_source=True).to(device),
+        "Full Ŧrust Model": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=True, use_source=True).to(device)
+    }
 
-    # Optimizer and loss function
-    optimizer = torch.optim.Adam(model.parameters())
+    # Create optimizers and loss functions
+    optimizers = {name: torch.optim.Adam(model.parameters()) for name, model in models.items()}
     criterion = nn.MSELoss()
 
     # Training and evaluation
     for epoch in range(num_epochs):
-        train_loss = train_model(model, train_loader, optimizer, criterion, device)
-        test_loss = evaluate_model(model, test_loader, criterion, device)
-        
         print(f"Epoch {epoch+1}/{num_epochs}")
-        print(f"Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+        
+        for name, model in models.items():
+            train_loss = train_model(model, train_loader, optimizers[name], criterion, device)
+            test_loss = evaluate_model(model, test_loader, criterion, device)
+            
+            print(f"{name:<25} - Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+        
         print()
+
+    # Final evaluation
+    print("Final Results:")
+    for name, model in models.items():
+        test_loss = evaluate_model(model, test_loader, criterion, device)
+        print(f"{name:<25} - Test Loss: {test_loss:.4f}")
 
 if __name__ == "__main__":
     run_experiment()
