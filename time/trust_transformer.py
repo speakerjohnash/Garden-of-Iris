@@ -7,6 +7,8 @@ import datetime
 import matplotlib.pyplot as plt
 import math
 
+import matplotlib.colors as mcolors
+
 # Device selection
 device = torch.device("mps" if torch.backends.mps.is_available() else
                       "cuda" if torch.cuda.is_available() else "cpu")
@@ -86,17 +88,20 @@ def visualize_data(dates, values, X_context, X_predictions, y, timestamps_contex
     for i in range(num_samples):
         plt.subplot(num_samples, 1, i+1)
         
-        # Plot context window
+        # Plot context points
         context_dates = dates[timestamps_context[i]]
-        plt.plot(context_dates, X_context[i], 'b-o', label='Context')
+        plt.scatter(context_dates, X_context[i], c='blue', label='Context', zorder=3)
         
         # Plot source predictions
-        prediction_dates = dates[timestamps_predictions[i]]
+        prediction_date = dates[timestamps_predictions[i][0]]
         for j in range(X_predictions.shape[2]):
-            plt.plot(prediction_dates, X_predictions[i, :, j], '--', alpha=0.5, label=f'Source {j+1}')
+            plt.scatter(prediction_date, X_predictions[i, 0, j], marker='x', s=100, label=f'Source {j+1}')
         
         # Plot true future value
-        plt.plot(dates[timestamps_predictions[i][-1]], y[i], 'ro', markersize=10, label='True Future')
+        plt.scatter(dates[timestamps_predictions[i][0]], y[i], c='red', s=100, label='True Future', zorder=3)
+        
+        # Plot true data line
+        plt.plot(dates, values, c='gray', alpha=0.5, zorder=1)
         
         plt.title(f'Sample {i+1}')
         plt.xlabel('Date')
@@ -112,26 +117,71 @@ class SourcePredictionGenerator:
         self.num_sources = num_sources
         self.num_time_periods = num_time_periods
         self.time_period_boundaries = np.linspace(0, true_data.shape[1], num_time_periods + 1, dtype=int)
-        self.expertise_levels = np.random.rand(num_sources, num_time_periods)
+        self.expertise_levels = np.random.rand(num_sources, num_time_periods) * 0.2  # Reduced max expertise for non-experts
+        self.expert_sources = np.random.randint(num_sources, size=num_time_periods)
+        
+        # Ensure one source is always expert in each time period
+        for period in range(num_time_periods):
+            self.expertise_levels[self.expert_sources[period], period] = 1.0
+        
+        # Generate a custom color palette with peaceful, rich colors
+        custom_colors = [
+            "#3D8A44", # Forest Green
+            "#4B0082",  # Indigo
+            "#1E90FF",  # Dodger Blue
+            "#00CED1",  # Dark Turquoise
+            "#9370DB",  # Medium Purple
+            "#4682B4",  # Steel Blue
+            "#20B2AA",  # Light Sea Green
+            "#483D8B",  # Dark Slate Blue
+            "#008B8B",  # Dark Cyan
+            "#5F9EA0",  # Cadet Blue
+        ]
+        self.colors = [mcolors.to_rgba(color) for color in custom_colors]
         
     def generate_predictions(self):
         predictions = np.zeros((self.num_sources, *self.true_data.shape))
         for source in range(self.num_sources):
             for period in range(self.num_time_periods):
                 start, end = self.time_period_boundaries[period], self.time_period_boundaries[period+1]
-                noise_level = 1 - self.expertise_levels[source, period]
-                noise = np.random.normal(0, noise_level, size=self.true_data[:, start:end].shape)
-                predictions[source, :, start:end] = self.true_data[:, start:end] + noise
+                expertise = self.expertise_levels[source, period]
+                
+                if expertise == 1.0:  # Expert source
+                    predictions[source, :, start:end] = self.true_data[:, start:end]
+                else:
+                    noise_level = (1 - expertise) * 3  # Increased noise for non-experts
+                    noise = np.random.normal(0, noise_level, size=self.true_data[:, start:end].shape)
+                    predictions[source, :, start:end] = self.true_data[:, start:end] + noise
+        
+        # Clip predictions to a reasonable range
+        data_min, data_max = np.min(self.true_data), np.max(self.true_data)
+        data_range = data_max - data_min
+        clip_min, clip_max = data_min - data_range, data_max + data_range
+        predictions = np.clip(predictions, clip_min, clip_max)
+        
         return predictions
     
     def visualize_predictions(self, feature_index=0):
         predictions = self.generate_predictions()
-        plt.figure(figsize=(15, 10))
+        plt.figure(figsize=(20, 10))
         plt.plot(self.true_data[0, :, feature_index], label='True Data', color='black', linewidth=2)
         
-        colors = plt.cm.rainbow(np.linspace(0, 1, self.num_sources))
-        for i in range(min(2, self.num_sources)):
-            plt.plot(predictions[i, 0, :, feature_index], label=f'Source {i+1}', color=colors[i], alpha=0.7)
+        for period in range(self.num_time_periods):
+            start, end = self.time_period_boundaries[period], self.time_period_boundaries[period+1]
+            expert_source = self.expert_sources[period]
+            expert_color = self.colors[period % len(self.colors)]
+            
+            # Plot expert source
+            plt.plot(range(start, end), predictions[expert_source, 0, start:end, feature_index], 
+                     color=expert_color, linewidth=2, label=f'Expert (Period {period+1})')
+            
+            # Plot non-expert sources
+            for source in range(self.num_sources):
+                if source != expert_source:
+                    source_color = self.colors[source % len(self.colors)]
+                    lighter_color = mcolors.to_rgba(source_color, alpha=0.3)
+                    plt.plot(range(start, end), predictions[source, 0, start:end, feature_index], 
+                             color=lighter_color, linewidth=1)
         
         for boundary in self.time_period_boundaries[1:-1]:
             plt.axvline(x=boundary, color='gray', linestyle='--', alpha=0.5)
@@ -139,45 +189,48 @@ class SourcePredictionGenerator:
         plt.title(f'True Data vs Source Predictions (Feature {feature_index})')
         plt.xlabel('Time')
         plt.ylabel('Value')
-        plt.legend()
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
         plt.show()
 
 # New sampling function for source and temporal data
-def sample_trust_data(true_data, source_predictions, context_size, future_size, num_samples):
+def sample_trust_data(true_data, source_predictions, context_size, min_future_distance, max_future_distance, num_samples):
     num_sources = source_predictions.shape[0]
     data_length = true_data.shape[1]
     
     X_context = np.zeros((num_samples, context_size))
-    X_predictions = np.zeros((num_samples, future_size, num_sources))
+    X_predictions = np.zeros((num_samples, 1, num_sources))  # Only one future point
     y = np.zeros(num_samples)
     
-    timestamps_context = np.zeros((num_samples, context_size))
-    timestamps_predictions = np.zeros((num_samples, future_size))
-    target_timestamps = np.zeros(num_samples)
+    timestamps_context = np.zeros((num_samples, context_size), dtype=int)
+    timestamps_predictions = np.zeros((num_samples, 1), dtype=int)  # Only one future timestamp
+    target_timestamps = np.zeros(num_samples, dtype=int)
     
-    source_ids = np.zeros((num_samples, context_size + future_size), dtype=int)
+    source_ids = np.zeros((num_samples, context_size + 1), dtype=int)  # +1 for the single future point
     
     for i in range(num_samples):
-        # Randomly select the end of the context window
-        context_end = np.random.randint(context_size, data_length - future_size)
+        # Randomly select context points
+        context_indices = np.sort(np.random.choice(data_length - max_future_distance, context_size, replace=False))
+        X_context[i] = true_data[0, context_indices, 0]
+        timestamps_context[i] = context_indices
         
-        # Extract context window
-        X_context[i] = true_data[0, context_end - context_size:context_end, 0]
-        timestamps_context[i] = np.arange(context_end - context_size, context_end)
+        # Select random future point
+        future_distance = np.random.randint(min_future_distance, max_future_distance + 1)
+        future_index = context_indices[-1] + future_distance
         
         # Extract future predictions from each source
-        X_predictions[i] = source_predictions[:, 0, context_end:context_end + future_size, 0].T
+        X_predictions[i, 0, :] = source_predictions[:, 0, future_index, 0]
         
-        # Set target (ground truth for the last future timestamp)
-        y[i] = true_data[0, context_end + future_size - 1, 0]
+        # Set target (ground truth for the future timestamp)
+        y[i] = true_data[0, future_index, 0]
         
         # Set timestamps for predictions and target
-        timestamps_predictions[i] = np.arange(context_end, context_end + future_size)
-        target_timestamps[i] = context_end + future_size - 1
+        timestamps_predictions[i, 0] = future_index
+        target_timestamps[i] = future_index
         
         # Set source IDs (0 for true data in context, 1 to num_sources for predictions)
         source_ids[i, :context_size] = 0
-        source_ids[i, context_size:] = np.random.randint(1, num_sources + 1, size=future_size)
+        source_ids[i, context_size:] = np.random.randint(1, num_sources + 1, size=1)
     
     return X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids
 
@@ -318,8 +371,9 @@ def evaluate_model(model, test_loader, criterion, device):
 def run_experiment():
     # Parameters
     num_days = 1000
-    context_size = 30
-    future_size = 10
+    context_size = 5  # Reduced to 5 context points
+    min_future_distance = 30  # Minimum distance to future prediction
+    max_future_distance = 100  # Maximum distance to future prediction
     num_sources = 5
     num_samples = 10000
     d_model = 64
@@ -327,21 +381,22 @@ def run_experiment():
     num_layers = 2
     batch_size = 64
     num_epochs = 100
+    num_time_periods = 10
 
     # Generate data
     dates, values = generate_synthetic_data(num_days)
     true_data = values.reshape(1, -1, 1)
     
     # Generate source predictions
-    generator = SourcePredictionGenerator(true_data, num_sources, num_time_periods=10)
+    generator = SourcePredictionGenerator(true_data, num_sources, num_time_periods)
     source_predictions = generator.generate_predictions()
 
     # Demonstrate source predictions
-    demonstrate_source_predictions(true_data, np.arange(len(values)), np.zeros(len(values)))
+    generator.visualize_predictions(feature_index=0)
 
     # Sample data
     X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids = sample_trust_data(
-        true_data, source_predictions, context_size, future_size, num_samples
+        true_data, source_predictions, context_size, min_future_distance, max_future_distance, num_samples
     )
 
     # Visualize data
