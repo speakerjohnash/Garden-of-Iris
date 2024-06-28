@@ -111,6 +111,40 @@ def visualize_data(dates, values, X_context, X_predictions, y, timestamps_contex
     plt.tight_layout()
     plt.show()
 
+def visualize_no_context_data(dates, values, X_predictions, y, timestamps_predictions, source_ids, num_samples=5):
+    plt.figure(figsize=(20, 5 * num_samples))
+    
+    for i in range(num_samples):
+        plt.subplot(num_samples, 1, i+1)
+        
+        # Plot true data line
+        plt.plot(dates, values, c='gray', alpha=0.5, zorder=1, label='True Data')
+        
+        # Plot source predictions
+        prediction_date = dates[timestamps_predictions[i][0]]
+        for j in range(X_predictions.shape[2]):
+            plt.scatter(prediction_date, X_predictions[i, 0, j], marker='x', s=100, label=f'Source {j+1}')
+        
+        # Plot true future value
+        plt.scatter(prediction_date, y[i], c='red', s=100, label='True Future', zorder=3)
+        
+        plt.title(f'Sample {i+1} (No Context)')
+        plt.xlabel('Date')
+        plt.ylabel('Value')
+        plt.legend()
+    
+    plt.tight_layout()
+    plt.show()
+
+    # Print the data for the first sample
+    print("Data for the first sample:")
+    print(f"Timestamp: {dates[timestamps_predictions[0][0]]}")
+    print(f"True value: {y[0]:.4f}")
+    print("Source predictions:")
+    for j in range(X_predictions.shape[2]):
+        print(f"  Source {j+1}: {X_predictions[0, 0, j]:.4f}")
+    print(f"Selected source ID: {source_ids[0, -1]}")
+
 class SourcePredictionGenerator:
     def __init__(self, true_data, num_sources, num_time_periods):
         self.true_data = true_data
@@ -391,6 +425,49 @@ def evaluate_model(model, test_loader, criterion, device):
             total_loss += loss.item()
     return total_loss / len(test_loader)
 
+def evaluate_model_with_details(model, test_loader, criterion, device):
+    model.eval()
+    total_loss = 0
+    all_predictions = []
+    all_targets = []
+    all_expert_values = []
+    with torch.no_grad():
+        for batch in test_loader:
+            x_context, x_predictions, timestamps_context, timestamps_predictions, target_timestamps, source_ids, targets = [b.to(device) for b in batch]
+            outputs = model(x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids)
+            loss = criterion(outputs, targets)
+            total_loss += loss.item()
+            all_predictions.extend(outputs.cpu().numpy())
+            all_targets.extend(targets.cpu().numpy())
+            all_expert_values.extend(x_predictions[range(len(source_ids)), 0, source_ids[:, -1]].cpu().numpy())
+    return total_loss / len(test_loader), all_predictions, all_targets, all_expert_values
+
+def visualize_predictions(predictions, targets, expert_values, model_name):
+    plt.figure(figsize=(10, 6))
+    plt.scatter(targets, predictions, alpha=0.5, label='Model predictions')
+    plt.scatter(targets, expert_values, alpha=0.5, label='Expert values')
+    plt.plot([min(targets), max(targets)], [min(targets), max(targets)], 'r--', label='Perfect prediction')
+    plt.xlabel('True values')
+    plt.ylabel('Predicted values')
+    plt.title(f'{model_name} Predictions vs True Values')
+    plt.legend()
+    plt.show()
+
+def analyze_source_predictions(source_predictions):
+    num_sources = source_predictions.shape[0]
+    num_timepoints = source_predictions.shape[2]
+    
+    for source in range(num_sources):
+        mean = np.mean(source_predictions[source, 0, :, 0])
+        std = np.std(source_predictions[source, 0, :, 0])
+        print(f"Source {source + 1}: Mean = {mean:.4f}, Std = {std:.4f}")
+    
+    expert_counts = np.sum(source_predictions == np.max(source_predictions, axis=0), axis=0)[0, :, 0]
+    print(f"\nExpert source distribution:")
+    for source in range(num_sources):
+        count = np.sum(expert_counts == source + 1)
+        print(f"Source {source + 1}: {count} times ({count/num_timepoints*100:.2f}%)")
+
 # Updated run_experiment function
 def run_experiment():
     # Parameters
@@ -415,6 +492,9 @@ def run_experiment():
     generator = SourcePredictionGenerator(true_data, num_sources, num_time_periods)
     source_predictions = generator.generate_predictions()
 
+    # Analyze source predictions
+    analyze_source_predictions(source_predictions)
+
     # Split time
     split_time = int(0.8 * num_days)
 
@@ -428,6 +508,10 @@ def run_experiment():
     # Visualize data (only for with context scenario)
     X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids = data_with_context
     visualize_data(dates, values, X_context, X_predictions, y, timestamps_context, timestamps_predictions)
+
+    # Visualize data for no-context scenario
+    X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids = data_without_context
+    visualize_no_context_data(dates, values, X_predictions, y, timestamps_predictions, source_ids)
 
     # Create datasets
     dataset_with_context = TrustDataset(*data_with_context)
@@ -480,8 +564,15 @@ def run_experiment():
         # Final evaluation
         print("Final Results:")
         for name, model in models.items():
-            test_loss = evaluate_model(model, test_loader, criterion, device)
+            test_loss, predictions, targets, expert_values = evaluate_model_with_details(model, test_loader, criterion, device)
             print(f"{name:<25} - Test Loss: {test_loss:.4f}")
+            print(f"  Mean Absolute Error: {np.mean(np.abs(np.array(predictions) - np.array(targets))):.4f}")
+            print(f"  Mean Absolute Error (Expert): {np.mean(np.abs(np.array(expert_values) - np.array(targets))):.4f}")
+            print(f"  Correlation with targets: {np.corrcoef(predictions, targets)[0, 1]:.4f}")
+            print(f"  Correlation with expert: {np.corrcoef(predictions, expert_values)[0, 1]:.4f}")
+            
+            # Visualize predictions
+            visualize_predictions(predictions, targets, expert_values, name)
 
 if __name__ == "__main__":
     run_experiment()
