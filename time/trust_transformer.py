@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from scipy.interpolate import CubicSpline
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
@@ -53,6 +55,26 @@ def generate_synthetic_data(num_days):
     seasonal = np.sin(2 * np.pi * time_feature) + 0.5 * np.sin(4 * np.pi * time_feature)
     noise = 0.1 * np.random.randn(num_days)
     values = trend + seasonal + noise
+    
+    return dates, values
+
+def generate_advanced_synthetic_data(start_date, end_date, num_samples):
+    start = np.datetime64(start_date)
+    end = np.datetime64(end_date)
+    
+    # Generate evenly spaced timestamps
+    dates = np.linspace(start.astype(int), end.astype(int), num_samples).astype('datetime64[s]')
+    
+    total_days = (end - start).astype('timedelta64[D]').astype(int)
+    time_feature = np.linspace(0, total_days / 365.25, num_samples)
+    
+    trend = 0.5 * time_feature
+    seasonal = np.sin(2 * np.pi * time_feature) + 0.5 * np.sin(4 * np.pi * time_feature)
+    pattern = trend + seasonal
+    
+    noise = 0.1 * np.random.randn(num_samples)
+    
+    values = pattern + noise
     
     return dates, values
 
@@ -137,7 +159,7 @@ def visualize_no_context_data(dates, values, X_predictions, y, timestamps_predic
     plt.show()
 
     # Print the data for the first sample
-    print("Data for the first sample:")
+    print("\nData for the first sample:")
     print(f"Timestamp: {dates[timestamps_predictions[0]]}")
     print(f"True value: {y[0]:.4f}")
     print("Source predictions:")
@@ -187,7 +209,7 @@ class SourcePredictionGenerator:
         
         return predictions
     
-    def visualize_predictions(self, feature_index=0, split_time=None):
+    def visualize_predictions(self, feature_index=0, dates=None):
         predictions = self.generate_predictions()
         plt.figure(figsize=(20, 10))
         plt.plot(self.true_data[0, :, feature_index], label='True Data', color='black', linewidth=2)
@@ -197,11 +219,9 @@ class SourcePredictionGenerator:
             expert_source = self.expert_sources[period]
             expert_color = self.colors[expert_source % len(self.colors)]
             
-            # Plot expert source
             plt.plot(range(start, end), predictions[expert_source, 0, start:end, feature_index], 
                      color=expert_color, linewidth=2, label=f'Expert (Source {expert_source+1})' if period == 0 else "")
             
-            # Plot non-expert sources
             for source in range(self.num_sources):
                 if source != expert_source:
                     source_color = self.colors[source % len(self.colors)]
@@ -212,8 +232,10 @@ class SourcePredictionGenerator:
         for boundary in self.time_period_boundaries[1:-1]:
             plt.axvline(x=boundary, color='gray', linestyle='--', alpha=0.5)
         
-        if split_time is not None:
-            plt.axvline(x=split_time, color='red', linestyle='-', linewidth=2, label='Train/Test Split')
+        if dates is not None:
+            split_time = dates[0] + 0.8 * (dates[-1] - dates[0])
+            split_index = np.searchsorted(dates, split_time)
+            plt.axvline(x=split_index, color='red', linestyle='-', linewidth=2, label='Train/Test Split')
         
         plt.title(f'True Data vs Source Predictions (Feature {feature_index})')
         plt.xlabel('Time')
@@ -417,6 +439,8 @@ def analyze_source_predictions(source_predictions):
 # Updated run_experiment function
 def run_experiment():
     # Parameters
+    start_date = '2020-01-01'
+    end_date = '2022-09-27'
     num_days = 1000
     num_sources = 10
     num_samples = 10000
@@ -428,7 +452,9 @@ def run_experiment():
     num_time_periods = 50
 
     # Generate data
-    dates, values = generate_synthetic_data(num_days)
+    # dates, values = generate_synthetic_data(num_days)
+    dates, values = generate_advanced_synthetic_data(start_date, end_date, num_samples)
+
     true_data = values.reshape(1, -1, 1)
     
     # Generate source predictions
@@ -438,11 +464,8 @@ def run_experiment():
     # Analyze source predictions
     analyze_source_predictions(source_predictions)
 
-    # Split time
-    split_time = int(0.8 * num_days)
-
     # Demonstrate source predictions
-    generator.visualize_predictions(feature_index=0, split_time=split_time)
+    generator.visualize_predictions(feature_index=0, dates=dates)
 
     # Create data without context
     data = sample_trust_data(true_data, source_predictions, num_samples)
@@ -455,12 +478,13 @@ def run_experiment():
     dataset = TrustDataset(*data)
 
     # Split dataset based on time
-    def split_dataset(dataset):
-        train_indices = [i for i in range(len(dataset)) if dataset.timestamps_predictions[i] < split_time]
-        test_indices = [i for i in range(len(dataset)) if dataset.timestamps_predictions[i] >= split_time]
+    def split_dataset(dataset, dates):
+        split_time = dates[0] + 0.8 * (dates[-1] - dates[0])
+        train_indices = [i for i in range(len(dataset)) if dates[dataset.timestamps_predictions[i]] < split_time]
+        test_indices = [i for i in range(len(dataset)) if dates[dataset.timestamps_predictions[i]] >= split_time]
         return torch.utils.data.Subset(dataset, train_indices), torch.utils.data.Subset(dataset, test_indices)
 
-    train_dataset, test_dataset = split_dataset(dataset)
+    train_dataset, test_dataset = split_dataset(dataset, dates)
 
     # Create data loaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
