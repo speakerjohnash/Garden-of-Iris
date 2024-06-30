@@ -121,9 +121,9 @@ def visualize_no_context_data(dates, values, X_predictions, y, timestamps_predic
         plt.plot(dates, values, c='gray', alpha=0.5, zorder=1, label='True Data')
         
         # Plot source predictions
-        prediction_date = dates[timestamps_predictions[i][0]]
-        for j in range(X_predictions.shape[2]):
-            plt.scatter(prediction_date, X_predictions[i, 0, j], marker='x', s=100, label=f'Source {j+1}')
+        prediction_date = dates[timestamps_predictions[i]]
+        for j in range(X_predictions.shape[1]):
+            plt.scatter(prediction_date, X_predictions[i, j], marker='x', s=100, label=f'Source {j+1}')
         
         # Plot true future value
         plt.scatter(prediction_date, y[i], c='red', s=100, label='True Future', zorder=3)
@@ -138,12 +138,12 @@ def visualize_no_context_data(dates, values, X_predictions, y, timestamps_predic
 
     # Print the data for the first sample
     print("Data for the first sample:")
-    print(f"Timestamp: {dates[timestamps_predictions[0][0]]}")
+    print(f"Timestamp: {dates[timestamps_predictions[0]]}")
     print(f"True value: {y[0]:.4f}")
     print("Source predictions:")
-    for j in range(X_predictions.shape[2]):
-        print(f"  Source {j+1}: {X_predictions[0, 0, j]:.4f}")
-    print(f"Selected source ID: {source_ids[0, -1]}")
+    for j in range(X_predictions.shape[1]):
+        print(f"  Source {j+1}: {X_predictions[0, j]:.4f}")
+    print(f"Selected source ID: {source_ids[0]}")
 
 class SourcePredictionGenerator:
     def __init__(self, true_data, num_sources, num_time_periods):
@@ -223,67 +223,36 @@ class SourcePredictionGenerator:
         plt.show()
 
 # New sampling function for source and temporal data
-def sample_trust_data(true_data, source_predictions, context_size, min_future_distance, max_future_distance, num_samples):
+def sample_trust_data(true_data, source_predictions, num_samples):
     num_sources = source_predictions.shape[0]
     data_length = true_data.shape[1]
     
-    X_context = np.zeros((num_samples, max(context_size, 1)))  # Ensure at least 1 dimension
-    X_predictions = np.zeros((num_samples, 1, num_sources))  # Only one future point
+    X_predictions = np.zeros((num_samples, num_sources))
     y = np.zeros(num_samples)
-    
-    timestamps_context = np.zeros((num_samples, max(context_size, 1)), dtype=int)
-    timestamps_predictions = np.zeros((num_samples, 1), dtype=int)  # Only one future timestamp
-    target_timestamps = np.zeros(num_samples, dtype=int)
-    
-    source_ids = np.zeros((num_samples, max(context_size, 1) + 1), dtype=int)  # +1 for the single future point
+    timestamps_predictions = np.zeros(num_samples, dtype=int)
+    source_ids = np.tile(np.arange(num_sources), (num_samples, 1))
     
     for i in range(num_samples):
-        if context_size > 0:
-            # Randomly select context points
-            context_indices = np.sort(np.random.choice(data_length - max_future_distance, context_size, replace=False))
-            X_context[i, :context_size] = true_data[0, context_indices, 0]
-            timestamps_context[i, :context_size] = context_indices
-            source_ids[i, :context_size] = 0
-        
-        # Select random future point
-        if context_size > 0:
-            future_distance = np.random.randint(min_future_distance, max_future_distance + 1)
-            future_index = context_indices[-1] + future_distance
-        else:
-            future_index = np.random.randint(data_length - max_future_distance, data_length)
-        
-        # Extract future predictions from each source
-        X_predictions[i, 0, :] = source_predictions[:, 0, future_index, 0]
-        
-        # Set target (ground truth for the future timestamp)
+        future_index = np.random.randint(0, data_length)
+        X_predictions[i] = source_predictions[:, 0, future_index, 0]
         y[i] = true_data[0, future_index, 0]
-        
-        # Set timestamps for predictions and target
-        timestamps_predictions[i, 0] = future_index
-        target_timestamps[i] = future_index
-        
-        # Set source IDs for predictions
-        source_ids[i, -1] = np.random.randint(1, num_sources + 1)
+        timestamps_predictions[i] = future_index
     
-    return X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids
+    return X_predictions, y, timestamps_predictions, source_ids
 
 # Updated TimeSeriesDataset
 class TrustDataset(Dataset):
-    def __init__(self, X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids):
-        self.X_context = torch.FloatTensor(X_context)
+    def __init__(self, X_predictions, y, timestamps_predictions, source_ids):
         self.X_predictions = torch.FloatTensor(X_predictions)
         self.y = torch.FloatTensor(y)
-        self.timestamps_context = torch.LongTensor(timestamps_context)
         self.timestamps_predictions = torch.LongTensor(timestamps_predictions)
-        self.target_timestamps = torch.LongTensor(target_timestamps)
         self.source_ids = torch.LongTensor(source_ids)
     
     def __len__(self):
         return len(self.y)
     
     def __getitem__(self, idx):
-        return (self.X_context[idx], self.X_predictions[idx], self.timestamps_context[idx], 
-                self.timestamps_predictions[idx], self.target_timestamps[idx], self.source_ids[idx], self.y[idx])
+        return (self.X_predictions[idx], self.timestamps_predictions[idx], self.source_ids[idx], self.y[idx])
 
 # Specialized Attention
 class TemporalAttention(nn.Module):
@@ -359,40 +328,18 @@ class TrustTransformer(nn.Module):
         self.temporal_transformer_layers = nn.ModuleList([TemporalTransformerLayer(self.d_model, nhead, self.d_model * 4) for _ in range(num_layers)])
         self.fc = nn.Linear(self.d_model, 1)
     
-    def forward(self, x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids):
-        # Embed context
-        if x_context.size(1) > 0:
-            x_context = self.value_embedding(x_context.unsqueeze(-1))
-            embeddings = [x_context]
-            
-            if self.use_temporal:
-                t_context = self.timestamp_encoding(timestamps_context)
-                embeddings.append(t_context)
-            
-            if self.use_source:
-                s_context = self.source_embedding(source_ids[:, :x_context.size(1)])
-                embeddings.append(s_context)
-            
-            x_context = torch.cat(embeddings, dim=-1)
-        else:
-            x_context = torch.empty(x_predictions.size(0), 0, self.d_model, device=x_predictions.device)
-        
+    def forward(self, x_predictions, timestamps_predictions, source_ids):
         # Embed predictions
-        x_predictions = self.value_embedding(x_predictions.unsqueeze(-1))
-        embeddings = [x_predictions]
+        x = self.value_embedding(x_predictions.unsqueeze(-1))
         
         if self.use_temporal:
-            t_predictions = self.timestamp_encoding(timestamps_predictions)
-            embeddings.append(t_predictions.unsqueeze(1).expand_as(x_predictions))
+            t = self.timestamp_encoding(timestamps_predictions)
+            t = t.unsqueeze(1).expand(-1, x_predictions.size(1), -1)
+            x = torch.cat([x, t], dim=-1)
         
         if self.use_source:
-            s_predictions = self.source_embedding(source_ids[:, -x_predictions.size(1):])
-            embeddings.append(s_predictions.unsqueeze(1).expand_as(x_predictions))
-        
-        x_predictions = torch.cat(embeddings, dim=-1)
-        
-        # Combine context and predictions
-        x = torch.cat([x_context, x_predictions.view(x_predictions.size(0), -1, self.d_model)], dim=1)
+            s = self.source_embedding(source_ids)
+            x = torch.cat([x, s], dim=-1)
         
         for layer in self.temporal_transformer_layers:
             x = layer(x)
@@ -404,23 +351,22 @@ def train_model(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
     for batch in train_loader:
-        x_context, x_predictions, timestamps_context, timestamps_predictions, target_timestamps, source_ids, targets = [b.to(device) for b in batch]
+        x_predictions, timestamps_predictions, source_ids, targets = [b.to(device) for b in batch]
         optimizer.zero_grad()
-        outputs = model(x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids)
+        outputs = model(x_predictions, timestamps_predictions, source_ids)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
     return total_loss / len(train_loader)
 
-# Updated evaluation function
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()
     total_loss = 0
     with torch.no_grad():
         for batch in test_loader:
-            x_context, x_predictions, timestamps_context, timestamps_predictions, target_timestamps, source_ids, targets = [b.to(device) for b in batch]
-            outputs = model(x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids)
+            x_predictions, timestamps_predictions, source_ids, targets = [b.to(device) for b in batch]
+            outputs = model(x_predictions, timestamps_predictions, source_ids)
             loss = criterion(outputs, targets)
             total_loss += loss.item()
     return total_loss / len(test_loader)
@@ -433,13 +379,13 @@ def evaluate_model_with_details(model, test_loader, criterion, device):
     all_expert_values = []
     with torch.no_grad():
         for batch in test_loader:
-            x_context, x_predictions, timestamps_context, timestamps_predictions, target_timestamps, source_ids, targets = [b.to(device) for b in batch]
-            outputs = model(x_context, x_predictions, timestamps_context, timestamps_predictions, source_ids)
+            x_predictions, timestamps_predictions, source_ids, targets = [b.to(device) for b in batch]
+            outputs = model(x_predictions, timestamps_predictions, source_ids)
             loss = criterion(outputs, targets)
             total_loss += loss.item()
             all_predictions.extend(outputs.cpu().numpy())
             all_targets.extend(targets.cpu().numpy())
-            all_expert_values.extend(x_predictions[range(len(source_ids)), 0, source_ids[:, -1]].cpu().numpy())
+            all_expert_values.extend(x_predictions[:, 0].cpu().numpy())  # Assuming first source is expert
     return total_loss / len(test_loader), all_predictions, all_targets, all_expert_values
 
 def visualize_predictions(predictions, targets, expert_values, model_name):
@@ -468,20 +414,18 @@ def analyze_source_predictions(source_predictions):
         count = np.sum(expert_counts == source + 1)
         print(f"Source {source + 1}: {count} times ({count/num_timepoints*100:.2f}%)")
 
+
 # Updated run_experiment function
 def run_experiment():
     # Parameters
     num_days = 1000
-    context_size = 10
-    min_future_distance = 100
-    max_future_distance = 300
-    num_sources = 5
+    num_sources = 10
     num_samples = 10000
     d_model = 64
     nhead = 4
     num_layers = 2
     batch_size = 64
-    num_epochs = 100
+    num_epochs = 200
     num_time_periods = 50
 
     # Generate data
@@ -501,43 +445,34 @@ def run_experiment():
     # Demonstrate source predictions
     generator.visualize_predictions(feature_index=0, split_time=split_time)
 
-    # Create two sets of data: one with context and one without
-    data_with_context = sample_trust_data(true_data, source_predictions, context_size, min_future_distance, max_future_distance, num_samples)
-    data_without_context = sample_trust_data(true_data, source_predictions, 0, min_future_distance, max_future_distance, num_samples)
-
-    # Visualize data (only for with context scenario)
-    X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids = data_with_context
-    visualize_data(dates, values, X_context, X_predictions, y, timestamps_context, timestamps_predictions)
+    # Create data without context
+    data = sample_trust_data(true_data, source_predictions, num_samples)
 
     # Visualize data for no-context scenario
-    X_context, X_predictions, y, timestamps_context, timestamps_predictions, target_timestamps, source_ids = data_without_context
+    X_predictions, y, timestamps_predictions, source_ids = data
     visualize_no_context_data(dates, values, X_predictions, y, timestamps_predictions, source_ids)
 
-    # Create datasets
-    dataset_with_context = TrustDataset(*data_with_context)
-    dataset_without_context = TrustDataset(*data_without_context)
+    # Create dataset
+    dataset = TrustDataset(*data)
 
-    # Split datasets based on time
+    # Split dataset based on time
     def split_dataset(dataset):
-        train_indices = [i for i in range(len(dataset)) if dataset.target_timestamps[i] < split_time]
-        test_indices = [i for i in range(len(dataset)) if dataset.target_timestamps[i] >= split_time]
+        train_indices = [i for i in range(len(dataset)) if dataset.timestamps_predictions[i] < split_time]
+        test_indices = [i for i in range(len(dataset)) if dataset.timestamps_predictions[i] >= split_time]
         return torch.utils.data.Subset(dataset, train_indices), torch.utils.data.Subset(dataset, test_indices)
 
-    train_dataset_with_context, test_dataset_with_context = split_dataset(dataset_with_context)
-    train_dataset_without_context, test_dataset_without_context = split_dataset(dataset_without_context)
+    train_dataset, test_dataset = split_dataset(dataset)
 
     # Create data loaders
-    train_loader_with_context = DataLoader(train_dataset_with_context, batch_size=batch_size, shuffle=True)
-    test_loader_with_context = DataLoader(test_dataset_with_context, batch_size=batch_size)
-    train_loader_without_context = DataLoader(train_dataset_without_context, batch_size=batch_size, shuffle=True)
-    test_loader_without_context = DataLoader(test_dataset_without_context, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     # Create models
     models = {
-        "Baseline (Value Only)": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=False, use_source=False).to(device),
-        "Temporal Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=True, use_source=False).to(device),
-        "Source Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=False, use_source=True).to(device),
-        "Full Ŧrust Model": TrustTransformer(d_model, nhead, num_layers, num_sources + 1, use_temporal=True, use_source=True).to(device)
+        "Baseline (Value Only)": TrustTransformer(d_model, nhead, num_layers, num_sources, use_temporal=False, use_source=False).to(device),
+        "Temporal Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources, use_temporal=True, use_source=False).to(device),
+        "Source Embeddings Only": TrustTransformer(d_model, nhead, num_layers, num_sources, use_temporal=False, use_source=True).to(device),
+        "Full Ŧrust Model": TrustTransformer(d_model, nhead, num_layers, num_sources, use_temporal=True, use_source=True).to(device)
     }
 
     # Create optimizers and loss functions
@@ -545,34 +480,30 @@ def run_experiment():
     criterion = nn.MSELoss()
 
     # Training and evaluation
-    for context in ["Without Context", "With Context"]:
-        print(f"\n--- Experiment {context} ---")
-        train_loader = train_loader_with_context if context == "With Context" else train_loader_without_context
-        test_loader = test_loader_with_context if context == "With Context" else test_loader_without_context
-
-        for epoch in range(num_epochs):
-            print(f"Epoch {epoch+1}/{num_epochs}")
-            
-            for name, model in models.items():
-                train_loss = train_model(model, train_loader, optimizers[name], criterion, device)
-                test_loss = evaluate_model(model, test_loader, criterion, device)
-                
-                print(f"{name:<25} - Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
-            
-            print()
-
-        # Final evaluation
-        print("Final Results:")
+    print("\n--- Experiment ---")
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch+1}/{num_epochs}")
+        
         for name, model in models.items():
-            test_loss, predictions, targets, expert_values = evaluate_model_with_details(model, test_loader, criterion, device)
-            print(f"{name:<25} - Test Loss: {test_loss:.4f}")
-            print(f"  Mean Absolute Error: {np.mean(np.abs(np.array(predictions) - np.array(targets))):.4f}")
-            print(f"  Mean Absolute Error (Expert): {np.mean(np.abs(np.array(expert_values) - np.array(targets))):.4f}")
-            print(f"  Correlation with targets: {np.corrcoef(predictions, targets)[0, 1]:.4f}")
-            print(f"  Correlation with expert: {np.corrcoef(predictions, expert_values)[0, 1]:.4f}")
+            train_loss = train_model(model, train_loader, optimizers[name], criterion, device)
+            test_loss = evaluate_model(model, test_loader, criterion, device)
             
-            # Visualize predictions
-            visualize_predictions(predictions, targets, expert_values, name)
+            print(f"{name:<25} - Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+        
+        print()
+
+    # Final evaluation
+    print("Final Results:")
+    for name, model in models.items():
+        test_loss, predictions, targets, expert_values = evaluate_model_with_details(model, test_loader, criterion, device)
+        print(f"{name:<25} - Test Loss: {test_loss:.4f}")
+        print(f"  Mean Absolute Error: {np.mean(np.abs(np.array(predictions) - np.array(targets))):.4f}")
+        print(f"  Mean Absolute Error (Expert): {np.mean(np.abs(np.array(expert_values) - np.array(targets))):.4f}")
+        print(f"  Correlation with targets: {np.corrcoef(predictions, targets)[0, 1]:.4f}")
+        print(f"  Correlation with expert: {np.corrcoef(predictions, expert_values)[0, 1]:.4f}")
+        
+        # Visualize predictions
+        visualize_predictions(predictions, targets, expert_values, name)
 
 if __name__ == "__main__":
     run_experiment()
