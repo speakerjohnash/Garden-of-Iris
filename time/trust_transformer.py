@@ -135,13 +135,23 @@ def visualize_data(dates, values, X_context, X_predictions, y, timestamps_contex
     plt.show()
 
 def visualize_no_context_data(dates, values, X_predictions, y, timestamps_predictions, source_ids, num_samples=5):
+    # Subsample to 1000 points if necessary
+    num_points = len(dates)
+    if num_points > 1000:
+        indices = np.linspace(0, num_points - 1, 1000, dtype=int)
+        dates_sampled = dates[indices]
+        values_sampled = values[indices]
+    else:
+        dates_sampled = dates
+        values_sampled = values
+
     plt.figure(figsize=(20, 5 * num_samples))
     
     for i in range(num_samples):
         plt.subplot(num_samples, 1, i+1)
         
         # Plot true data line
-        plt.plot(dates, values, c='gray', alpha=0.5, zorder=1, label='True Data')
+        plt.plot(dates_sampled, values_sampled, c='gray', alpha=0.5, zorder=1, label='True Data')
         
         # Plot source predictions
         prediction_date = dates[timestamps_predictions[i]]
@@ -212,30 +222,30 @@ class SourcePredictionGenerator:
     
     def visualize_predictions(self, feature_index=0, dates=None):
         predictions = self.generate_predictions()
+        
+        # Subsample to 1000 points
+        num_points = self.true_data.shape[1]
+        if num_points > 1000:
+            indices = np.linspace(0, num_points - 1, 1000, dtype=int)
+            true_data_sampled = self.true_data[0, indices, feature_index]
+            predictions_sampled = predictions[:, 0, indices, feature_index]
+            if dates is not None:
+                dates_sampled = dates[indices]
+        else:
+            true_data_sampled = self.true_data[0, :, feature_index]
+            predictions_sampled = predictions[:, 0, :, feature_index]
+            dates_sampled = dates
+
         plt.figure(figsize=(20, 10))
-        plt.plot(self.true_data[0, :, feature_index], label='True Data', color='black', linewidth=2)
+        plt.plot(true_data_sampled, label='True Data', color='black', linewidth=2)
         
-        for period in range(self.num_time_periods):
-            start, end = self.time_period_boundaries[period], self.time_period_boundaries[period+1]
-            expert_source = self.expert_sources[period]
-            expert_color = self.colors[expert_source % len(self.colors)]
-            
-            plt.plot(range(start, end), predictions[expert_source, 0, start:end, feature_index], 
-                     color=expert_color, linewidth=2, label=f'Expert (Source {expert_source+1})' if period == 0 else "")
-            
-            for source in range(self.num_sources):
-                if source != expert_source:
-                    source_color = self.colors[source % len(self.colors)]
-                    lighter_color = mcolors.to_rgba(source_color, alpha=0.3)
-                    plt.plot(range(start, end), predictions[source, 0, start:end, feature_index], 
-                             color=lighter_color, linewidth=1, label=f'Source {source+1}' if period == 0 else "")
-        
-        for boundary in self.time_period_boundaries[1:-1]:
-            plt.axvline(x=boundary, color='gray', linestyle='--', alpha=0.5)
+        for source in range(self.num_sources):
+            color = self.colors[source % len(self.colors)]
+            plt.plot(predictions_sampled[source], color=color, alpha=0.5, linewidth=1, label=f'Source {source+1}')
         
         if dates is not None:
             split_time = dates[0] + 0.8 * (dates[-1] - dates[0])
-            split_index = np.searchsorted(dates, split_time)
+            split_index = np.searchsorted(dates_sampled, split_time)
             plt.axvline(x=split_index, color='red', linestyle='-', linewidth=2, label='Train/Test Split')
         
         plt.title(f'True Data vs Source Predictions (Feature {feature_index})')
@@ -444,12 +454,12 @@ def run_experiment():
     end_date = '2022-09-27'
     num_days = 1000
     num_sources = 10
-    num_samples = 10000
+    num_samples = 100000
     d_model = 64
     nhead = 4
     num_layers = 2
     batch_size = 64
-    num_epochs = 50
+    num_epochs = 200
     num_time_periods = 50
 
     # Generate data
