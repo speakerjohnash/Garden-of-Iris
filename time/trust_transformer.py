@@ -408,12 +408,11 @@ def analyze_source_predictions(source_predictions):
         std = np.std(source_predictions[source, 0, :, 0])
         print(f"Source {source + 1}: Mean = {mean:.4f}, Std = {std:.4f}")
     
-    expert_counts = np.sum(source_predictions == np.max(source_predictions, axis=0), axis=0)[0, :, 0]
+    expert_counts = np.argmax(source_predictions, axis=0)[0, :, 0]
     print(f"\nExpert source distribution:")
     for source in range(num_sources):
-        count = np.sum(expert_counts == source + 1)
+        count = np.sum(expert_counts == source)
         print(f"Source {source + 1}: {count} times ({count/num_timepoints*100:.2f}%)")
-
 
 # Updated run_experiment function
 def run_experiment():
