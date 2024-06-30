@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 import datetime
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import math
 
 import matplotlib.colors as mcolors
@@ -448,7 +449,7 @@ def run_experiment():
     nhead = 4
     num_layers = 2
     batch_size = 64
-    num_epochs = 200
+    num_epochs = 50
     num_time_periods = 50
 
     # Generate data
@@ -502,6 +503,10 @@ def run_experiment():
     optimizers = {name: torch.optim.Adam(model.parameters()) for name, model in models.items()}
     criterion = nn.MSELoss()
 
+    # Initialize loss tracking
+    train_losses = {name: [] for name in models.keys()}
+    test_losses = {name: [] for name in models.keys()}
+
     # Training and evaluation
     print("\n--- Experiment ---")
     for epoch in range(num_epochs):
@@ -511,9 +516,27 @@ def run_experiment():
             train_loss = train_model(model, train_loader, optimizers[name], criterion, device)
             test_loss = evaluate_model(model, test_loader, criterion, device)
             
+            train_losses[name].append(train_loss)
+            test_losses[name].append(test_loss)
+            
             print(f"{name:<25} - Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
         
         print()
+
+    # Visualize training and test losses
+    def plot_losses(losses, title):
+        plt.figure(figsize=(15, 10))
+        for i, (name, loss) in enumerate(losses.items(), 1):
+            plt.subplot(2, 2, i)
+            plt.plot(loss)
+            plt.title(f"{name} - {title}")
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss")
+        plt.tight_layout()
+        plt.show()
+
+    plot_losses(train_losses, "Training Loss")
+    plot_losses(test_losses, "Test Loss")
 
     # Final evaluation
     print("Final Results:")
