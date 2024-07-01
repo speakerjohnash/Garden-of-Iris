@@ -79,6 +79,19 @@ def generate_advanced_synthetic_data(start_date, end_date, num_samples):
     
     return dates, values
 
+def generate_advanced_synthetic_data(start_date, end_date, num_samples):
+    start = np.datetime64(start_date)
+    end = np.datetime64(end_date)
+    
+    dates = np.linspace(start.astype(int), end.astype(int), num_samples).astype('datetime64[s]')
+    
+    # Generate random values with changing volatility
+    base_values = np.random.randn(num_samples)
+    volatility = 1 + np.sin(np.linspace(0, 10*np.pi, num_samples)) * 0.5  # Oscillating volatility
+    values = base_values * volatility
+    
+    return dates, values
+
 def demonstrate_source_predictions(data, timestamps, targets):
     num_sources = 5
     num_time_periods = 10
@@ -217,7 +230,7 @@ class SourcePredictionGenerator:
                         high=np.max(self.true_data),
                         size=self.true_data[:, start:end].shape
                     )
-        
+     
         return predictions
     
     def visualize_predictions(self, feature_index=0, dates=None):
@@ -265,11 +278,20 @@ def sample_trust_data(true_data, source_predictions, num_samples):
     timestamps_predictions = np.zeros(num_samples, dtype=int)
     source_ids = np.tile(np.arange(num_sources), (num_samples, 1))
     
+    print("\nSampling data:")
     for i in range(num_samples):
         future_index = np.random.randint(0, data_length)
         X_predictions[i] = source_predictions[:, 0, future_index, 0]
         y[i] = true_data[0, future_index, 0]
         timestamps_predictions[i] = future_index
+        
+        if i < 5:  # Print details for the first 5 samples
+            print(f"Sample {i}:")
+            print(f"  True value: {y[i]:.2f}")
+            print(f"  Predictions: {X_predictions[i]}")
+            expert_prediction = X_predictions[i][np.isclose(X_predictions[i], y[i])][0]
+            print(f"  Expert prediction: {expert_prediction:.2f}")
+            print(f"  Timestamp: {timestamps_predictions[i]}")
     
     return X_predictions, y, timestamps_predictions, source_ids
 
@@ -447,6 +469,28 @@ def analyze_source_predictions(source_predictions):
         count = np.sum(expert_counts == source)
         print(f"Source {source + 1}: {count} times ({count/num_timepoints*100:.2f}%)")
 
+def visualize_prediction_distribution(true_data, source_predictions):
+    plt.figure(figsize=(15, 5))
+    plt.subplot(1, 2, 1)
+    plt.hist(true_data.flatten(), bins=50, alpha=0.7, label='True Data')
+    plt.hist(source_predictions.flatten(), bins=50, alpha=0.7, label='All Predictions')
+    plt.legend()
+    plt.title('Distribution of True Data vs All Predictions')
+    
+    plt.subplot(1, 2, 2)
+    # Find expert predictions by matching with true data
+    expert_predictions = np.array([
+        source_predictions[:, 0, i, 0][np.isclose(source_predictions[:, 0, i, 0], true_data[0, i, 0])][0]
+        for i in range(true_data.shape[1])
+    ])
+    plt.hist(true_data.flatten(), bins=50, alpha=0.7, label='True Data')
+    plt.hist(expert_predictions, bins=50, alpha=0.7, label='Expert Predictions')
+    plt.legend()
+    plt.title('Distribution of True Data vs Expert Predictions')
+    
+    plt.tight_layout()
+    plt.show()
+
 # Updated run_experiment function
 def run_experiment():
     # Parameters
@@ -454,7 +498,7 @@ def run_experiment():
     end_date = '2022-09-27'
     num_days = 1000
     num_sources = 10
-    num_samples = 100000
+    num_samples = 5000
     d_model = 64
     nhead = 4
     num_layers = 2
@@ -471,6 +515,9 @@ def run_experiment():
     # Generate source predictions
     generator = SourcePredictionGenerator(true_data, num_sources, num_time_periods)
     source_predictions = generator.generate_predictions()
+
+    # Call this after generating predictions
+    visualize_prediction_distribution(true_data, source_predictions)
 
     # Analyze source predictions
     analyze_source_predictions(source_predictions)
